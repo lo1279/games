@@ -196,10 +196,10 @@ class Player {
         return true;
     }
 
-    update(keys, mousePos, touchPos, bullets, enemies) {
+    update(keys, mousePos, touchPos, bullets, enemies, bounds = { width: this.canvasWidth, height: this.canvasHeight }) {
         if (!this.alive) return;
 
-        // 1. 移动逻辑 (解耦冲突：键盘操作处于最高实时优先级)
+        // 1. 移动逻辑 (多输入源协同：手机端优先采用防遮挡相对位移微操)
         let moveX = 0;
         let moveY = 0;
         if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1;
@@ -213,19 +213,26 @@ class Player {
             const len = Math.hypot(moveX, moveY);
             this.x += (moveX / len) * this.speed;
             this.y += (moveY / len) * this.speed;
-            this.targetX = this.x;
-            this.targetY = this.y;
         } else if (touchPos && touchPos.active) {
-            this.x += (touchPos.x - this.x) * 0.25;
-            this.y += (touchPos.y - this.y) * 0.25;
+            // 手机端防遮挡微操：根据手指滑动的相对偏移量机动
+            if (touchPos.deltaX !== 0 || touchPos.deltaY !== 0) {
+                this.x += touchPos.deltaX * 1.1;
+                this.y += touchPos.deltaY * 1.1;
+                // 消耗本帧位移
+                touchPos.deltaX = 0;
+                touchPos.deltaY = 0;
+            }
         } else if (mousePos && mousePos.active) {
-            this.x += (mousePos.x - this.x) * 0.2;
-            this.y += (mousePos.y - this.y) * 0.2;
+            // PC 端鼠标跟随
+            this.x += (mousePos.x - this.x) * 0.22;
+            this.y += (mousePos.y - this.y) * 0.22;
         }
 
-        // 屏幕边界限制
-        this.x = Math.max(30, Math.min(this.canvasWidth - 30, this.x));
-        this.y = Math.max(40, Math.min(this.canvasHeight - 40, this.y));
+        // 动态全屏边界限制
+        this.canvasWidth = bounds.width;
+        this.canvasHeight = bounds.height;
+        this.x = Math.max(26, Math.min(bounds.width - 26, this.x));
+        this.y = Math.max(35, Math.min(bounds.height - 35, this.y));
 
         // 2. 尾焰喷射
         if (window.particles) {

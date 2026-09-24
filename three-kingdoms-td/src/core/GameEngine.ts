@@ -1065,7 +1065,7 @@ export class GameEngine {
         }
       });
       this.spawnParticles(tower.x, tower.y, '#fbbf24', 40);
-    } else if (hero.id === 'zhugeliang') {
+    } else if (hero.id === 'zhugeliang' && target) {
       // 诸葛亮【八卦神雷阵】：八卦阵盘显现，九天落雷轰炸
       sound.playThunder();
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】雷霆听吾号令!`, '#38bdf8', 24, true);
@@ -1090,7 +1090,7 @@ export class GameEngine {
           this.spawnLightningEffect(tower.x, tower.y, e.x, e.y);
         }
       });
-    } else if (hero.id === 'zhouyu') {
+    } else if (hero.id === 'zhouyu' && target) {
       // 周瑜【火烧赤壁】：凤凰业火焚天
       sound.playExplosion();
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】赤壁业火，燃尽千帆!`, '#ef4444', 24, true);
@@ -1141,7 +1141,7 @@ export class GameEngine {
         this.spawnParticles(t.x, t.y, '#f59e0b', 20);
         this.addFloatingText(t.x, t.y - 20, '魏武神威·攻速+50%!', '#fde047', 15, true);
       });
-    } else if (hero.id === 'zhaoyun') {
+    } else if (hero.id === 'zhaoyun' && target) {
       // 赵云：龙胆破军，银枪连刺
       sound.playSlash();
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】一身是胆，破阵如风!`, '#059669', 24, true);

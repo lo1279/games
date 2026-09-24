@@ -28,7 +28,7 @@ class TankGame {
 
     // 关卡与进度
     this.currentLevelIndex = 0;
-    this.enemyQueue = []; // 待出生的敌军队列
+    this.enemyQueue = [...LEVELS[0].enemies]; // 预设第一关敌军总览
     this.spawnPoints = [
       { x: 0, y: 0 },
       { x: 12 * CONFIG.TILE_SIZE, y: 0 },
@@ -509,14 +509,24 @@ class TankGame {
     if (levelNameEl && curLvl) levelNameEl.innerText = curLvl.name;
 
     // 渲染待击毁剩余敌军坦克图标矩阵
+    const remainingTotal = this.enemyQueue.length + this.enemies.length;
     if (enemyIconsEl) {
-      const remainingTotal = this.enemyQueue.length + this.enemies.length;
       let html = '';
       for (let i = 0; i < remainingTotal; i++) {
         html += '<span class="enemy-icon">▲</span>';
       }
       enemyIconsEl.innerHTML = html;
     }
+
+    // 同步更新移动端紧凑顶部 HUD
+    const mStage = document.getElementById('mHudStage');
+    const mScore = document.getElementById('mHudScore');
+    const mLives = document.getElementById('mHudLives');
+    const mEnemy = document.getElementById('mHudEnemyCount');
+    if (mStage) mStage.innerText = this.currentLevelIndex + 1;
+    if (mScore && this.player) mScore.innerText = this.player.score;
+    if (mLives && this.player) mLives.innerText = Math.max(0, this.player.lives);
+    if (mEnemy) mEnemy.innerText = remainingTotal;
   }
 
   /**
@@ -585,12 +595,12 @@ class TankGame {
 
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px monospace';
-      ctx.fillText('按 ENTER 或 空格键 或 J 键 开始', w / 2, h / 2 + 50);
+      ctx.fillText('按 ENTER / 空格 或 点击 [A开火] 开始', w / 2, h / 2 + 50);
 
       ctx.fillStyle = '#7f8c8d';
       ctx.font = '14px monospace';
-      ctx.fillText('WASD / 方向键: 移动   J / 空格: 开炮', w / 2, h / 2 + 100);
-      ctx.fillText('P: 暂停   M: 静音   R: 重新开始', w / 2, h / 2 + 130);
+      ctx.fillText('移动: 方向键 / 滑动十字盘   开火: J / A键', w / 2, h / 2 + 100);
+      ctx.fillText('连发: B键   暂停: P键   重开: R键', w / 2, h / 2 + 130);
     } else if (this.state === this.STATE.STAGE_START) {
       // 经典灰黑色转场屏
       ctx.fillStyle = '#333333';
@@ -615,7 +625,7 @@ class TankGame {
       ctx.fillText('PAUSED 暂停中', w / 2, h / 2);
       ctx.font = '16px monospace';
       ctx.fillStyle = '#ffffff';
-      ctx.fillText('按 P 键继续战斗', w / 2, h / 2 + 40);
+      ctx.fillText('按 P 键或点击 [暂停] 继续战斗', w / 2, h / 2 + 40);
     } else if (this.state === this.STATE.VICTORY) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
       ctx.fillRect(0, 0, w, h);
@@ -639,7 +649,7 @@ class TankGame {
 
       ctx.fillStyle = '#ecf0f1';
       ctx.font = '16px monospace';
-      ctx.fillText('按 ENTER 或 R 键重新出击', w / 2, h / 2 + riseOffset + 50);
+      ctx.fillText('按 ENTER / R 或 点击 [A开火] 重新出击', w / 2, h / 2 + riseOffset + 50);
     }
   }
 }

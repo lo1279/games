@@ -29,7 +29,7 @@ export const TowerPanel: React.FC<TowerPanelProps> = ({
   const sellRefund = Math.floor(totalInvested * 0.7);
 
   return (
-    <div className="absolute bottom-4 left-6 bg-stone-900/95 border border-amber-600/60 rounded-xl p-4 shadow-2xl backdrop-blur-md w-84 z-30 animate-in fade-in slide-in-from-bottom-3 duration-200">
+    <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-6 bg-stone-900/95 border border-amber-600/60 rounded-xl p-3 sm:p-4 shadow-2xl backdrop-blur-md w-72 sm:w-84 max-w-[calc(100%-16px)] z-30 animate-in fade-in slide-in-from-bottom-3 duration-200">
       {/* 头部信息 */}
       <div className="flex items-center justify-between pb-2.5 border-b border-amber-900/40">
         <div className="flex items-center gap-2.5">

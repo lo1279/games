@@ -2,8 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雷霆战机 - Thunder Fighter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>雷霆战机 - 微信小程序移动全屏版</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +14,7 @@
         <!-- 游戏主画布 -->
         <canvas id="gameCanvas"></canvas>
 
-        <!-- HUD 实时战斗数据面板 -->
+        <!-- 移动端 HUD 实时战斗数据面板 (避让前摄/刘海屏) -->
         <div id="hud">
             <div class="hud-top">
                 <div class="hud-score-box">
@@ -54,11 +57,14 @@
             </div>
         </div>
 
-        <!-- 悬浮快捷控制栏 -->
+        <!-- 底部单手舒适操作栏 (避让iPhone底部横条) -->
         <div id="hud-controls">
-            <button class="circle-btn" id="sound-toggle">🔊 音效</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="circle-btn" id="pause-btn">⏸ 暂停</button>
+                <button class="circle-btn" id="sound-toggle">🔊 音效</button>
+            </div>
             <button class="circle-btn bomb-btn" id="bomb-btn">
-                <span id="hud-bombs">💣💣</span> 释放核弹 [B]
+                <span id="hud-bombs">💣💣</span> 核弹
             </button>
         </div>
 
@@ -68,10 +74,10 @@
             <div class="game-subtitle">THUNDER FIGHTER</div>
             
             <div class="feature-list">
-                <p>🚀 <strong>战机升级</strong>：拾取 <strong>P</strong> 勋章强化主炮，满阶开启<strong>暴走形态</strong></p>
-                <p>🛡️ <strong>能量护盾</strong>：拾取 <strong>S</strong> 修复护盾，抵挡强敌致命创伤</p>
-                <p>💣 <strong>雷霆核弹</strong>：按 <strong>B 键</strong> 或点击底部核弹，释放全屏 EMP 清除弹幕</p>
-                <p>🎯 <strong>战斗操控</strong>：支持<strong>鼠标指针对准/拖拽</strong>、<strong>WASD/方向键</strong>平移</p>
+                <p>👆 <strong>防遮挡触控</strong>：单指在屏幕<strong>任意位置滑动</strong>即可平滑微操，视线完全开阔！</p>
+                <p>💥 <strong>雷霆核弹</strong>：点击右下角<strong>核弹按钮</strong>或<strong>双击全屏任意位置</strong>释放全屏 EMP 清障！</p>
+                <p>🚀 <strong>武器升级</strong>：拾取 <strong>P</strong> 强化主炮，满阶开启<strong>极光暴走形态</strong></p>
+                <p>🛡️ <strong>能量护盾</strong>：拾取 <strong>S</strong> 修复护盾，免受致命直击</p>
             </div>
 
             <button class="btn-primary" id="start-btn">启 动 战 机</button>

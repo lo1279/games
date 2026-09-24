@@ -29,8 +29,7 @@ class Dice3DEngine {
 
         // 相机
         this.camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-        this.camera.position.set(0, 10, 12);
-        this.camera.lookAt(0, 0, 0);
+        this.updateCameraResponsive(width, height);
 
         // 渲染器
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -592,12 +591,31 @@ class Dice3DEngine {
         this.renderer.render(this.scene, this.camera);
     }
 
+    updateCameraResponsive(width, height) {
+        if (!this.camera) return;
+        const aspect = width / height;
+        this.camera.aspect = aspect;
+
+        // 针对窄屏手机竖屏，动态调整FOV与相机高度距离，防止3D托盘与骰子边缘被切掉
+        if (width < 450) {
+            this.camera.fov = 52;
+            this.camera.position.set(0, 11.5, 13.8);
+        } else if (width < 640) {
+            this.camera.fov = 46;
+            this.camera.position.set(0, 10.8, 13.0);
+        } else {
+            this.camera.fov = 40;
+            this.camera.position.set(0, 10, 12);
+        }
+        this.camera.lookAt(0, 0, 0);
+        this.camera.updateProjectionMatrix();
+    }
+
     onResize() {
         if (!this.container || !this.renderer) return;
         const width = this.container.clientWidth;
         const height = this.container.clientHeight;
-        this.camera.aspect = width / height;
-        this.camera.updateProjectionMatrix();
+        this.updateCameraResponsive(width, height);
         this.renderer.setSize(width, height);
     }
 }

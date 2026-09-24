@@ -1,15 +1,18 @@
-/* 基础与变量重置 */
+/* 基础重置与设计令牌 */
 :root {
-    --bg-dark: #0a0b12;
-    --card-bg: rgba(20, 24, 38, 0.75);
-    --border-color: rgba(90, 105, 150, 0.25);
-    --border-glow: rgba(0, 240, 240, 0.35);
+    --bg-dark: #090a10;
+    --card-bg: rgba(18, 22, 36, 0.75);
+    --border-color: rgba(90, 105, 150, 0.22);
+    --border-glow: rgba(0, 240, 240, 0.4);
     --text-primary: #e6edf8;
     --text-muted: #8d9bb5;
     --accent-cyan: #00f0f0;
     --accent-pink: #ff2277;
+    --accent-orange: #ffaa00;
     --accent-purple: #aa33ff;
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --board-width: 320px;
+    --board-height: 640px;
 }
 
 * {
@@ -18,74 +21,122 @@
     padding: 0;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overscroll-behavior: none;
+    -webkit-overscroll-behavior: none;
+    touch-action: none;
 }
 
 body {
     background-color: var(--bg-dark);
     background-image: 
-        radial-gradient(circle at 50% 20%, rgba(30, 40, 75, 0.6) 0%, transparent 60%),
-        radial-gradient(circle at 80% 80%, rgba(20, 15, 40, 0.6) 0%, transparent 50%);
+        radial-gradient(circle at 50% 15%, rgba(35, 45, 80, 0.5) 0%, transparent 65%),
+        radial-gradient(circle at 80% 85%, rgba(25, 20, 50, 0.5) 0%, transparent 55%);
     color: var(--text-primary);
     font-family: var(--font-family);
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 20px;
-    overflow-x: hidden;
+    justify-content: space-between;
+    padding: env(safe-area-inset-top, 8px) 12px env(safe-area-inset-bottom, 8px) 12px;
 }
 
-/* 顶部标题 */
+/* ==========================================
+   1. 顶部 Header 状态栏
+   ========================================== */
 .game-header {
-    text-align: center;
-    margin-bottom: 20px;
+    width: 100%;
+    max-width: 800px;
+    flex-shrink: 0;
+    padding: 6px 4px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .game-title {
-    font-size: 2.2rem;
+    font-size: 1.6rem;
     font-weight: 900;
-    letter-spacing: 6px;
+    letter-spacing: 4px;
     background: linear-gradient(135deg, #00f0f0, #bb00ff, #ff2255);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 25px rgba(0, 240, 240, 0.4);
+    text-shadow: 0 0 18px rgba(0, 240, 240, 0.4);
     text-transform: uppercase;
 }
 
-.game-subtitle {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    letter-spacing: 2px;
-    margin-top: 4px;
+.header-actions {
+    display: flex;
+    gap: 8px;
 }
 
-/* 游戏舞台整体布局 */
+.icon-btn {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+}
+
+.icon-btn:active {
+    transform: scale(0.92);
+    border-color: var(--accent-cyan);
+    background: rgba(0, 240, 240, 0.15);
+}
+
+/* ==========================================
+   2. 游戏舞台整体布局 (Game Wrapper)
+   ========================================== */
 .game-wrapper {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    gap: 20px;
-    max-width: 900px;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
     width: 100%;
+    max-width: 860px;
 }
 
-/* 侧边信息栏面板 */
+/* 侧边信息栏 (Side Panel) */
 .side-panel {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    width: 140px;
+    gap: 12px;
+    width: 130px;
+    flex-shrink: 0;
 }
 
-/* 卡片通用样式 (Glassmorphism) */
+/* 玻璃拟态卡片 */
 .glass-box {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    border-radius: 10px;
+    padding: 10px 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -93,73 +144,77 @@ body {
     transition: border-color 0.2s;
 }
 
-.glass-box:hover {
-    border-color: var(--border-glow);
-}
-
 .box-title {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--text-muted);
-    letter-spacing: 1.5px;
-    margin-bottom: 8px;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
     text-transform: uppercase;
 }
 
 .box-value {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 800;
     color: #ffffff;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
 
 .box-value.highlight {
     color: var(--accent-cyan);
-    text-shadow: 0 0 12px rgba(0, 240, 240, 0.5);
+    text-shadow: 0 0 12px rgba(0, 240, 240, 0.45);
 }
 
-/* 预览与暂存小画布 */
 .preview-canvas {
-    width: 96px;
-    height: 96px;
-    background: rgba(10, 12, 20, 0.8);
-    border-radius: 8px;
+    width: 84px;
+    height: 84px;
+    background: rgba(10, 12, 20, 0.85);
+    border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* 主游戏舞台容器 */
+/* 主画布容器 (Board Container) */
 .board-container {
     position: relative;
-    padding: 8px;
-    background: rgba(15, 18, 30, 0.9);
-    border: 2px solid rgba(0, 240, 240, 0.3);
-    border-radius: 14px;
+    padding: 6px;
+    background: rgba(15, 18, 30, 0.95);
+    border: 2px solid rgba(0, 240, 240, 0.35);
+    border-radius: 12px;
     box-shadow: 
-        0 0 30px rgba(0, 240, 240, 0.15),
-        inset 0 0 20px rgba(0, 0, 0, 0.8);
+        0 0 25px rgba(0, 240, 240, 0.18),
+        inset 0 0 15px rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 100%;
 }
 
 #board {
     display: block;
-    background: #0d0f17;
-    border-radius: 8px;
-    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9);
+    background: #0c0e15;
+    border-radius: 6px;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
 }
 
-/* 游戏状态浮层 (Ready / Paused / Game Over) */
+/* 遮罩层 (Overlay) */
 .overlay {
     position: absolute;
-    inset: 8px;
-    background: rgba(8, 10, 18, 0.85);
-    backdrop-filter: blur(6px);
+    inset: 6px;
+    background: rgba(8, 10, 18, 0.88);
+    backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: 6px;
     z-index: 10;
     transition: opacity 0.2s ease;
+    padding: 20px;
+    text-align: center;
 }
 
 .overlay.hidden {
@@ -168,43 +223,34 @@ body {
 }
 
 .overlay-title {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 900;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     color: #ffffff;
-    text-shadow: 0 0 20px var(--accent-cyan);
+    text-shadow: 0 0 16px var(--accent-cyan);
     margin-bottom: 8px;
 }
 
 .overlay-subtitle {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
-/* 按钮组 */
-.control-buttons {
-    display: flex;
-    gap: 12px;
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
+.overlay-btn {
+    margin-top: 10px;
 }
 
 .btn {
     appearance: none;
-    outline: none;
     border: none;
-    padding: 10px 22px;
-    font-size: 0.95rem;
+    padding: 12px 28px;
+    font-size: 1rem;
     font-weight: 700;
     letter-spacing: 1px;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .btn-primary {
@@ -213,119 +259,208 @@ body {
     box-shadow: 0 4px 15px rgba(0, 240, 240, 0.4);
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 240, 240, 0.6);
-}
-
 .btn-primary:active {
-    transform: translateY(1px);
+    transform: scale(0.96);
 }
 
-.btn-secondary {
-    background: rgba(40, 48, 75, 0.7);
-    color: var(--text-primary);
+/* ==========================================
+   3. 移动端触控虚拟手柄 (Touch Controller)
+   ========================================== */
+.touch-controller {
+    display: none;
+    width: 100%;
+    max-width: 500px;
+    flex-shrink: 0;
+    padding: 8px 4px 4px 4px;
+    gap: 12px;
+}
+
+/* 左手方向簇 (D-Pad) */
+.dpad-cluster {
+    display: flex;
+    flex: 1;
+    gap: 8px;
+}
+
+/* 右手动作簇 (Action Cluster) */
+.action-cluster {
+    display: flex;
+    flex: 1.1;
+    gap: 8px;
+}
+
+.touch-btn {
+    flex: 1;
+    height: 52px;
+    background: rgba(26, 32, 50, 0.9);
     border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    touch-action: manipulation;
+    cursor: pointer;
+    transition: transform 0.08s, background-color 0.08s;
 }
 
-.btn-secondary:hover {
-    background: rgba(55, 65, 100, 0.9);
-    border-color: rgba(255, 255, 255, 0.3);
+.touch-btn:active {
+    transform: scale(0.92);
+    background: var(--accent-cyan);
+    color: #070913;
+    box-shadow: 0 0 15px rgba(0, 240, 240, 0.6);
 }
 
-.btn-secondary.muted {
+.btn-action-hold {
+    font-size: 0.85rem;
+    color: var(--accent-orange);
+    border-color: rgba(255, 170, 0, 0.3);
+}
+
+.btn-action-rotate {
+    font-size: 0.95rem;
+    color: var(--accent-cyan);
+    border-color: rgba(0, 240, 240, 0.4);
+}
+
+.btn-action-drop {
+    font-size: 0.9rem;
     color: var(--accent-pink);
     border-color: rgba(255, 34, 119, 0.4);
 }
 
-/* 键盘操作说明卡片 */
+/* ==========================================
+   4. 桌面端键盘说明
+   ========================================== */
 .controls-guide {
-    margin-top: 15px;
     width: 100%;
-    max-width: 600px;
+    max-width: 680px;
     background: rgba(18, 22, 34, 0.6);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 0.8rem;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.75rem;
     color: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 6px;
 }
 
 .controls-guide-title {
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     text-align: center;
 }
 
 .controls-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
     text-align: center;
 }
 
 .key-badge {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 1px 5px;
+    border-radius: 3px;
     font-family: monospace;
     font-size: 0.75rem;
-    margin-right: 4px;
 }
 
-/* 移动端/触控虚拟手柄 */
-.touch-controls {
-    display: none;
-    margin-top: 18px;
-    width: 100%;
-    max-width: 380px;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
+/* ==========================================
+   5. 手机/移动端竖屏极速响应 (Mobile Breakpoint)
+   ========================================== */
+@media (max-width: 768px) {
+    body {
+        padding: env(safe-area-inset-top, 6px) 6px env(safe-area-inset-bottom, 8px) 6px;
+    }
 
-.touch-btn {
-    background: rgba(30, 36, 56, 0.85);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 14px;
-    border-radius: 10px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    touch-action: manipulation;
-}
+    .game-header {
+        padding: 4px 6px;
+    }
 
-.touch-btn:active {
-    background: var(--accent-cyan);
-    color: #070913;
-}
+    .game-title {
+        font-size: 1.3rem;
+        letter-spacing: 3px;
+    }
 
-/* 响应式调整 */
-@media (max-width: 680px) {
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.95rem;
+    }
+
     .game-wrapper {
-        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+        justify-content: space-around;
         align-items: center;
     }
 
+    /* 侧边信息栏收缩为竖排挂在主舞台两侧 */
     .side-panel {
-        flex-direction: row;
-        width: 100%;
-        max-width: 340px;
-        justify-content: space-between;
+        width: 60px;
+        gap: 6px;
+    }
+
+    .glass-box {
+        padding: 6px 2px;
+        border-radius: 8px;
+    }
+
+    .box-title {
+        font-size: 0.55rem;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+
+    .box-value {
+        font-size: 0.95rem;
     }
 
     .preview-canvas {
-        width: 64px;
-        height: 64px;
+        width: 48px;
+        height: 48px;
     }
 
-    .touch-controls {
-        display: grid;
+    /* 主舞台自适应缩放 */
+    .board-container {
+        padding: 4px;
+        border-width: 1.5px;
+        max-width: calc(100% - 132px);
     }
 
-    .controls-grid {
-        grid-template-columns: 1fr 1fr;
+    #board {
+        max-height: calc(100dvh - 170px);
+        max-width: 100%;
+    }
+
+    /* 展开移动端虚拟手柄 */
+    .touch-controller {
+        display: flex;
+    }
+
+    /* 隐藏桌面端键盘说明 */
+    .controls-guide {
+        display: none;
+    }
+}
+
+/* 极小屏幕极限适配（如 iPhone SE / 屏高较小设备） */
+@media (max-height: 640px) and (max-width: 768px) {
+    .touch-btn {
+        height: 44px;
+        font-size: 1.1rem;
+    }
+    .preview-canvas {
+        width: 40px;
+        height: 40px;
+    }
+    .game-title {
+        font-size: 1.1rem;
     }
 }

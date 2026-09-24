@@ -1,0 +1,7 @@
+/** 全局基础样式 **/
+page {
+  background-color: #090a10;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}

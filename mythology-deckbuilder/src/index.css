@@ -1,12 +1,22 @@
 @import "tailwindcss";
 
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  body {
+  html, body {
     margin: 0;
     padding: 0;
     background-color: #090a0f;
@@ -14,7 +24,25 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     overflow-x: hidden;
     min-height: 100vh;
+    min-height: 100dvh;
+    touch-action: manipulation;
   }
+}
+
+/* 微信小程序与移动端安全区辅助类 */
+.safe-top {
+  padding-top: max(12px, var(--sat));
+}
+
+.safe-bottom {
+  padding-bottom: max(12px, var(--sab));
+}
+
+.safe-area-container {
+  padding-top: max(8px, var(--sat));
+  padding-bottom: max(12px, var(--sab));
+  padding-left: max(8px, var(--sal));
+  padding-right: max(8px, var(--sar));
 }
 
 /* 游戏发光效果与卡牌边框特效 */
@@ -34,13 +62,25 @@
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 15px rgba(239, 68, 68, 0.2);
 }
 
-.card-hover-fx {
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+/* 桌面端 Hover 动效 (在触屏设备上不强依赖) */
+@media (hover: hover) and (pointer: fine) {
+  .card-hover-fx {
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .card-hover-fx:hover {
+    transform: translateY(-20px) scale(1.06);
+    z-index: 50;
+  }
 }
 
-.card-hover-fx:hover {
-  transform: translateY(-24px) scale(1.08);
-  z-index: 50;
+/* 移动端卡牌横向流畅平滑滑动 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* 呼吸动画与受击抖动 */
@@ -65,8 +105,8 @@
 
 /* 自定义暗色滚动条 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: #111827;

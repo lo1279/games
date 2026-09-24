@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "pages/index/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "雷霆战机",
+    "navigationBarBackgroundColor": "#060814",
+    "navigationBarTextStyle": "white",
+    "navigationStyle": "custom",
+    "backgroundColor": "#030712"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

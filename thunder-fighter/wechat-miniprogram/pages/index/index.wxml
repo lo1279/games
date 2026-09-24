@@ -1,0 +1,9 @@
+<!-- 雷霆战机全屏容器 -->
+<view class="container">
+  <web-view 
+    src="{{gameUrl}}" 
+    bindmessage="onMessage"
+    bindload="onLoadSuccess"
+    binderror="onLoadError">
+  </web-view>
+</view>

@@ -245,6 +245,66 @@ export const App: React.FC = () => {
     }
   };
 
+  // 移动端 Touch 触控事件适配（微信小程序与手机浏览器核心兼容）
+  const getCanvasCoordsFromClient = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  };
+
+  const handleCanvasTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const coords = getCanvasCoordsFromClient(touch.clientX, touch.clientY);
+    if (!coords) return;
+
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    // 1. 如果正在放置武将
+    if (placingHeroId) {
+      const col = Math.floor(coords.x / 50);
+      const row = Math.floor(coords.y / 50);
+      const success = engine.placeTower(placingHeroId, col, row);
+      if (success) {
+        setPlacingHeroId(null);
+        engine.placingHeroId = null;
+      }
+      return;
+    }
+
+    // 2. 否则检测点击场上的武将
+    let clickedTower: PlacedTower | null = null;
+    for (const t of engine.towers) {
+      const dist = Math.hypot(t.x - coords.x, t.y - coords.y);
+      if (dist <= 26) {
+        clickedTower = t;
+        break;
+      }
+    }
+    engine.selectTower(clickedTower);
+  };
+
+  const handleCanvasTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const coords = getCanvasCoordsFromClient(touch.clientX, touch.clientY);
+    if (!coords || !engineRef.current) return;
+    engineRef.current.mousePos = coords;
+  };
+
+  const handleCanvasTouchEnd = () => {
+    if (engineRef.current) {
+      engineRef.current.mousePos = null;
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen bg-stone-950 select-none overflow-hidden text-stone-100">
       {/* 顶部导航控制栏 */}
@@ -264,11 +324,11 @@ export const App: React.FC = () => {
         onChangeStage={handleSelectStage}
       />
 
-      {/* 主工作区 */}
-      <div className="flex-1 flex overflow-hidden relative">
+      {/* 主工作区：移动端上下分层 (flex-col)，桌面端左右分层 (md:flex-row) */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         {/* 游戏战场 Canvas 区域 */}
-        <div className="flex-1 flex items-center justify-center bg-stone-950 p-3 relative">
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-900/60 bg-stone-900">
+        <div className="flex-1 flex items-center justify-center bg-stone-950 p-1 sm:p-2 md:p-3 relative overflow-hidden min-h-0">
+          <div className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-900/60 bg-stone-900 max-w-full max-h-full flex items-center justify-center">
             <canvas
               ref={canvasRef}
               width={1000}
@@ -277,11 +337,15 @@ export const App: React.FC = () => {
               onMouseMove={handleCanvasMouseMove}
               onMouseLeave={handleCanvasMouseLeave}
               onContextMenu={handleCanvasContextMenu}
-              className="cursor-crosshair block"
+              onTouchStart={handleCanvasTouchStart}
+              onTouchMove={handleCanvasTouchMove}
+              onTouchEnd={handleCanvasTouchEnd}
+              className="cursor-crosshair block touch-none"
               style={{
-                maxWidth: 'calc(100vw - 320px)',
-                maxHeight: 'calc(100vh - 80px)',
+                maxWidth: '100%',
+                maxHeight: '100%',
                 aspectRatio: '1000 / 600',
+                objectFit: 'contain',
               }}
             />
 

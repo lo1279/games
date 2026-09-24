@@ -601,3 +601,101 @@ body.theme-classic .kbd {
   border: 1px solid #808080;
   color: #000;
 }
+
+/* ============================================================
+   移动端专属模式切换栏样式 (Mobile Mode Bar)
+   ============================================================ */
+.mobile-mode-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.mobile-mode-btn {
+  flex: 1;
+  max-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--btn-text);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.mobile-mode-btn .mode-icon {
+  font-size: 18px;
+}
+
+.mobile-mode-btn.active.reveal-mode {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.mobile-mode-btn.active.flag-mode {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #ef4444;
+  color: #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+}
+
+body.theme-classic .mobile-mode-btn {
+  border-radius: 0;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-right: 2px solid #808080;
+  border-bottom: 2px solid #808080;
+  background: #c0c0c0;
+  color: #000;
+}
+
+body.theme-classic .mobile-mode-btn.active {
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  background: #dfdfdf;
+  font-weight: bold;
+}
+
+/* 手机端响应式微调 */
+@media (max-width: 600px) {
+  body {
+    padding: 8px 4px;
+    justify-content: flex-start;
+  }
+
+  .game-window {
+    padding: 10px 8px;
+    width: 100vw;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  body.theme-modern {
+    --cell-size: 30px;
+  }
+
+  .board-container {
+    max-height: 60vh;
+  }
+
+  .led-display {
+    font-size: 22px;
+    min-width: 58px;
+    padding: 2px 6px;
+  }
+}

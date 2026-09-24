@@ -1,0 +1,141 @@
+<!-- pages/index/index.wxml -->
+<view class="container">
+  <!-- 顶部控制与工具栏 -->
+  <view class="toolbar">
+    <view class="toolbar-left">
+      <picker bindchange="onDifficultyChange" value="{{diffIndex}}" range="{{diffOptions}}" range-key="label">
+        <view class="tool-btn picker-btn">
+          <text class="tool-icon">🎮</text>
+          <text>{{diffOptions[diffIndex].shortLabel}}</text>
+          <text class="arrow">▼</text>
+        </view>
+      </picker>
+      <view class="tool-btn" bindtap="showRecordsModal">
+        <text class="tool-icon">🏆</text>
+        <text>纪录</text>
+      </view>
+    </view>
+
+    <view class="toolbar-right">
+      <view class="tool-btn" bindtap="resetBoardPosition">
+        <text class="tool-icon">🎯</text>
+        <text>居中</text>
+      </view>
+      <view class="tool-btn" bindtap="toggleSound">
+        <text class="tool-icon">{{soundMuted ? '🔇' : '🔊'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- HUD 仪表盘 -->
+  <view class="hud-panel">
+    <view class="led-display" title="剩余地雷">{{formattedMines}}</view>
+    <view class="smiley-btn" bindtap="resetGame" hover-class="btn-active">
+      <text class="smiley-icon">{{smileyIcon}}</text>
+    </view>
+    <view class="led-display" title="耗时秒数">{{formattedTime}}</view>
+  </view>
+
+  <!-- 棋盘区域：使用原生 movable-view 实现极致流畅的双指缩放与拖拽 -->
+  <movable-area class="board-area">
+    <movable-view 
+      class="board-view" 
+      direction="all" 
+      inertia="true" 
+      out-of-bounds="true" 
+      scale="true" 
+      scale-min="0.4" 
+      scale-max="2.5" 
+      scale-value="{{scaleValue}}"
+      x="{{boardX}}" 
+      y="{{boardY}}"
+      bindscale="onBoardScale"
+    >
+      <view class="board-grid" style="grid-template-columns: repeat({{cols}}, {{cellSize}}px);">
+        <block wx:for="{{grid}}" wx:for-item="row" wx:for-index="r" wx:key="r">
+          <block wx:for="{{row}}" wx:for-item="cell" wx:for-index="c" wx:key="c">
+            <view 
+              class="cell {{cell.classNames}}" 
+              style="width: {{cellSize}}px; height: {{cellSize}}px;"
+              data-row="{{r}}" 
+              data-col="{{c}}" 
+              bindtap="onCellTap" 
+              bindlongpress="onCellLongPress"
+            >
+              <text wx:if="{{cell.state === 'FLAGGED'}}">🚩</text>
+              <text wx:elif="{{cell.state === 'QUESTION'}}">❓</text>
+              <text wx:elif="{{cell.state === 'REVEALED' && cell.isMine}}">💣</text>
+              <text wx:elif="{{cell.state === 'REVEALED' && cell.adjacentMines > 0}}" class="num-{{cell.adjacentMines}}">{{cell.adjacentMines}}</text>
+              <text wx:elif="{{cell.isFalseFlag}}">❌</text>
+            </view>
+          </block>
+        </block>
+      </view>
+    </movable-view>
+  </movable-area>
+
+  <!-- 底部手机端专属：触屏操作模式切换栏 (常驻大按钮) -->
+  <view class="mode-bar">
+    <view 
+      class="mode-btn {{touchMode === 'REVEAL' ? 'mode-active reveal-active' : ''}}" 
+      data-mode="REVEAL" 
+      bindtap="switchTouchMode"
+    >
+      <text class="mode-icon">⛏️</text>
+      <view class="mode-texts">
+        <text class="mode-title">挖掘模式</text>
+        <text class="mode-sub">轻触翻开方块</text>
+      </view>
+    </view>
+
+    <view 
+      class="mode-btn {{touchMode === 'FLAG' ? 'mode-active flag-active' : ''}}" 
+      data-mode="FLAG" 
+      bindtap="switchTouchMode"
+    >
+      <text class="mode-icon">🚩</text>
+      <view class="mode-texts">
+        <text class="mode-title">插旗模式</text>
+        <text class="mode-sub">轻触快速标记</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 弹窗通用遮罩 -->
+  <view class="modal-overlay" wx:if="{{showModal}}">
+    <!-- 排行榜弹窗 -->
+    <view class="modal-content" wx:if="{{modalType === 'RECORDS'}}">
+      <view class="modal-title">🏆 最佳通关记录</view>
+      <view class="records-list">
+        <view class="record-item">
+          <text class="record-label">初级 (9×9)</text>
+          <text class="record-val">{{records.beginner ? records.beginner + ' 秒' : '暂无记录'}}</text>
+        </view>
+        <view class="record-item">
+          <text class="record-label">中级 (16×16)</text>
+          <text class="record-val">{{records.intermediate ? records.intermediate + ' 秒' : '暂无记录'}}</text>
+        </view>
+        <view class="record-item">
+          <text class="record-label">高级 (30×16)</text>
+          <text class="record-val">{{records.expert ? records.expert + ' 秒' : '暂无记录'}}</text>
+        </view>
+      </view>
+      <view class="modal-buttons">
+        <button class="btn btn-secondary" bindtap="clearRecords">清空记录</button>
+        <button class="btn btn-primary" bindtap="closeModal">关闭</button>
+      </view>
+    </view>
+
+    <!-- 胜利结算弹窗 -->
+    <view class="modal-content" wx:if="{{modalType === 'WIN'}}">
+      <view class="modal-title">🎉 挑战成功！</view>
+      <view class="win-detail">
+        <text>通关难度：{{diffOptions[diffIndex].label}}</text>
+        <text class="win-time">耗时：{{gameTime}} 秒</text>
+      </view>
+      <view class="modal-buttons">
+        <button class="btn btn-primary" bindtap="onWinPlayAgain">再来一局</button>
+      </view>
+    </view>
+  </view>
+</view>

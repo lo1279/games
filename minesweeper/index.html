@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>扫雷 (Minesweeper)</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -57,10 +57,22 @@
       <div class="board" id="board"></div>
     </main>
 
+    <!-- 移动端专属操作模式切换栏 -->
+    <div class="mobile-mode-bar" id="mobile-mode-bar">
+      <button class="mobile-mode-btn active reveal-mode" id="btn-mode-reveal" data-mode="REVEAL">
+        <span class="mode-icon">⛏️</span>
+        <span class="mode-title">挖掘模式</span>
+      </button>
+      <button class="mobile-mode-btn flag-mode" id="btn-mode-flag" data-mode="FLAG">
+        <span class="mode-icon">🚩</span>
+        <span class="mode-title">插旗模式</span>
+      </button>
+    </div>
+
     <!-- 底部操作说明 -->
     <footer class="footer-tips">
       <p><span class="kbd">左键</span> 翻开方格 ｜ <span class="kbd">右键 / 长按</span> 插旗标记 (🚩/❓)</p>
-      <p><span class="kbd">双击 / 左右键同时按</span> 快捷展开周围 (Chording)</p>
+      <p><span class="kbd">双击 / 滚轮中键</span> 快捷展开周围 (Chording)</p>
     </footer>
   </div>
 

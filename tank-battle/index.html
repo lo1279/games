@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>坦克大战 (Tank Battle) - 经典FC复刻版</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
   <link rel="stylesheet" href="style.css">
@@ -12,10 +12,30 @@
   <!-- 顶部标题 -->
   <header class="game-header">
     <h1 class="game-title">
-      <span>🛡️</span> 经典坦克大战 (TANK BATTLE) <span>⭐</span>
+      <span>🛡️</span> 经典坦克大战 <span>⭐</span>
     </h1>
     <p class="game-subtitle">守护老鹰基地 · 击溃敌军装甲 · 升级重炮破钢</p>
   </header>
+
+  <!-- 移动端专属紧凑顶部 HUD (手机自适应展示) -->
+  <section class="mobile-top-hud">
+    <div class="mobile-hud-item">
+      <span class="mobile-hud-label">关卡:</span>
+      <span class="mobile-hud-val" id="mHudStage">1</span>
+    </div>
+    <div class="mobile-hud-item">
+      <span class="mobile-hud-label">得分:</span>
+      <span class="mobile-hud-val" id="mHudScore">0</span>
+    </div>
+    <div class="mobile-hud-item">
+      <span class="mobile-hud-label">生命:</span>
+      <span class="mobile-hud-val" id="mHudLives" style="color: #2ed573;">3</span>
+    </div>
+    <div class="mobile-hud-item">
+      <span class="mobile-hud-label">敌军剩:</span>
+      <span class="mobile-hud-val" id="mHudEnemyCount" style="color: #ff4757;">20</span>
+    </div>
+  </section>
 
   <!-- 街机框体主容器 -->
   <main class="arcade-container">
@@ -25,7 +45,7 @@
       <div id="crtOverlay" class="crt-overlay"></div>
     </div>
 
-    <!-- 侧边栏 HUD -->
+    <!-- 桌面端经典侧边栏 HUD -->
     <aside class="hud-sidebar">
       <div class="hud-card">
         <div class="hud-label">当前关卡</div>
@@ -62,7 +82,45 @@
     </aside>
   </main>
 
-  <!-- 操作指引面板 -->
+  <!-- 📱 移动端/微信小程序专属掌机触控面板 (Handheld Gamepad) -->
+  <section class="touch-controls">
+    <div class="gamepad-main">
+      <!-- 1. 左侧滑动十字方向盘 (Virtual D-Pad) -->
+      <div class="dpad-container" id="dpad">
+        <div class="dpad-cross">
+          <div class="d-arrow d-up" data-dir="0">▲</div>
+          <div class="d-arrow d-right" data-dir="1">▶</div>
+          <div class="d-arrow d-down" data-dir="2">▼</div>
+          <div class="d-arrow d-left" data-dir="3">◀</div>
+          <div class="d-center"></div>
+        </div>
+      </div>
+
+      <!-- 2. 中部功能按键排 -->
+      <div class="gamepad-middle">
+        <div class="system-btn-group">
+          <button id="mobilePauseBtn" class="sys-btn">⏸️ 暂停</button>
+          <button id="mobileRestartBtn" class="sys-btn">🔄 重开</button>
+          <button id="mobileMuteBtn" class="sys-btn">🔊</button>
+        </div>
+        <div style="font-size: 10px; color: #747d8c; text-align: center;">TANK BATTLE</div>
+      </div>
+
+      <!-- 3. 右侧红宝石开火按键群 (A / B) -->
+      <div class="action-pad">
+        <div class="btn-circle btn-fire-b" id="touchRapidBtn">
+          <span>B</span>
+          <span class="btn-sub-label">连发</span>
+        </div>
+        <div class="btn-circle btn-fire-a" id="touchFireBtn">
+          <span>A</span>
+          <span class="btn-sub-label">开火</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 底部桌面端操作说明面板 -->
   <section class="instructions-panel">
     <div class="instruction-item">
       <span>移动:</span>
@@ -71,15 +129,13 @@
       <span class="key-badge">↑</span><span class="key-badge">←</span><span class="key-badge">↓</span><span class="key-badge">→</span>
     </div>
     <div class="instruction-item">
-      <span>开火射击:</span>
-      <span class="key-badge">J</span> <span>或</span> <span class="key-badge">空格</span> <span>或</span> <span class="key-badge">K</span>
+      <span>开火:</span>
+      <span class="key-badge">J</span> <span>或</span> <span class="key-badge">空格</span>
     </div>
     <div class="instruction-item">
       <span>暂停:</span>
       <span class="key-badge">P</span>
-    </div>
-    <div class="instruction-item">
-      <span>重新开始:</span>
+      <span style="margin-left: 8px;">重开:</span>
       <span class="key-badge">R</span>
     </div>
     <div class="instruction-item">
@@ -88,20 +144,7 @@
     </div>
   </section>
 
-  <!-- 移动触控摇杆与按键 (适配手机或触控屏) -->
-  <section class="touch-controls" id="touchControls">
-    <div class="d-pad">
-      <div class="d-btn d-up" data-key="ArrowUp">▲</div>
-      <div class="d-btn d-left" data-key="ArrowLeft">◀</div>
-      <div class="d-btn d-right" data-key="ArrowRight">▶</div>
-      <div class="d-btn d-down" data-key="ArrowDown">▼</div>
-    </div>
-    <div class="action-pad">
-      <div class="action-btn" id="touchFireBtn">开火</div>
-    </div>
-  </section>
-
-  <!-- 脚本引入链 (注意依赖顺序) -->
+  <!-- 脚本引入链 -->
   <script src="js/config.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/levels.js"></script>
@@ -112,11 +155,15 @@
   <script src="js/tank.js"></script>
   <script src="js/player.js"></script>
   <script src="js/enemy.js"></script>
+  <script src="js/touch.js"></script>
   <script src="js/game.js"></script>
 
-  <!-- UI 辅助交互绑定 -->
+  <!-- UI 辅助交互与触控初始化 -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // 初始化移动端/微信触控手柄控制器
+      window.touchController = new TouchController(window.game);
+
       // 全局交互唤醒 Web Audio API
       const unlockAudio = () => {
         soundEngine.init();
@@ -126,66 +173,51 @@
       window.addEventListener('touchstart', unlockAudio, { once: true });
 
       // 重新开始按钮
-      document.getElementById('restartBtn').addEventListener('click', () => {
-        unlockAudio();
-        if (window.game) window.game.startNewGame();
-      });
+      const restartBtn = document.getElementById('restartBtn');
+      if (restartBtn) {
+        restartBtn.addEventListener('click', () => {
+          unlockAudio();
+          if (window.game) window.game.startNewGame();
+        });
+      }
 
       // 暂停按钮
-      document.getElementById('pauseBtn').addEventListener('click', () => {
-        if (window.game) {
-          if (window.game.state === window.game.STATE.PLAYING) {
-            window.game.state = window.game.STATE.PAUSED;
-          } else if (window.game.state === window.game.STATE.PAUSED) {
-            window.game.state = window.game.STATE.PLAYING;
+      const pauseBtn = document.getElementById('pauseBtn');
+      if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+          if (window.game) {
+            if (window.game.state === window.game.STATE.PLAYING) {
+              window.game.state = window.game.STATE.PAUSED;
+            } else if (window.game.state === window.game.STATE.PAUSED) {
+              window.game.state = window.game.STATE.PLAYING;
+            }
           }
-        }
-      });
+        });
+      }
 
       // 静音按钮
-      document.getElementById('muteBtn').addEventListener('click', () => {
-        const isMuted = soundEngine.toggleMute();
-        window.game.updateMuteUI(isMuted);
-      });
+      const muteBtn = document.getElementById('muteBtn');
+      if (muteBtn) {
+        muteBtn.addEventListener('click', () => {
+          const isMuted = soundEngine.toggleMute();
+          window.game.updateMuteUI(isMuted);
+        });
+      }
 
       // CRT 滤镜切换
       const crtOverlay = document.getElementById('crtOverlay');
       const crtBtn = document.getElementById('crtToggleBtn');
-      crtBtn.addEventListener('click', () => {
-        if (crtOverlay.style.display === 'none') {
-          crtOverlay.style.display = 'block';
-          crtBtn.innerText = '📺 CRT复古滤镜: 开';
-        } else {
-          crtOverlay.style.display = 'none';
-          crtBtn.innerText = '📺 CRT复古滤镜: 关';
-        }
-      });
-
-      // 触控支持
-      const dButtons = document.querySelectorAll('.d-btn');
-      dButtons.forEach(btn => {
-        const key = btn.dataset.key;
-        btn.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          if (window.game) window.game.keys[key] = true;
-        });
-        btn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          if (window.game) window.game.keys[key] = false;
-        });
-      });
-
-      const touchFire = document.getElementById('touchFireBtn');
-      touchFire.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (window.game) {
-          if (window.game.state === window.game.STATE.TITLE) {
-            window.game.startNewGame();
+      if (crtBtn && crtOverlay) {
+        crtBtn.addEventListener('click', () => {
+          if (crtOverlay.style.display === 'none') {
+            crtOverlay.style.display = 'block';
+            crtBtn.innerText = '📺 CRT复古滤镜: 开';
           } else {
-            window.game.playerShoot();
+            crtOverlay.style.display = 'none';
+            crtBtn.innerText = '📺 CRT复古滤镜: 关';
           }
-        }
-      });
+        });
+      }
     });
   </script>
 </body>

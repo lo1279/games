@@ -46,10 +46,10 @@ export const BottomControls: React.FC<BottomControlsProps> = ({
   const fireCdPercent = isFireInCd ? (skillsCooldown.fireCd / skillsCooldown.maxFireCd) * 100 : 0;
 
   return (
-    <div className="absolute bottom-4 right-80 flex items-center gap-3 z-20">
+    <div className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 flex flex-wrap items-center justify-end gap-1.5 sm:gap-3 z-20 pointer-events-auto">
       {/* 主公锦囊妙计快捷栏 */}
-      <div className="bg-stone-900/90 border border-amber-900/50 rounded-xl p-1.5 flex items-center gap-2 backdrop-blur-md shadow-xl">
-        <div className="text-[11px] font-bold text-amber-400/80 px-2 flex items-center gap-1 border-r border-stone-800">
+      <div className="bg-stone-900/95 border border-amber-900/60 rounded-xl p-1 sm:p-1.5 flex items-center gap-1 sm:gap-2 backdrop-blur-md shadow-xl">
+        <div className="hidden sm:flex text-[11px] font-bold text-amber-400/80 px-1.5 sm:px-2 items-center gap-1 border-r border-stone-800">
           <span>锦囊</span>
         </div>
 
@@ -57,7 +57,7 @@ export const BottomControls: React.FC<BottomControlsProps> = ({
         <button
           onClick={onCastFreeze}
           disabled={!canCastFreeze}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition btn-press border relative overflow-hidden ${
+          className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition btn-press border relative overflow-hidden ${
             isFreezeInCd
               ? 'bg-stone-900/90 text-sky-400/60 border-sky-950/60 cursor-not-allowed'
               : canAffordFreeze
@@ -130,7 +130,7 @@ export const BottomControls: React.FC<BottomControlsProps> = ({
       <button
         onClick={onStartWave}
         disabled={waveInProgress || allWavesCompleted}
-        className={`px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-2xl transition btn-press border ${
+        className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-2xl transition btn-press border ${
           allWavesCompleted
             ? 'bg-stone-800 text-stone-400 border-stone-700 cursor-not-allowed'
             : waveInProgress
@@ -142,27 +142,27 @@ export const BottomControls: React.FC<BottomControlsProps> = ({
       >
         {waveInProgress ? (
           <>
-            <ShieldAlert size={18} className="animate-spin" />
-            <span>敌军进攻中...</span>
+            <ShieldAlert size={16} className="animate-spin" />
+            <span>进攻中...</span>
           </>
         ) : allWavesCompleted ? (
           <span>全线大捷！</span>
         ) : isPrepping ? (
           <>
-            <Swords size={18} />
+            <Swords size={16} />
             <div className="flex flex-col items-start text-left leading-tight">
-              <span className="font-extrabold text-stone-950">
-                迎击 (第 {currentWave + 1} 波 · {prepSecondsLeft}s 后发兵)
+              <span className="font-extrabold text-stone-950 text-[11px] sm:text-xs">
+                第 {currentWave + 1} 波 · {prepSecondsLeft}s
               </span>
-              <span className="text-[10px] text-stone-900/90 font-medium">
-                [点击立即开战]
+              <span className="text-[9px] text-stone-900/90 font-medium">
+                [立即迎击]
               </span>
             </div>
           </>
         ) : (
           <>
-            <Swords size={18} />
-            <span>擂鼓迎击 (第 {currentWave + 1} 波)</span>
+            <Swords size={16} />
+            <span>迎击 (第 {currentWave + 1} 波)</span>
           </>
         )}
       </button>

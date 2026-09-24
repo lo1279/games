@@ -1,32 +1,128 @@
-# React + TypeScript + Vite
+# 《万神纪元：诸神对决》（Pantheon: Clash of Myths）
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+一款融合**华夏神话**、**希腊神话**与**北欧神话**的轻量级 **Roguelike 卡牌构筑（Deckbuilder）游戏**。  
+专为**移动端手机竖屏**与**微信小程序环境**深度定制，支持单手触屏操作、安全区适配与程序化无依赖音效。
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🎮 游戏特色与核心系统
 
-## React Compiler
+### 1. 三大神话神明与专属神格
+| 神话体系 | 神明英雄 | 特色机制 | 核心被动 (Divine Trait) | 初始核心卡牌 |
+| :--- | :--- | :--- | :--- | :--- |
+| **华夏神话** | **齐天大圣 · 孙悟空** | 破甲 / 连击 / 变化 | **【金刚不坏】**：受到伤害时常驻抵减 4 点；连续打出攻击牌额外附加破甲伤害 | 棍影击、定海神针、筋斗云、毫毛分身 |
+| **希腊神话** | **智慧与战争女神 · 雅典娜** | 圣盾 / 真实反伤 / 智谋 | **【神盾反震】**：回合结束若自身有未被击破的护盾，对敌人反弹等同于护盾 50% 的真实伤害 | 圣盾突刺、埃癸斯神盾、猫头鹰洞见、宙斯雷霆 |
+| **北欧神话** | **雷霆之神 · 托尔** | 感电 / 连锁雷暴 / 充能 | **【雷霆狂怒】**：攻击带有【感电】的敌人时必定触发 1.5 倍暴击，并震慑敌方 | 妙尔尼尔轻击、飞锤回旋、雷霆呼唤、狂战嗜血 |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 2. 跨神话卡牌构筑 (Cross-Mythology Deckbuilding)
+* **战利品三选一**：击败普通敌人或精英怪后，可跨阵营选择神术（例如让孙悟空手持雷神之锤打出感电连击，或雅典娜施展三昧真火灼烧敌人）；
+* **诸神黑市**：可用神晶金币购买跨神话稀有法宝、神器，或在“冥河遗忘之池”洗练精简套牌。
 
-## Expanding the Oxlint configuration
+### 3. 竖向肉鸽爬塔路线 (Roguelike Progression)
+* **遭遇战**：巡海夜叉、狂暴半人马、霜巨人哨兵；
+* **精英领主**：勒拿九头蛇 · 海德拉、魔狼芬里尔之嗣；
+* **诸神圣火**：选择打坐冥想（恢复 35% 生命）或神躯淬炼（上限永久提升 10 点）；
+* **神话奇遇**：昆仑瑶池仙酿、特尔斐神庙神谕、密米尔智慧之泉等深度剧情抉择；
+* **守关终极 BOSS**：灭世黑龙 · 尼德霍格（具备【灭世蓄力】与毁灭全屏龙息机制）。
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+### 4. 纯代码程序化 Web Audio API 音效
+* 零外部大音频文件依赖，出牌、打击、圣盾格挡、雷暴轰鸣、抽牌、胜利号角全由浏览器音频振荡器实时合成，超低延迟且秒级响应。
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+---
+
+## 📱 移动端与微信小程序专属优化
+
+* **上下纵向战场布局 (Vertical Portrait Arena)**：
+  * **顶部状态区**：避让微信小程序胶囊按钮与全面屏刘海（`safe-area-inset-top`），轻量展示持有神器与神晶；
+  * **上半场（敌方魔神）**：直观展示怪物头像、血量条、护盾吸收角标、行动意图气泡与负面状态徽章；
+  * **中场（战况与状态）**：居中对决播报，我方血条、护盾、3点神力法力晶石以及便于单手触达的【结束回合】按钮；
+  * **下半场（手牌滑动槽）**：卡牌尺寸自适应，支持横向平滑滑动。
+* **触屏防误触“点选预览 + 确认打出”机制**：
+  * 单击手牌浮起高亮，即时呼出大字详情面板；
+  * 大拇指最佳热区提供醒目的【▶ 打出】确认按钮，神力不足时自动置灰并提示，杜绝小屏误触。
+* **微信首触手势音频解锁**：
+  * 自动监听全局首次触屏手势（`touchstart`/`pointerdown`）解锁唤醒 `AudioContext`，突破微信内嵌浏览器的音频静音限制。
+
+---
+
+## 🛠️ 技术栈与工程拓扑
+
+* **前端框架**：`React 19` + `TypeScript` + `Vite`
+* **UI 样式**：`Tailwind CSS v4` + 移动端 Safe Area 变量
+* **图标库**：`Lucide React`
+* **粒子动效**：`canvas-confetti`
+* **音频合成**：原生 `Web Audio API` (OscillatorNode / GainNode)
+
+### 项目目录结构
+```text
+mythology-deckbuilder/
+├── index.html                   # 移动端/微信视口与 WebApp 配置
+├── package.json                 # 项目依赖配置
+├── vite.config.ts               # Vite 插件与构建配置
+├── src/
+│   ├── types/                   # 强类型定义 (Card, Hero, Enemy, Relic, MapNode)
+│   ├── data/                    # 神话数据源
+│   │   ├── heroes.ts            # 三大神明属性、被动神格与初始卡组
+│   │   ├── cards.ts             # 跨神话卡牌库 (包含伤害、护盾、连击、感电等效果)
+│   │   ├── enemies.ts           # 阶梯难度敌人与意图 AI 行动逻辑
+│   │   ├── relics.ts            # 定海神针碎片、宙斯雷晶等神话神器
+│   │   └── events.ts            # 神话奇遇事件与多分支抉择
+│   ├── audio/
+│   │   └── soundSynth.ts        # Web Audio API 纯代码程序化音频合成引擎
+│   ├── components/
+│   │   ├── BattleArena.tsx      # 移动端上下纵向战斗舞台与点选出牌交互
+│   │   ├── CardComponent.tsx    # 带有神话主题色、自适应尺寸的卡牌组件
+│   │   ├── HeroSelect.tsx       # 万神殿选神界面 (支持触屏横向切换)
+│   │   ├── MapView.tsx          # 竖向爬塔节点地图
+│   │   ├── RewardModal.tsx      # 战利品卡牌三选一与金币弹窗
+│   │   ├── ShopModal.tsx        # 诸神黑市商品与删牌洗练
+│   │   ├── RestModal.tsx        # 圣火营地休整
+│   │   ├── EventModal.tsx       # 神话奇遇交互
+│   │   └── DeckViewerModal.tsx  # 完整构筑套牌检阅器
+│   ├── App.tsx                  # 核心状态机与回合制战斗逻辑结算引擎
+│   ├── index.css                # 移动端安全区变量、触屏属性与主题样式
+│   └── main.tsx                 # 应用挂载入口
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 🚀 本地开发与真机调试
+
+### 1. 安装依赖
+```bash
+npm install
+```
+
+### 2. 启动本地开发服务 (支持同一 WiFi 手机真机体验)
+```bash
+npm run dev -- --host
+```
+命令行将输出局域网 IP（例如 `http://192.168.x.x:5173/`）。用手机微信或手机浏览器直接访问该链接即可单手体验。
+
+### 3. 生产打包构建
+```bash
+npm run build
+```
+打包后生成的 `dist` 目录可直接部署于任何静态 Web 服务器或云托管平台。
+
+### 4. 产物本地预览
+```bash
+npm run preview
+```
+
+---
+
+## 📲 微信小程序部署指引
+
+### 方式一：微信小程序 Web-View 内嵌（最快上线方案）
+1. 执行 `npm run build` 生成 `dist` 目录；
+2. 将 `dist` 部署至你的安全 HTTPS 域名（如腾讯云 CloudBase、阿里云 OSS、Vercel 等）；
+3. 在微信小程序后台配置该域名为**“业务域名”**；
+4. 在微信小程序工程的任意页面中引入：
+   ```html
+   <web-view src="https://你的线上域名/"></web-view>
+   ```
+5. 即可直接提审发布为微信小程序！
+
+### 方式二：UniApp / Taro 容器包装
+如需将游戏逻辑转为原生小程序组件，可将 `src/components` 与 `src/data` 迁移至 UniApp 或 Taro 的 React 框架中进行小程序原生打包构建。

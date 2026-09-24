@@ -1,6 +1,6 @@
 /**
- * 俄罗斯方块（Tetris）独立运行整合包
- * 支持 file:// 协议直接双击打开，无需本地 HTTP 服务器
+ * 俄罗斯方块（Tetris Neon Edition）独立整合运行包
+ * 支持移动端/手机触控手势、震动反馈、微信内置浏览器与小程序 web-view 极速运行
  */
 
 (function () {
@@ -574,6 +574,7 @@
             this.mainCanvas = document.getElementById('board');
             this.nextCanvas = document.getElementById('next-canvas');
             this.holdCanvas = document.getElementById('hold-canvas');
+            this.boardContainer = document.getElementById('board-container');
 
             this.board = new Board(this.mainCanvas);
             this.nextCtx = this.nextCanvas.getContext('2d');
@@ -594,6 +595,7 @@
             this.btnStart = document.getElementById('btn-start');
             this.btnPause = document.getElementById('btn-pause');
             this.btnSound = document.getElementById('btn-sound');
+            this.btnRestartTop = document.getElementById('btn-restart-top');
 
             this.randomizer = new BagRandomizer();
             this.currentPiece = null;
@@ -617,9 +619,28 @@
             this.animationId = null;
 
             this.initEventListeners();
+            this.initTouchGestures();
             this.drawPreview(this.nextCtx, null);
             this.drawPreview(this.holdCtx, null);
             this.board.draw(null);
+        }
+
+        triggerHaptic(type = 'light') {
+            try {
+                if (window.WeixinJSBridge && window.WeixinJSBridge.invoke) {
+                    window.WeixinJSBridge.invoke('vibrateShort', {});
+                    return;
+                }
+                if (navigator && navigator.vibrate) {
+                    if (type === 'heavy') {
+                        navigator.vibrate(28);
+                    } else if (type === 'medium') {
+                        navigator.vibrate(18);
+                    } else {
+                        navigator.vibrate(10);
+                    }
+                }
+            } catch (e) {}
         }
 
         start() {
@@ -643,7 +664,7 @@
             this.nextPiece = this.randomizer.next();
 
             this.hideOverlay();
-            this.btnPause.textContent = '⏸ 暂停 (P)';
+            if (this.btnPause) this.btnPause.textContent = '⏸';
 
             this.lastTime = performance.now();
             this.dropCounter = 0;
@@ -652,6 +673,7 @@
                 cancelAnimationFrame(this.animationId);
             }
             this.loop(this.lastTime);
+            this.triggerHaptic('medium');
         }
 
         togglePause() {
@@ -659,14 +681,15 @@
 
             this.isPaused = !this.isPaused;
             if (this.isPaused) {
-                this.showOverlay('游戏已暂停', '按 P 键或点击按钮继续');
-                this.btnPause.textContent = '▶ 继续 (P)';
+                this.showOverlay('游戏已暂停', '点击继续按钮或按 P 键恢复');
+                if (this.btnPause) this.btnPause.textContent = '▶';
             } else {
                 this.hideOverlay();
-                this.btnPause.textContent = '⏸ 暂停 (P)';
+                if (this.btnPause) this.btnPause.textContent = '⏸';
                 this.lastTime = performance.now();
                 this.loop(this.lastTime);
             }
+            this.triggerHaptic('light');
         }
 
         loop(time = 0) {
@@ -712,6 +735,7 @@
                 this.addScore(SOFT_DROP_POINTS);
                 sound.playMove();
                 this.dropCounter = 0;
+                this.triggerHaptic('light');
             } else {
                 this.lockCurrentPiece();
             }
@@ -729,6 +753,7 @@
                 this.addScore(droppedRows * HARD_DROP_POINTS);
             }
             sound.playDrop();
+            this.triggerHaptic('heavy');
             this.lockCurrentPiece();
         }
 
@@ -736,6 +761,7 @@
             if (!this.isPlaying || this.isPaused || this.isClearing || !this.currentPiece) return;
             if (this.currentPiece.move(dx, 0, this.board)) {
                 sound.playMove();
+                this.triggerHaptic('light');
             }
         }
 
@@ -743,6 +769,7 @@
             if (!this.isPlaying || this.isPaused || this.isClearing || !this.currentPiece) return;
             if (this.currentPiece.rotate(this.board, clockwise)) {
                 sound.playRotate();
+                this.triggerHaptic('light');
             }
         }
 
@@ -750,6 +777,7 @@
             if (!this.isPlaying || this.isPaused || this.isClearing || !this.canHold || !this.currentPiece) return;
 
             sound.playHold();
+            this.triggerHaptic('medium');
             const currentType = this.currentPiece.type;
 
             if (!this.heldPiece) {
@@ -772,10 +800,11 @@
             const fullRows = this.board.getCompletedRows();
             if (fullRows.length > 0) {
                 this.isClearing = true;
-                this.currentPiece = null; // 消行闪烁期间清空活动方块，避免残留多余幽灵虚影
+                this.currentPiece = null;
                 this.board.clearingRows = fullRows;
                 this.board.spawnClearParticles(fullRows);
                 sound.playClear(fullRows.length);
+                this.triggerHaptic('heavy');
 
                 setTimeout(() => {
                     this.board.removeRows(fullRows);
@@ -815,6 +844,7 @@
             this.isGameOver = true;
             this.isPlaying = false;
             sound.playGameOver();
+            this.triggerHaptic('heavy');
 
             if (this.score > this.highScore) {
                 this.highScore = this.score;
@@ -823,7 +853,7 @@
             }
 
             this.showOverlay('游戏结束', `最终得分: ${this.score} (消行: ${this.lines})`);
-            this.btnStart.textContent = '🔄 重新开始';
+            if (this.btnStart) this.btnStart.textContent = '🔄 重新开始';
         }
 
         addScore(pts) {
@@ -885,13 +915,73 @@
             this.overlayEl.classList.add('hidden');
         }
 
+        initTouchGestures() {
+            const target = this.boardContainer || this.mainCanvas;
+            let startX = 0;
+            let startY = 0;
+            let lastMoveX = 0;
+            let lastMoveY = 0;
+            let startTime = 0;
+            let hasMoved = false;
+            let lastTapTime = 0;
+
+            const MOVE_THRESHOLD = 20;
+            const DROP_THRESHOLD = 26;
+
+            target.addEventListener('touchstart', (e) => {
+                if (!this.isPlaying || this.isPaused || this.isGameOver) return;
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                lastMoveX = touch.clientX;
+                lastMoveY = touch.clientY;
+                startTime = performance.now();
+                hasMoved = false;
+            }, { passive: true });
+
+            target.addEventListener('touchmove', (e) => {
+                if (!this.isPlaying || this.isPaused || this.isGameOver) return;
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - lastMoveX;
+                const deltaY = touch.clientY - lastMoveY;
+
+                if (Math.abs(deltaX) >= MOVE_THRESHOLD) {
+                    const dir = deltaX > 0 ? 1 : -1;
+                    this.movePiece(dir);
+                    lastMoveX = touch.clientX;
+                    hasMoved = true;
+                }
+
+                if (deltaY >= DROP_THRESHOLD) {
+                    this.softDrop();
+                    lastMoveY = touch.clientY;
+                    hasMoved = true;
+                }
+            }, { passive: true });
+
+            target.addEventListener('touchend', (e) => {
+                if (!this.isPlaying || this.isPaused || this.isGameOver) return;
+                const now = performance.now();
+                const duration = now - startTime;
+
+                if (!hasMoved && duration < 260) {
+                    if (now - lastTapTime < 280) {
+                        this.hardDrop();
+                        lastTapTime = 0;
+                    } else {
+                        this.rotatePiece(true);
+                        lastTapTime = now;
+                    }
+                }
+            }, { passive: true });
+        }
+
         initEventListeners() {
             window.addEventListener('keydown', (e) => {
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
                     e.preventDefault();
                 }
 
-                // 未在游戏中，或游戏已经结束时，按空格或回车均可重新开始
                 if (!this.isPlaying || this.isGameOver) {
                     if (e.code === 'Space' || e.code === 'Enter') {
                         this.start();
@@ -931,21 +1021,27 @@
                 }
             });
 
-            this.btnStart.addEventListener('click', () => {
-                this.start();
-            });
+            if (this.btnStart) {
+                this.btnStart.addEventListener('click', () => this.start());
+            }
 
-            this.btnPause.addEventListener('click', () => {
-                this.togglePause();
-            });
+            if (this.btnPause) {
+                this.btnPause.addEventListener('click', () => this.togglePause());
+            }
 
-            this.btnSound.addEventListener('click', () => {
-                const isMuted = sound.toggleMute();
-                this.btnSound.textContent = isMuted ? '🔇 静音' : '🔊 音效';
-                this.btnSound.classList.toggle('muted', isMuted);
-            });
+            if (this.btnRestartTop) {
+                this.btnRestartTop.addEventListener('click', () => this.start());
+            }
 
-            // 触控/屏幕虚拟按键支持（优先 pointerdown 实现零延迟响应）
+            if (this.btnSound) {
+                this.btnSound.addEventListener('click', () => {
+                    const isMuted = sound.toggleMute();
+                    this.btnSound.textContent = isMuted ? '🔇' : '🔊';
+                    this.btnSound.classList.toggle('muted', isMuted);
+                    this.triggerHaptic('light');
+                });
+            }
+
             const bindButton = (id, action) => {
                 const btn = document.getElementById(id);
                 if (btn) {
@@ -971,6 +1067,15 @@
             bindButton('ctrl-down', () => this.softDrop());
             bindButton('ctrl-drop', () => this.hardDrop());
             bindButton('ctrl-hold', () => this.hold());
+
+            document.body.addEventListener('touchmove', (e) => {
+                if (e.target.closest('.touch-btn, .icon-btn, .btn')) return;
+                e.preventDefault();
+            }, { passive: false });
+
+            document.addEventListener('WeixinJSBridgeReady', () => {
+                sound.init();
+            }, false);
         }
     }
 

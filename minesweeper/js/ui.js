@@ -22,6 +22,8 @@ class MinesweeperUI {
     this.longPressTimer = null;
     this.isTouchMoved = false;
 
+    this.touchMode = 'REVEAL'; // 'REVEAL' (挖掘) 或 'FLAG' (插旗)
+
     // DOM 元素缓存
     this.dom = {
       app: document.getElementById('app'),
@@ -40,6 +42,8 @@ class MinesweeperUI {
       timerDigits: document.getElementById('timer-digits'),
       board: document.getElementById('board'),
       boardContainer: document.getElementById('board-container'),
+      btnModeReveal: document.getElementById('btn-mode-reveal'),
+      btnModeFlag: document.getElementById('btn-mode-flag'),
       modalOverlay: document.getElementById('modal-overlay'),
       recordsModal: document.getElementById('records-modal'),
       recordsList: document.getElementById('records-list'),
@@ -256,6 +260,20 @@ class MinesweeperUI {
       return;
     }
 
+    const clickedCell = this.game.grid[r][c];
+
+    // 若当前为手机插旗模式且格子未翻开，直接执行插旗切换
+    if (this.touchMode === 'FLAG' && clickedCell.state !== CellState.REVEALED) {
+      this.handleCellRightClick(r, c);
+      return;
+    }
+
+    // 若点击已翻开且带数字的格子，自动触发和弦展开 (Chord)
+    if (clickedCell.state === CellState.REVEALED && clickedCell.adjacentMines > 0) {
+      this.handleChord(r, c);
+      return;
+    }
+
     const wasReady = this.game.status === GameState.READY;
     const res = this.game.reveal(r, c);
 
@@ -273,6 +291,20 @@ class MinesweeperUI {
       this.handleGameOver(true);
     } else if (res.changedCells.length > 0) {
       sounds.playClick();
+    }
+  }
+
+  // 设置移动端操作模式
+  setTouchMode(mode) {
+    this.touchMode = mode;
+    if (this.dom.btnModeReveal && this.dom.btnModeFlag) {
+      if (mode === 'REVEAL') {
+        this.dom.btnModeReveal.classList.add('active');
+        this.dom.btnModeFlag.classList.remove('active');
+      } else {
+        this.dom.btnModeReveal.classList.remove('active');
+        this.dom.btnModeFlag.classList.add('active');
+      }
     }
   }
 
@@ -461,6 +493,16 @@ class MinesweeperUI {
 
   // 绑定各类交互事件
   bindGlobalEvents() {
+    // 移动端操作模式切换
+    if (this.dom.btnModeReveal && this.dom.btnModeFlag) {
+      this.dom.btnModeReveal.addEventListener('click', () => {
+        this.setTouchMode('REVEAL');
+      });
+      this.dom.btnModeFlag.addEventListener('click', () => {
+        this.setTouchMode('FLAG');
+      });
+    }
+
     // 难度切换
     this.dom.difficultySelect.addEventListener('change', (e) => {
       this.currentDifficulty = e.target.value;

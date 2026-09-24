@@ -1,0 +1,9 @@
+<!-- 微信小程序 Web-View 全屏容器 -->
+<view class="container">
+  <web-view 
+    src="{{gameUrl}}" 
+    bindmessage="onWebMessage"
+    bindload="onWebLoad"
+    binderror="onWebError"
+  ></web-view>
+</view>

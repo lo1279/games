@@ -8,11 +8,10 @@ class ThunderGame {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // 游戏分辨率 (内部逻辑分辨率)
-        this.width = 480;
-        this.height = 720;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        // 动态全屏高清分辨率与 Retina 缩放
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        this.width = window.innerWidth || 480;
+        this.height = window.innerHeight || 720;
 
         // 核心子系统
         this.starfield = new Starfield(this.width, this.height);
@@ -20,6 +19,7 @@ class ThunderGame {
         this.bullets = [];
         this.enemies = [];
         this.items = [];
+        this.spawnQueue = [];
         window.currentItems = this.items;
         this.boss = null;
 
@@ -35,21 +35,61 @@ class ThunderGame {
         this.waveTimer = 0;
         this.bossWarningTimer = 0;
         this.isGameOverPending = false;
-        this.spawnQueue = []; // 基于游戏主帧率的敌机生成任务队列
 
         // 震屏效果
         this.shakeTime = 0;
         this.shakeIntensity = 0;
 
-        // 控制输入状态
+        // 控制输入状态 (触屏相对拖拽微操，视线完全开阔)
         this.keys = {};
         this.mousePos = { x: this.width / 2, y: this.height - 100, active: false };
-        this.touchPos = { x: this.width / 2, y: this.height - 100, active: false };
+        this.touchPos = { x: this.width / 2, y: this.height - 100, deltaX: 0, deltaY: 0, active: false };
+        this.lastTouchX = 0;
+        this.lastTouchY = 0;
+        this.lastTouchTime = 0;
 
+        this.resize();
         this.initInput();
         this.bindUI();
+        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 150));
+
         this.lastTime = performance.now();
         requestAnimationFrame(this.loop.bind(this));
+    }
+
+    // 动态全屏自适应与 Retina 像素比缩放
+    resize() {
+        const container = document.getElementById('game-container') || document.body;
+        const w = container.clientWidth || window.innerWidth || 480;
+        const h = container.clientHeight || window.innerHeight || 720;
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        this.width = w;
+        this.height = h;
+
+        this.canvas.width = Math.round(w * this.dpr);
+        this.canvas.height = Math.round(h * this.dpr);
+        this.canvas.style.width = `${w}px`;
+        this.canvas.style.height = `${h}px`;
+
+        if (this.starfield) {
+            this.starfield.resize(w, h);
+        }
+        if (this.player) {
+            this.player.canvasWidth = w;
+            this.player.canvasHeight = h;
+        }
+    }
+
+    // 微信小程序与现代手机震动反馈
+    hapticFeedback(type = 'light') {
+        try {
+            if (window.wx && typeof wx.vibrateShort === 'function') {
+                wx.vibrateShort({ type: type === 'heavy' ? 'heavy' : 'light' });
+            } else if (navigator.vibrate) {
+                navigator.vibrate(type === 'heavy' ? [30, 40, 60] : 18);
+            }
+        } catch(e) {}
     }
 
     initInput() {
@@ -61,7 +101,8 @@ class ThunderGame {
             }
             if (e.code === 'KeyB') {
                 if (this.state === 'PLAYING') {
-                    this.player.useBomb(this.bullets, this.enemies, this.boss);
+                    const used = this.player.useBomb(this.bullets, this.enemies, this.boss);
+                    if (used) this.hapticFeedback('heavy');
                 }
             }
             if (e.code === 'KeyP') {
@@ -77,11 +118,9 @@ class ThunderGame {
         // 鼠标控制 (鼠标有实际位移时再激活)
         const getCanvasCoord = (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.width / rect.width;
-            const scaleY = this.height / rect.height;
             return {
-                x: (e.clientX - rect.left) * scaleX,
-                y: (e.clientY - rect.top) * scaleY
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
             };
         };
 
@@ -97,14 +136,27 @@ class ThunderGame {
             this.mousePos.active = false;
         });
 
-        // 触屏控制
+        // 手机触屏微操控制 (支持屏幕任意区域盲操相对位移 + 双击释放核弹)
         this.canvas.addEventListener('touchstart', e => {
             e.preventDefault();
             if (e.touches.length > 0) {
-                const pos = getCanvasCoord(e.touches[0]);
-                this.touchPos.x = pos.x;
-                this.touchPos.y = pos.y;
+                const touch = e.touches[0];
+                this.lastTouchX = touch.clientX;
+                this.lastTouchY = touch.clientY;
+                this.touchPos.deltaX = 0;
+                this.touchPos.deltaY = 0;
                 this.touchPos.active = true;
+
+                // 双击全屏释放核弹 (Double Tap Bomb)
+                const now = performance.now();
+                if (now - this.lastTouchTime < 320) {
+                    if (this.state === 'PLAYING') {
+                        const used = this.player.useBomb(this.bullets, this.enemies, this.boss);
+                        if (used) this.hapticFeedback('heavy');
+                    }
+                }
+                this.lastTouchTime = now;
+
                 if (window.sounds) window.sounds.ensureResume();
             }
         }, { passive: false });
@@ -112,19 +164,28 @@ class ThunderGame {
         this.canvas.addEventListener('touchmove', e => {
             e.preventDefault();
             if (e.touches.length > 0) {
-                const pos = getCanvasCoord(e.touches[0]);
-                this.touchPos.x = pos.x;
-                this.touchPos.y = pos.y;
+                const touch = e.touches[0];
+                // 累计手指位移差，驱动战机防遮挡平滑机动
+                const dx = touch.clientX - this.lastTouchX;
+                const dy = touch.clientY - this.lastTouchY;
+                this.touchPos.deltaX += dx;
+                this.touchPos.deltaY += dy;
+                this.lastTouchX = touch.clientX;
+                this.lastTouchY = touch.clientY;
                 this.touchPos.active = true;
             }
         }, { passive: false });
 
         this.canvas.addEventListener('touchend', () => {
             this.touchPos.active = false;
+            this.touchPos.deltaX = 0;
+            this.touchPos.deltaY = 0;
         });
 
         this.canvas.addEventListener('touchcancel', () => {
             this.touchPos.active = false;
+            this.touchPos.deltaX = 0;
+            this.touchPos.deltaY = 0;
         });
     }
 
@@ -132,9 +193,11 @@ class ThunderGame {
         document.getElementById('start-btn')?.addEventListener('click', () => this.startGame());
         document.getElementById('restart-btn')?.addEventListener('click', () => this.startGame());
         document.getElementById('resume-btn')?.addEventListener('click', () => this.togglePause());
+        document.getElementById('pause-btn')?.addEventListener('click', () => this.togglePause());
         document.getElementById('bomb-btn')?.addEventListener('click', () => {
             if (this.state === 'PLAYING') {
-                this.player.useBomb(this.bullets, this.enemies, this.boss);
+                const used = this.player.useBomb(this.bullets, this.enemies, this.boss);
+                if (used) this.hapticFeedback('heavy');
             }
         });
         document.getElementById('sound-toggle')?.addEventListener('click', () => {
@@ -385,11 +448,11 @@ class ThunderGame {
         // 视差星空
         this.starfield.update(this.player.isRage ? 2.5 : 1.2);
 
-        // 玩家更新
-        this.player.update(this.keys, this.mousePos, this.touchPos, this.bullets, this.enemies);
-
-        // 子弹更新
+        // 子弹与边界定义
         const bounds = { width: this.width, height: this.height };
+
+        // 玩家更新 (传入动态视口边界)
+        this.player.update(this.keys, this.mousePos, this.touchPos, this.bullets, this.enemies, bounds);
         for (let b of this.bullets) {
             if (b instanceof HomingMissile) {
                 b.update(bounds, this.enemies.concat(this.boss ? [this.boss] : []));
@@ -505,6 +568,9 @@ class ThunderGame {
 
     draw() {
         this.ctx.save();
+        if (this.dpr && this.dpr !== 1) {
+            this.ctx.scale(this.dpr, this.dpr);
+        }
 
         // 震屏位移
         if (this.shakeTime > 0) {
