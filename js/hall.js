@@ -305,12 +305,7 @@ class GameHubApp {
 
     // iframe 加载完成
     this.theaterIframe.addEventListener('load', () => {
-      if (this.theaterLoading) {
-        this.theaterLoading.style.opacity = '0';
-        setTimeout(() => {
-          this.theaterLoading.style.display = 'none';
-        }, 300);
-      }
+      this.hideLoading();
       // 让 iframe 获得焦点，并在同源支持下捕获内部 ESC 按键以平滑退出剧场
       try {
         const cw = this.theaterIframe.contentWindow;
@@ -523,6 +518,12 @@ class GameHubApp {
     this.theaterLoading.style.display = 'flex';
     this.theaterLoading.style.opacity = '1';
 
+    // 智能安全兜底：最多 1 秒强制平滑淡出遮罩层，绝不因为后台大图慢速加载阻塞画面
+    if (this.loadingTimer) clearTimeout(this.loadingTimer);
+    this.loadingTimer = setTimeout(() => {
+      this.hideLoading();
+    }, 1000);
+
     // 激活视窗
     this.theaterIframe.src = game.path;
     this.theaterOverlay.classList.add('active');
@@ -532,7 +533,21 @@ class GameHubApp {
     this.renderGames();
   }
 
+  hideLoading() {
+    if (this.loadingTimer) {
+      clearTimeout(this.loadingTimer);
+      this.loadingTimer = null;
+    }
+    if (this.theaterLoading) {
+      this.theaterLoading.style.opacity = '0';
+      setTimeout(() => {
+        this.theaterLoading.style.display = 'none';
+      }, 300);
+    }
+  }
+
   closeTheater() {
+    this.hideLoading();
     this.theaterOverlay.classList.remove('active');
     document.body.style.overflow = '';
     // 释放 iframe 避免后台继续播放声音或消耗 CPU/GPU
@@ -545,6 +560,11 @@ class GameHubApp {
     if (!this.currentGame) return;
     this.theaterLoading.style.display = 'flex';
     this.theaterLoading.style.opacity = '1';
+    if (this.loadingTimer) clearTimeout(this.loadingTimer);
+    this.loadingTimer = setTimeout(() => {
+      this.hideLoading();
+    }, 1000);
+
     try {
       if (this.theaterIframe.contentWindow && this.theaterIframe.contentWindow.location) {
         this.theaterIframe.contentWindow.location.reload();
