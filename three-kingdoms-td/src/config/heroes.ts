@@ -174,7 +174,7 @@ export const HEROES: HeroConfig[] = [
     baseAttackInterval: 1.2,
     description: '唯贤唯德，能服于人。仁德光环常驻提升周围武将 15% 免伤，战法仁泽全军回血提振。',
     skillName: '仁德昭天',
-    skillDesc: '拔剑呼应桃园誓言，为全场在阵武将恢复 300 点生命，并削减休整倒计时 6 秒！',
+    skillDesc: '拔剑呼应桃园誓言，为全场在阵武将恢复 650 点生命，并削减休整倒计时 10 秒！',
     skillCooldown: 12,
     color: '#15803d', // 汉昭烈墨绿/金绿
     projectileType: 'slash',
@@ -194,7 +194,7 @@ export const HEROES: HeroConfig[] = [
     baseAttackInterval: 1.0,
     description: '救死扶伤，扁鹊重生。普攻优先治疗射程内虚弱武将，战法布下青囊药阵回血控敌。',
     skillName: '青囊回春',
-    skillDesc: '投掷青囊灵药阵，瞬间为重伤武将恢复 450 点生命，并麻痹周围敌军 2.0 秒。',
+    skillDesc: '投掷青囊灵药阵，瞬间为重伤武将恢复 1000 点生命，并麻痹周围敌军 2.5 秒。',
     skillCooldown: 11,
     color: '#0d9488', // 青囊水绿
     projectileType: 'slash',

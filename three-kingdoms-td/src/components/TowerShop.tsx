@@ -201,7 +201,7 @@ export const TowerShop: React.FC<TowerShopProps> = ({
         <div className="p-3 bg-amber-950/80 border-t border-amber-600/50 flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs text-amber-300">
             <ShieldAlert size={14} className="animate-bounce" />
-            <span>请在战场点将台上点击部署</span>
+            <span>点击战场任意空地即可安营扎寨</span>
           </div>
           <button
             onClick={() => onSelectHeroToPlace(null)}

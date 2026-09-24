@@ -29,6 +29,8 @@ export interface GameEngineCallbacks {
   onTowersChange?: (deployedHeroIds: string[]) => void;
   onSkillsCooldownChange?: (cooldowns: MasterSkillsCooldown) => void;
   onPrepCountdownChange?: (secondsLeft: number) => void;
+  onAssetsLoadingProgress?: (loaded: number, total: number, percent: number) => void;
+  onAssetsLoaded?: () => void;
 }
 
 export class GameEngine {
@@ -57,6 +59,7 @@ export class GameEngine {
   public static readonly MAX_PREP_TIME = 10;
   public prepCountdown: number = 0;
   private lastPrepBroadcastSec: number = 0;
+  private lastSelectedTowerBroadcastSec: number = 0; // 控制选中武将战斗数据刷新频率
 
   // 实体列表
   public towers: PlacedTower[] = [];
@@ -78,6 +81,11 @@ export class GameEngine {
   private imageCache: Map<string, HTMLImageElement> = new Map();
   private mapBgImage: HTMLImageElement | null = null;
 
+  // 全量静态资源预加载进度追踪
+  public totalAssetsCount: number = 0;
+  public loadedAssetsCount: number = 0;
+  public isAssetsReady: boolean = false;
+
   private animationFrameId: number | null = null;
   private lastTimestamp: number = 0;
 
@@ -90,44 +98,99 @@ export class GameEngine {
     this.ctx = context;
     this.stage = stage;
     this.callbacks = callbacks;
-    this.preloadHeroImages();
-    this.preloadEnemyImages();
+    this.startPreloadAllAssets();
     this.resetStage(stage);
   }
 
-  // 预加载敌军（小兵与 Boss）图片
-  private preloadEnemyImages(): void {
+  // 启动全量图片资产后台加载并精准统计进度
+  private startPreloadAllAssets(): void {
+    // 收集所有需要全量加载的图片列表
+    const assetList: { key: string; url: string; isMapBg?: boolean }[] = [];
+
+    // 1. 三大关卡地图背景图
+    ['stage_1', 'stage_2', 'stage_3'].forEach((stageId) => {
+      assetList.push({
+        key: `map_${stageId}`,
+        url: `./assets/maps/${stageId}_bg.jpg`,
+        isMapBg: stageId === this.stage.id,
+      });
+    });
+
+    // 2. 敌军立绘（小兵与 Boss）
     Object.values(ENEMIES).forEach((enemy) => {
-      const img = new Image();
-      img.src = `./assets/enemies/${enemy.id}.png`;
-      this.imageCache.set(`enemy_${enemy.id}`, img);
+      assetList.push({
+        key: `enemy_${enemy.id}`,
+        url: `./assets/enemies/${enemy.id}.png`,
+      });
     });
-  }
 
-  // 预加载英雄立绘（头像、待机姿态、攻击姿态）
-  private preloadHeroImages(): void {
+    // 3. 名将立绘（头像、待机姿态、挥砍攻击姿态）
     HEROES.forEach((h) => {
-      // 基础头像
       if (h.avatarUrl) {
-        const img = new Image();
-        img.src = h.avatarUrl;
-        this.imageCache.set(h.id, img);
+        assetList.push({ key: h.id, url: h.avatarUrl });
       }
-
-      // 待机姿态 (idle)
-      const idleImg = new Image();
-      idleImg.src = `./assets/heroes/${h.id}_idle.png`;
-      this.imageCache.set(`${h.id}_idle`, idleImg);
-
-      // 攻击姿态 (attack)
-      const attackImg = new Image();
-      attackImg.src = `./assets/heroes/${h.id}_attack.png`;
-      this.imageCache.set(`${h.id}_attack`, attackImg);
+      assetList.push({ key: `${h.id}_idle`, url: `./assets/heroes/${h.id}_idle.png` });
+      assetList.push({ key: `${h.id}_attack`, url: `./assets/heroes/${h.id}_attack.png` });
     });
+
+    this.totalAssetsCount = assetList.length;
+    this.loadedAssetsCount = 0;
+
+    const onSingleAssetFinish = () => {
+      this.loadedAssetsCount++;
+      const percent = Math.min(100, Math.floor((this.loadedAssetsCount / this.totalAssetsCount) * 100));
+      this.callbacks.onAssetsLoadingProgress?.(this.loadedAssetsCount, this.totalAssetsCount, percent);
+
+      if (this.loadedAssetsCount >= this.totalAssetsCount) {
+        this.isAssetsReady = true;
+        this.callbacks.onAssetsLoaded?.();
+      }
+    };
+
+    // 并发启动图片预加载（附带超时防挂死保护）
+    assetList.forEach((asset) => {
+      const img = new Image();
+      let handled = false;
+      const done = () => {
+        if (!handled) {
+          handled = true;
+          onSingleAssetFinish();
+        }
+      };
+
+      img.onload = () => {
+        if (asset.isMapBg) {
+          this.mapBgImage = img;
+        }
+        done();
+      };
+      img.onerror = () => {
+        // 即使个别网络偶发失败也平滑计数，防止卡在 99%
+        done();
+      };
+
+      img.src = asset.url;
+      this.imageCache.set(asset.key, img);
+
+      // 单图超过 15 秒强制兜底放行
+      setTimeout(() => {
+        if (!handled && (!img.complete || img.naturalWidth === 0)) {
+          done();
+        }
+      }, 15000);
+    });
+
+    // 初始化先通知一次 0%
+    this.callbacks.onAssetsLoadingProgress?.(0, this.totalAssetsCount, 0);
   }
 
   // 加载关卡地图背景图
   private loadMapBackground(): void {
+    const cached = this.imageCache.get(`map_${this.stage.id}`);
+    if (cached && cached.complete && cached.naturalWidth > 0) {
+      this.mapBgImage = cached;
+      return;
+    }
     const bgUrl = `./assets/maps/${this.stage.id}_bg.jpg`;
     const img = new Image();
     img.src = bgUrl;
@@ -214,6 +277,45 @@ export class GameEngine {
     return true;
   }
 
+  // 计算点到线段的最短距离，用于精确判定武将是否摆在兵道上
+  private distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+    const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    if (l2 === 0) return Math.hypot(px - x1, py - y1);
+    let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+  }
+
+  // 判定指定列与行是否适合作为安营扎寨平地（只要不在敌军主道、寨门且在地图内即可）
+  public isPositionValidForTower(col: number, row: number): boolean {
+    // 地图网格尺寸：宽 1000 (20 列), 高 600 (12 行)
+    if (col < 0 || col >= 20 || row < 0 || row >= 12) return false;
+
+    const cx = col * 50 + 25;
+    const cy = row * 50 + 25;
+
+    // 道路中线安全净空判定：距离敌军行进兵道中线至少 34 像素（道路宽度约为 36 像素，半宽 18 像素）
+    const path = this.stage.path;
+    const roadClearance = 34;
+
+    for (let i = 0; i < path.length - 1; i++) {
+      const p1 = path[i];
+      const p2 = path[i + 1];
+      const dist = this.distToSegment(cx, cy, p1.x, p1.y, p2.x, p2.y);
+      if (dist < roadClearance) {
+        return false; // 紧贴或正中压在道路上，不可安营
+      }
+    }
+
+    // 避开起点敌寨门与终点主帅营核心遮挡区 (半径 36 像素)
+    const startP = path[0];
+    const endP = path[path.length - 1];
+    if (Math.hypot(cx - startP.x, cy - startP.y) < 40) return false;
+    if (Math.hypot(cx - endP.x, cy - endP.y) < 40) return false;
+
+    return true;
+  }
+
   // 放置武将防御塔
   public placeTower(heroId: string, col: number, row: number): boolean {
     const hero = HEROES.find((h) => h.id === heroId);
@@ -233,13 +335,17 @@ export class GameEngine {
       return false;
     }
 
-    // 检查格子是否被占用
-    const slotKey = `${col},${row}`;
-    const isSlotValid = this.stage.towerSlots.some((s) => s.col === col && s.row === row);
-    if (!isSlotValid) return false;
+    // 全地图自由网格放置判定：只要不堵在敌军主行军兵道上、不越界、未被其他武将占用，即可安营扎寨！
+    if (!this.isPositionValidForTower(col, row)) {
+      sound.playAlarm();
+      return false;
+    }
 
     const alreadyOccupied = this.towers.some((t) => t.col === col && t.row === row);
-    if (alreadyOccupied) return false;
+    if (alreadyOccupied) {
+      sound.playAlarm();
+      return false;
+    }
 
     // 扣除金币并创建防御塔
     this.gold -= hero.cost;
@@ -510,6 +616,22 @@ export class GameEngine {
       }
     }
 
+    // 0.2 定期向 UI 同步当前选中武将的最新战斗属性（总伤害、击杀数、生命值、倒下休整时间等）
+    if (this.selectedTower) {
+      this.lastSelectedTowerBroadcastSec += dt;
+      if (this.lastSelectedTowerBroadcastSec >= 0.2) {
+        this.lastSelectedTowerBroadcastSec = 0;
+        const realTower = this.towers.find((t) => t.id === this.selectedTower?.id);
+        if (realTower) {
+          this.selectedTower = realTower;
+          this.callbacks.onSelectTower({ ...realTower });
+        } else {
+          this.selectedTower = null;
+          this.callbacks.onSelectTower(null);
+        }
+      }
+    }
+
     // 1. 处理波次生成
     if (this.waveInProgress) {
       this.waveTimer += dt;
@@ -777,12 +899,12 @@ export class GameEngine {
         tower.attackAnimationTimer = 0.45;
         this.triggerHeroSkill(tower, hero, bestTarget || undefined, woundedAlly || undefined);
       }
-      // 华佗专属普攻：优先治疗友军
+      // 华佗专属普攻：优先治疗友军（大幅强化治疗量与续航能力）
       else if (hero.id === 'huatuo' && woundedAlly && tower.attackTimer >= effectiveInterval) {
         tower.attackTimer = 0;
         tower.attackAnimationTimer = 0.35;
         tower.angle = Math.atan2(woundedAlly.y - tower.y, woundedAlly.x - tower.x);
-        this.healAllyTower(tower, woundedAlly, 45 + tower.level * 15);
+        this.healAllyTower(tower, woundedAlly, 120 + tower.level * 40);
       }
       // 普通攻击（对敌军）
       else if (bestTarget) {
@@ -822,12 +944,13 @@ export class GameEngine {
       // 如果是穿透弹道（黄忠穿云箭/孙尚香散射箭）
       if (p.piercing) {
         if (!p.hitEnemyIds) p.hitEnemyIds = [];
+        const sourceTower = p.sourceTowerId ? this.towers.find((t) => t.id === p.sourceTowerId) : undefined;
         for (const enemy of this.enemies) {
           if (!p.hitEnemyIds.includes(enemy.id)) {
             const d = Math.hypot(enemy.x - p.x, enemy.y - p.y);
             if (d <= enemy.size + p.radius + 6) {
               p.hitEnemyIds.push(enemy.id);
-              this.applyDamageToEnemy(enemy, p.damage, p.damageType, undefined, true);
+              this.applyDamageToEnemy(enemy, p.damage, p.damageType, sourceTower, true);
               this.spawnParticles(enemy.x, enemy.y, p.color, 8);
             }
           }
@@ -933,6 +1056,7 @@ export class GameEngine {
         targetX: target.x,
         targetY: target.y,
         targetEnemyId: target.id,
+        sourceTowerId: tower.id,
         speed: 460,
         damage: tower.damage,
         damageType: 'physical',
@@ -989,6 +1113,7 @@ export class GameEngine {
         targetX: target.x,
         targetY: target.y,
         targetEnemyId: target.id,
+        sourceTowerId: tower.id,
         speed: 380,
         damage: tower.damage,
         damageType: 'magic',
@@ -1182,6 +1307,7 @@ export class GameEngine {
         targetX: tower.x + Math.cos(angle) * targetDist,
         targetY: tower.y + Math.sin(angle) * targetDist,
         targetEnemyId: null,
+        sourceTowerId: tower.id,
         speed: 720,
         damage: tower.damage * 3.5,
         damageType: 'physical',
@@ -1222,6 +1348,7 @@ export class GameEngine {
           targetX: tower.x + Math.cos(rad) * dist,
           targetY: tower.y + Math.sin(rad) * dist,
           targetEnemyId: null,
+          sourceTowerId: tower.id,
           speed: 520,
           damage: tower.damage * 2.0,
           damageType: 'physical',
@@ -1267,19 +1394,19 @@ export class GameEngine {
         elapsed: 0,
       });
 
-      // 仁泽全军
-      const healAmt = 300 + (tower.level - 1) * 80;
+      // 仁泽全军（大幅提升全场治疗量与减免休整）
+      const healAmt = 650 + (tower.level - 1) * 160;
       this.towers.forEach((t) => {
         const allyHero = HEROES.find((h) => h.id === t.heroId);
         const maxHp = t.maxHp || (allyHero?.baseHp || 700);
 
         if (t.isDown) {
-          // 削减休整倒计时 6 秒
-          t.recoveryTimer = Math.max(0, t.recoveryTimer - 6);
-          this.addFloatingText(t.x, t.y - 25, '仁德感召·休整-6s!', '#86efac', 17, true);
+          // 削减休整倒计时 10 秒
+          t.recoveryTimer = Math.max(0, t.recoveryTimer - 10);
+          this.addFloatingText(t.x, t.y - 25, '仁德感召·休整-10s!', '#86efac', 18, true);
           if (t.recoveryTimer === 0) {
             t.isDown = false;
-            t.hp = Math.floor(maxHp * 0.65);
+            t.hp = Math.floor(maxHp * 0.8);
             this.addFloatingText(t.x, t.y - 35, `【${allyHero?.name}】闻声力竭复苏!`, '#4ade80', 20, true);
           }
         } else {
@@ -1287,18 +1414,18 @@ export class GameEngine {
           t.hp = Math.min(maxHp, t.hp + healAmt);
           const actualHealed = t.hp - oldHp;
           if (actualHealed > 0) {
-            this.addFloatingText(t.x, t.y - 20, `+${actualHealed} 仁德`, '#4ade80', 16, true);
+            this.addFloatingText(t.x, t.y - 20, `+${actualHealed} 仁德`, '#4ade80', 17, true);
           }
         }
-        this.spawnParticles(t.x, t.y, '#22c55e', 14);
+        this.spawnParticles(t.x, t.y, '#22c55e', 16);
       });
     } else if (hero.id === 'huatuo') {
-      // 10. 华佗大招【青囊回春·麻沸散】：定点布施药阵，恢复重伤武将450血，麻痹迟缓周围敌军2.0s
+      // 10. 华佗大招【青囊回春·麻沸散】：超高额定点药阵回血（起死回生），麻痹周围敌军 2.5s
       sound.playUpgrade();
       sound.playDrum();
 
       const healTarget = ally || tower;
-      const healAmt = 450 + (tower.level - 1) * 120;
+      const healAmt = 1000 + (tower.level - 1) * 250;
       const allyHero = HEROES.find((h) => h.id === healTarget.heroId);
       const maxHp = healTarget.maxHp || (allyHero?.baseHp || 700);
 
@@ -1311,7 +1438,7 @@ export class GameEngine {
         x: healTarget.x,
         y: healTarget.y,
         angle: 0,
-        radius: 130,
+        radius: 140,
         color: '#14b8a6',
         secondaryColor: '#a7f3d0',
         duration: 1.2,
@@ -1322,23 +1449,23 @@ export class GameEngine {
       if (healTarget.isDown) {
         healTarget.isDown = false;
         healTarget.recoveryTimer = 0;
-        healTarget.hp = Math.floor(maxHp * 0.75);
+        healTarget.hp = Math.floor(maxHp * 0.9);
         this.addFloatingText(healTarget.x, healTarget.y - 30, `【${allyHero?.name}】神药复苏! +${healTarget.hp}`, '#2dd4bf', 22, true);
       } else {
         const oldHp = healTarget.hp;
         healTarget.hp = Math.min(maxHp, healTarget.hp + healAmt);
-        this.addFloatingText(healTarget.x, healTarget.y - 20, `+${healTarget.hp - oldHp} 青囊回春`, '#2dd4bf', 18, true);
+        this.addFloatingText(healTarget.x, healTarget.y - 20, `+${healTarget.hp - oldHp} 青囊回春`, '#2dd4bf', 19, true);
       }
-      this.spawnParticles(healTarget.x, healTarget.y, '#2dd4bf', 22);
+      this.spawnParticles(healTarget.x, healTarget.y, '#2dd4bf', 24);
 
       // 麻沸散药气扩散：麻痹周围敌人
       this.enemies.forEach((enemy) => {
         const d = Math.hypot(enemy.x - healTarget.x, enemy.y - healTarget.y);
         if (d <= 140) {
-          enemy.stunTimer = Math.max(enemy.stunTimer, 2.0);
-          this.applyDamageToEnemy(enemy, tower.damage * 1.5, 'magic', tower);
+          enemy.stunTimer = Math.max(enemy.stunTimer, 2.5);
+          this.applyDamageToEnemy(enemy, tower.damage * 1.8, 'magic', tower);
           this.addFloatingText(enemy.x, enemy.y - 12, '麻沸散·麻痹!', '#99f6e4', 16, true);
-          this.spawnParticles(enemy.x, enemy.y, '#0d9488', 8);
+          this.spawnParticles(enemy.x, enemy.y, '#0d9488', 10);
         }
       });
     } else {
@@ -1357,9 +1484,9 @@ export class GameEngine {
     const maxHp = target.maxHp || (allyHero?.baseHp || 700);
 
     if (target.isDown) {
-      target.recoveryTimer = Math.max(0, target.recoveryTimer - 1.5);
-      this.addFloatingText(target.x, target.y - 15, '金针通络 -1.5s', '#5eead4', 13);
-      this.spawnParticles(target.x, target.y, '#14b8a6', 4);
+      target.recoveryTimer = Math.max(0, target.recoveryTimer - 3.0);
+      this.addFloatingText(target.x, target.y - 15, '金针通络 -3.0s', '#5eead4', 14);
+      this.spawnParticles(target.x, target.y, '#14b8a6', 6);
       return;
     }
 
@@ -1369,13 +1496,15 @@ export class GameEngine {
     target.hp = Math.min(maxHp, target.hp + amount);
     const actual = target.hp - oldHp;
     if (actual > 0) {
-      this.addFloatingText(target.x, target.y - 18, `+${actual}`, '#2dd4bf', 14);
-      this.spawnParticles(target.x, target.y, '#2dd4bf', 5);
+      this.addFloatingText(target.x, target.y - 18, `+${actual}`, '#2dd4bf', 15);
+      this.spawnParticles(target.x, target.y, '#2dd4bf', 6);
     }
   }
 
   // 弹道命中处理
   private hitProjectile(p: Projectile, x: number, y: number): void {
+    const sourceTower = p.sourceTowerId ? this.towers.find((t) => t.id === p.sourceTowerId) : undefined;
+
     if (p.aoeRadius) {
       // 范围爆炸 (如火球)
       sound.playExplosion();
@@ -1383,7 +1512,7 @@ export class GameEngine {
       this.enemies.forEach((enemy) => {
         const d = Math.hypot(enemy.x - x, enemy.y - y);
         if (d <= (p.aoeRadius || 0)) {
-          this.applyDamageToEnemy(enemy, p.damage, p.damageType);
+          this.applyDamageToEnemy(enemy, p.damage, p.damageType, sourceTower);
           if (p.burnDuration) {
             enemy.burnTimer = p.burnDuration;
             enemy.burnDps = 45;
@@ -1393,7 +1522,7 @@ export class GameEngine {
     } else if (p.targetEnemyId) {
       const target = this.enemies.find((e) => e.id === p.targetEnemyId);
       if (target) {
-        this.applyDamageToEnemy(target, p.damage, p.damageType);
+        this.applyDamageToEnemy(target, p.damage, p.damageType, sourceTower);
         this.spawnParticles(target.x, target.y, p.color, 6);
       }
     }
@@ -1831,61 +1960,65 @@ export class GameEngine {
     ctx.restore();
   }
 
-  // 汉白玉雕花点将台基座渲染
+  // 名将基座与全图自由布阵导引渲染
   private renderTowerSlots(): void {
     const { ctx, stage } = this;
     const time = performance.now();
     const breathe = 0.3 + 0.18 * Math.sin(time * 0.004);
 
-    stage.towerSlots.forEach((slot) => {
-      const cx = slot.col * 50 + 25;
-      const cy = slot.row * 50 + 25;
-      const isOccupied = this.towers.some((t) => t.col === slot.col && t.row === slot.row);
-
+    // 1. 当玩家正在从点将台选将部署时，全图平地呈现轻柔翠金/米黄战术八卦阵点，明确提示玩家全图皆可布防！
+    if (this.placingHeroId) {
       ctx.save();
-      ctx.translate(cx, cy);
+      for (let col = 0; col < 20; col++) {
+        for (let row = 0; row < 12; row++) {
+          const isOccupied = this.towers.some((t) => t.col === col && t.row === row);
+          if (isOccupied) continue;
 
-      if (isOccupied) {
-        // 已驻扎名将：坚固青铜覆石底座
-        ctx.fillStyle = '#1e293b';
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(-21, -21, 42, 42, 7);
-        ctx.fill();
-        ctx.stroke();
+          // 仅在合法可建平地上显示柔和战术光点
+          if (this.isPositionValidForTower(col, row)) {
+            const cx = col * 50 + 25;
+            const cy = row * 50 + 25;
 
-        // 四角铜钉加固
-        ctx.fillStyle = '#d97706';
-        ctx.fillRect(-18, -18, 3, 3);
-        ctx.fillRect(15, -18, 3, 3);
-        ctx.fillRect(-18, 15, 3, 3);
-        ctx.fillRect(15, 15, 3, 3);
-      } else {
-        // 空置点将台：汉白玉微雕八卦台 + 金色呼吸微光
-        ctx.fillStyle = `rgba(217, 119, 6, ${breathe * 0.25})`;
-        ctx.strokeStyle = `rgba(245, 158, 11, ${breathe + 0.3})`;
-        ctx.lineWidth = 1.5;
+            ctx.fillStyle = `rgba(245, 158, 11, ${breathe * 0.18})`;
+            ctx.strokeStyle = `rgba(251, 191, 36, ${breathe * 0.35})`;
+            ctx.lineWidth = 1;
 
-        // 双层八角石台
-        ctx.beginPath();
-        ctx.roundRect(-20, -20, 40, 40, 6);
-        ctx.fill();
-        ctx.stroke();
+            ctx.beginPath();
+            ctx.roundRect(col * 50 + 6, row * 50 + 6, 38, 38, 5);
+            ctx.fill();
+            ctx.stroke();
 
-        // 内层阵纹
-        ctx.strokeStyle = `rgba(251, 191, 36, ${breathe * 0.5})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(0, 0, 14, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = `rgba(254, 243, 199, ${breathe + 0.5})`;
-        ctx.font = '10px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('点将台', 0, 0);
+            // 中心微光菱形点
+            ctx.fillStyle = `rgba(254, 240, 138, ${breathe * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
       }
+      ctx.restore();
+    }
+
+    // 2. 为全场所有已驻扎名将绘制坚固青铜覆石底座
+    this.towers.forEach((tower) => {
+      ctx.save();
+      ctx.translate(tower.x, tower.y);
+
+      // 已驻扎名将：坚固青铜覆石底座
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-21, -21, 42, 42, 7);
+      ctx.fill();
+      ctx.stroke();
+
+      // 四角铜钉加固
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(-18, -18, 3, 3);
+      ctx.fillRect(15, -18, 3, 3);
+      ctx.fillRect(-18, 15, 3, 3);
+      ctx.fillRect(15, 15, 3, 3);
 
       ctx.restore();
     });
@@ -2191,13 +2324,24 @@ export class GameEngine {
     const col = Math.floor(this.mousePos.x / 50);
     const row = Math.floor(this.mousePos.y / 50);
 
-    const isSlotValid = this.stage.towerSlots.some((s) => s.col === col && s.row === row);
+    const isSlotValid = this.isPositionValidForTower(col, row);
     const isOccupied = this.towers.some((t) => t.col === col && t.row === row);
     const isAlreadyDeployed = this.towers.some((t) => t.heroId === this.placingHeroId);
     const canPlace = isSlotValid && !isOccupied && !isAlreadyDeployed && this.gold >= hero.cost;
 
     const cx = col * 50 + 25;
     const cy = row * 50 + 25;
+
+    // 绘制当前网格选中吸附高亮框 (50x50)
+    ctx.save();
+    ctx.strokeStyle = canPlace ? '#4ade80' : '#f87171';
+    ctx.fillStyle = canPlace ? 'rgba(74, 222, 128, 0.22)' : 'rgba(239, 68, 68, 0.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(col * 50 + 2, row * 50 + 2, 46, 46, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
 
     // 绘制射程圈
     ctx.strokeStyle = canPlace ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)';

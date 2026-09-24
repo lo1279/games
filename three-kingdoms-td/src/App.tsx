@@ -40,6 +40,19 @@ export const App: React.FC = () => {
     victory: false,
   });
 
+  // 全量图片资源加载状态
+  const [loadingState, setLoadingState] = useState<{
+    loaded: number;
+    total: number;
+    percent: number;
+    isReady: boolean;
+  }>({
+    loaded: 0,
+    total: 45,
+    percent: 0,
+    isReady: false,
+  });
+
   // 初始化引擎
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -68,6 +81,19 @@ export const App: React.FC = () => {
       },
       onPrepCountdownChange: (secondsLeft) => {
         setPrepCountdown(secondsLeft);
+      },
+      onAssetsLoadingProgress: (loaded, total, percent) => {
+        setLoadingState((prev) => ({
+          ...prev,
+          loaded,
+          total,
+          percent,
+        }));
+      },
+      onAssetsLoaded: () => {
+        setTimeout(() => {
+          setLoadingState((prev) => ({ ...prev, isReady: true, percent: 100 }));
+        }, 300);
       },
     });
 
@@ -394,6 +420,43 @@ export const App: React.FC = () => {
           onRestart={handleRestart}
           onNextStage={handleSelectStage}
         />
+      )}
+
+      {/* 游戏资源全量预加载遮罩与进度指示器 */}
+      {!loadingState.isReady && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-stone-950/95 backdrop-blur-md text-amber-100 p-6 select-none transition-opacity duration-500">
+          <div className="relative mb-6">
+            <div className="w-24 h-24 rounded-full border-4 border-amber-600/30 border-t-amber-400 animate-spin flex items-center justify-center shadow-xl shadow-amber-900/30"></div>
+            <div className="absolute inset-0 flex items-center justify-center text-3xl font-serif">
+              🏯
+            </div>
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-bold tracking-widest text-amber-300 font-serif mb-2">
+            《三国志·群英塔防》
+          </h2>
+          <p className="text-xs sm:text-sm text-stone-400 mb-6 font-serif tracking-wider">
+            三军未动 · 粮草先行 · 全量高清美术资源调度中...
+          </p>
+
+          {/* 进度条外壳 */}
+          <div className="w-72 sm:w-96 bg-stone-900 rounded-full h-3 border border-amber-700/50 overflow-hidden shadow-inner p-0.5 mb-3">
+            <div
+              className="bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-400 h-full rounded-full transition-all duration-300 ease-out shadow-lg shadow-amber-500/50"
+              style={{ width: `${loadingState.percent}%` }}
+            ></div>
+          </div>
+
+          {/* 进度百分比与统计 */}
+          <div className="flex justify-between w-72 sm:w-96 text-xs text-stone-400 font-mono">
+            <span>正在加载: {loadingState.loaded} / {loadingState.total}</span>
+            <span className="text-amber-400 font-bold">{loadingState.percent}%</span>
+          </div>
+
+          <p className="text-[11px] text-stone-500 mt-4">
+            已开启后台全速预加载，所有武将攻击姿态与地图立绘即将准备就绪
+          </p>
+        </div>
       )}
     </div>
   );

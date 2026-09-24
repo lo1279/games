@@ -130,6 +130,7 @@ export interface Projectile {
   burnDuration?: number;
   piercing?: boolean;
   hitEnemyIds?: string[];
+  sourceTowerId?: string; // 发射该弹道的武将防御塔ID（用于准确结算总输出与击杀归属）
 }
 
 // 飘字伤害与特效粒子

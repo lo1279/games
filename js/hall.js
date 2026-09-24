@@ -102,7 +102,7 @@ const GAMES_DATA = [
     gradient: 'linear-gradient(135deg, rgba(234, 179, 8, 0.25) 0%, rgba(161, 98, 7, 0.08) 100%)',
     borderGlow: 'rgba(234, 179, 8, 0.45)',
     summary: '以三国宏大历史为背景的策略塔防，布置关羽、张飞、诸葛亮等名将，释放必杀大招抵御千军万马。',
-    path: 'three-kingdoms-td/dist/index.html?v=2',
+    path: 'three-kingdoms-td/dist/index.html?v=preload2026',
     controls: '鼠标点击武将卡拖拽布阵，点击已部署武将可升级或释放专属绝技。',
     rating: '4.9',
     features: ['蜀魏吴知名武将阵容', '技能动画与大招特效', '兵种相克与攻击范围机制', '关卡策略与兵线运营']
