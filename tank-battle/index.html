@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>坦克大战 (Tank Battle) - 经典FC复刻版</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 顶部标题 -->
+  <header class="game-header">
+    <h1 class="game-title">
+      <span>🛡️</span> 经典坦克大战 (TANK BATTLE) <span>⭐</span>
+    </h1>
+    <p class="game-subtitle">守护老鹰基地 · 击溃敌军装甲 · 升级重炮破钢</p>
+  </header>
+
+  <!-- 街机框体主容器 -->
+  <main class="arcade-container">
+    <!-- Canvas 战场区域 -->
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas" width="624" height="624"></canvas>
+      <div id="crtOverlay" class="crt-overlay"></div>
+    </div>
+
+    <!-- 侧边栏 HUD -->
+    <aside class="hud-sidebar">
+      <div class="hud-card">
+        <div class="hud-label">当前关卡</div>
+        <div class="hud-value" id="hudStage">1</div>
+        <div style="font-size: 11px; color: #a4b0be; margin-top: 4px;" id="hudLevelName">第 1 关: 新兵防线</div>
+      </div>
+
+      <div class="hud-card">
+        <div class="hud-label">得分 SCORE</div>
+        <div class="hud-value" id="hudScore">0</div>
+      </div>
+
+      <div class="hud-card">
+        <div class="hud-label">玩家生命 LIVES</div>
+        <div class="hud-value" id="hudLives" style="color: #2ed573;">3</div>
+      </div>
+
+      <div class="hud-card">
+        <div class="hud-label">
+          <span>待出动敌军</span>
+          <span style="font-size: 10px; color: #888;">(总共20辆)</span>
+        </div>
+        <div class="enemy-grid" id="hudEnemyIcons">
+          <!-- 动态生成敌军小图标 -->
+        </div>
+      </div>
+
+      <div class="control-actions">
+        <button id="restartBtn" class="btn">🔄 重新开始 (R)</button>
+        <button id="pauseBtn" class="btn btn-secondary">⏸️ 暂停 / 继续 (P)</button>
+        <button id="muteBtn" class="btn btn-secondary">🔊 声音开启 (M)</button>
+        <button id="crtToggleBtn" class="btn btn-secondary">📺 CRT复古滤镜: 开</button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 操作指引面板 -->
+  <section class="instructions-panel">
+    <div class="instruction-item">
+      <span>移动:</span>
+      <span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span>
+      <span>或</span>
+      <span class="key-badge">↑</span><span class="key-badge">←</span><span class="key-badge">↓</span><span class="key-badge">→</span>
+    </div>
+    <div class="instruction-item">
+      <span>开火射击:</span>
+      <span class="key-badge">J</span> <span>或</span> <span class="key-badge">空格</span> <span>或</span> <span class="key-badge">K</span>
+    </div>
+    <div class="instruction-item">
+      <span>暂停:</span>
+      <span class="key-badge">P</span>
+    </div>
+    <div class="instruction-item">
+      <span>重新开始:</span>
+      <span class="key-badge">R</span>
+    </div>
+    <div class="instruction-item">
+      <span>经典道具:</span>
+      <span>⭐升级 | 💣全屏炸弹 | ⏰冻结敌军 | ⛏️铁壁基地 | 🛡️金钟罩 | 💖奖命</span>
+    </div>
+  </section>
+
+  <!-- 移动触控摇杆与按键 (适配手机或触控屏) -->
+  <section class="touch-controls" id="touchControls">
+    <div class="d-pad">
+      <div class="d-btn d-up" data-key="ArrowUp">▲</div>
+      <div class="d-btn d-left" data-key="ArrowLeft">◀</div>
+      <div class="d-btn d-right" data-key="ArrowRight">▶</div>
+      <div class="d-btn d-down" data-key="ArrowDown">▼</div>
+    </div>
+    <div class="action-pad">
+      <div class="action-btn" id="touchFireBtn">开火</div>
+    </div>
+  </section>
+
+  <!-- 脚本引入链 (注意依赖顺序) -->
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/explosion.js"></script>
+  <script src="js/bullet.js"></script>
+  <script src="js/powerup.js"></script>
+  <script src="js/tank.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/game.js"></script>
+
+  <!-- UI 辅助交互绑定 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 全局交互唤醒 Web Audio API
+      const unlockAudio = () => {
+        soundEngine.init();
+        soundEngine.resume();
+      };
+      window.addEventListener('click', unlockAudio, { once: true });
+      window.addEventListener('touchstart', unlockAudio, { once: true });
+
+      // 重新开始按钮
+      document.getElementById('restartBtn').addEventListener('click', () => {
+        unlockAudio();
+        if (window.game) window.game.startNewGame();
+      });
+
+      // 暂停按钮
+      document.getElementById('pauseBtn').addEventListener('click', () => {
+        if (window.game) {
+          if (window.game.state === window.game.STATE.PLAYING) {
+            window.game.state = window.game.STATE.PAUSED;
+          } else if (window.game.state === window.game.STATE.PAUSED) {
+            window.game.state = window.game.STATE.PLAYING;
+          }
+        }
+      });
+
+      // 静音按钮
+      document.getElementById('muteBtn').addEventListener('click', () => {
+        const isMuted = soundEngine.toggleMute();
+        window.game.updateMuteUI(isMuted);
+      });
+
+      // CRT 滤镜切换
+      const crtOverlay = document.getElementById('crtOverlay');
+      const crtBtn = document.getElementById('crtToggleBtn');
+      crtBtn.addEventListener('click', () => {
+        if (crtOverlay.style.display === 'none') {
+          crtOverlay.style.display = 'block';
+          crtBtn.innerText = '📺 CRT复古滤镜: 开';
+        } else {
+          crtOverlay.style.display = 'none';
+          crtBtn.innerText = '📺 CRT复古滤镜: 关';
+        }
+      });
+
+      // 触控支持
+      const dButtons = document.querySelectorAll('.d-btn');
+      dButtons.forEach(btn => {
+        const key = btn.dataset.key;
+        btn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          if (window.game) window.game.keys[key] = true;
+        });
+        btn.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          if (window.game) window.game.keys[key] = false;
+        });
+      });
+
+      const touchFire = document.getElementById('touchFireBtn');
+      touchFire.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (window.game) {
+          if (window.game.state === window.game.STATE.TITLE) {
+            window.game.startNewGame();
+          } else {
+            window.game.playerShoot();
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

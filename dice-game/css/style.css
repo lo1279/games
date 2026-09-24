@@ -1,0 +1,116 @@
+/* 核心质感与赌场台面样式 */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Noto+Sans+SC:wght@400;600;800&display=swap');
+
+:root {
+    --gold-primary: #d4af37;
+    --gold-hover: #f3cf55;
+    --felt-green: #0a3327;
+    --table-rim: #241a0d;
+}
+
+body {
+    font-family: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 50% 20%, #161c28 0%, #090c12 100%);
+    color: #e2e8f0;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* 拟真 3D 台面视口边框 */
+.felt-tray-container {
+    background: radial-gradient(circle, #0e4233 0%, #07261d 80%, #041711 100%);
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.9), 0 10px 30px rgba(0, 0, 0, 0.7);
+    border: 6px solid #2d2417;
+    outline: 2px solid var(--gold-primary);
+}
+
+/* 筹码拟真立体按钮 */
+.chip-btn {
+    position: relative;
+    border-radius: 9999px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 2px 2px rgba(255, 255, 255, 0.3), inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 3px dashed rgba(255, 255, 255, 0.6);
+    user-select: none;
+}
+
+.chip-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5), inset 0 2px 2px rgba(255, 255, 255, 0.4);
+}
+
+.chip-btn:active {
+    transform: translateY(1px);
+}
+
+.chip-10 {
+    background: radial-gradient(circle, #3b82f6 30%, #1d4ed8 100%);
+    color: #ffffff;
+}
+
+.chip-50 {
+    background: radial-gradient(circle, #ef4444 30%, #b91c1c 100%);
+    color: #ffffff;
+}
+
+.chip-100 {
+    background: radial-gradient(circle, #10b981 30%, #047857 100%);
+    color: #ffffff;
+}
+
+.chip-500 {
+    background: radial-gradient(circle, #8b5cf6 30%, #6d28d9 100%);
+    color: #ffffff;
+}
+
+/* 骰宝下注格 */
+.bet-cell {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 8px;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.bet-cell:hover {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: var(--gold-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.15);
+}
+
+.bet-cell:active {
+    transform: scale(0.98);
+}
+
+/* 金色发光边框 */
+.gold-glow {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+/* 自定义轻量滚动条 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}

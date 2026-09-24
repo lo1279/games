@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 骰王争霸 - 多功能掷骰子游戏 (Dice Master)</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col min-h-screen">
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-amber-500/20 px-4 py-3 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+                <span class="text-3xl">🎲</span>
+                <div>
+                    <h1 class="font-extrabold text-lg text-amber-400 tracking-wide">3D 骰王争霸</h1>
+                    <p class="text-[10px] text-slate-400">Dice Master 3D · 纯物理引擎沉浸体验</p>
+                </div>
+            </div>
+
+            <!-- 筹码与状态栏 -->
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center bg-slate-800/90 border border-amber-500/40 rounded-full px-3 py-1 shadow-inner">
+                    <span class="text-yellow-400 mr-1.5 font-bold">🪙</span>
+                    <span id="user-chips" class="font-black text-amber-300 text-sm tracking-wider">1,000</span>
+                    <span class="text-xs text-slate-400 ml-1">筹码</span>
+                </div>
+
+                <button id="relief-btn" class="text-xs bg-rose-600/80 hover:bg-rose-500 text-white font-medium px-2.5 py-1.5 rounded-lg border border-rose-400/40 transition-all shadow-sm" title="筹码少于50时可领取500救济金">
+                    🎁 救济金
+                </button>
+
+                <button id="sound-toggle-btn" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 transition-all">
+                    🔊 音效开
+                </button>
+
+                <button id="help-btn" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 transition-all">
+                    📖 规则
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 模式选择导航 Tabs -->
+    <nav class="bg-slate-900/60 border-b border-slate-800 py-2 px-4">
+        <div class="max-w-6xl mx-auto flex items-center justify-center space-x-2 sm:space-x-4 overflow-x-auto">
+            <button class="mode-tab px-4 py-2 font-bold text-sm rounded-lg bg-amber-500 text-slate-950 shadow-md transition-all" data-mode="sicbo">
+                🎯 骰宝押大小
+            </button>
+            <button class="mode-tab px-4 py-2 font-medium text-sm rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all" data-mode="liar">
+                🗣️ 吹牛大话骰
+            </button>
+            <button class="mode-tab px-4 py-2 font-medium text-sm rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all" data-mode="yahtzee">
+                ⛵ 快艇骰子 (Yahtzee)
+            </button>
+            <button class="mode-tab px-4 py-2 font-medium text-sm rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all" data-mode="free">
+                🎲 自由掷骰
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主舞台容器 -->
+    <main class="max-w-6xl w-full mx-auto px-4 py-4 flex-1 flex flex-col gap-4">
+
+        <!-- 3D 渲染画布视口 -->
+        <div class="w-full relative rounded-2xl overflow-hidden felt-tray-container shadow-2xl flex-shrink-0" style="height: 380px;">
+            <div id="dice-viewport" class="w-full h-full"></div>
+            <!-- 右上角水印提示 -->
+            <div class="absolute bottom-2 right-3 text-[11px] text-slate-400/60 pointer-events-none font-mono">
+                WebGL 3D Physics Engine · 真实模拟
+            </div>
+        </div>
+
+        <!-- 玩法控制面板区 -->
+        <div class="w-full">
+
+            <!-- 模式 1: 骰宝押大小 -->
+            <div id="panel-sicbo" class="mode-panel flex flex-col gap-3">
+                <!-- 开奖路单 -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-bold text-slate-400">历史开奖路单:</span>
+                        <div id="sicbo-roadmap" class="flex items-center space-x-1.5 overflow-x-auto max-w-[500px] py-0.5">
+                            <!-- 动态路单小圆点 -->
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-400 font-medium">
+                        当前下注: <span id="sicbo-total-bet" class="text-amber-400 font-bold text-sm">0</span> 筹码
+                    </div>
+                </div>
+
+                <!-- 骰宝下注盘面 (Casino Felt Grid) -->
+                <div class="bg-slate-900/90 border border-amber-500/30 rounded-xl p-4 shadow-xl flex flex-col gap-3">
+                    <!-- 第一行：大 / 全围豹子 / 小 -->
+                    <div class="grid grid-cols-12 gap-2">
+                        <!-- 小 -->
+                        <div class="col-span-4 bet-cell border-blue-500/40 hover:border-blue-400" data-bet="small">
+                            <span class="text-xl font-black text-blue-400">小</span>
+                            <span class="text-xs text-slate-300">4 - 10 点</span>
+                            <span class="text-[10px] text-slate-500">1 赔 1 (围骰通吃)</span>
+                        </div>
+                        <!-- 全围豹子 -->
+                        <div class="col-span-4 bet-cell border-purple-500/40 hover:border-purple-400 bg-purple-950/20" data-bet="any_triple">
+                            <span class="text-lg font-black text-purple-300">全围 (豹子)</span>
+                            <span class="text-xs text-purple-200">任意三同号</span>
+                            <span class="text-[10px] text-yellow-400 font-bold">1 赔 24</span>
+                        </div>
+                        <!-- 大 -->
+                        <div class="col-span-4 bet-cell border-rose-500/40 hover:border-rose-400" data-bet="big">
+                            <span class="text-xl font-black text-rose-400">大</span>
+                            <span class="text-xs text-slate-300">11 - 17 点</span>
+                            <span class="text-[10px] text-slate-500">1 赔 1 (围骰通吃)</span>
+                        </div>
+                    </div>
+
+                    <!-- 第二行：单 / 双 -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bet-cell" data-bet="odd">
+                            <span class="font-bold text-slate-200">单 (总和为单数)</span>
+                            <span class="text-[10px] text-slate-400">1 赔 1</span>
+                        </div>
+                        <div class="bet-cell" data-bet="even">
+                            <span class="font-bold text-slate-200">双 (总和为双数)</span>
+                            <span class="text-[10px] text-slate-400">1 赔 1</span>
+                        </div>
+                    </div>
+
+                    <!-- 第三行：指定总点数 -->
+                    <div class="grid grid-cols-7 sm:grid-cols-14 gap-1.5">
+                        <div class="bet-cell" data-bet="sum_4"><span class="font-bold text-xs">4点</span><span class="text-[9px] text-yellow-400">1:50</span></div>
+                        <div class="bet-cell" data-bet="sum_5"><span class="font-bold text-xs">5点</span><span class="text-[9px] text-yellow-400">1:20</span></div>
+                        <div class="bet-cell" data-bet="sum_6"><span class="font-bold text-xs">6点</span><span class="text-[9px] text-yellow-400">1:15</span></div>
+                        <div class="bet-cell" data-bet="sum_7"><span class="font-bold text-xs">7点</span><span class="text-[9px] text-yellow-400">1:12</span></div>
+                        <div class="bet-cell" data-bet="sum_8"><span class="font-bold text-xs">8点</span><span class="text-[9px] text-yellow-400">1:8</span></div>
+                        <div class="bet-cell" data-bet="sum_9"><span class="font-bold text-xs">9点</span><span class="text-[9px] text-yellow-400">1:6</span></div>
+                        <div class="bet-cell" data-bet="sum_10"><span class="font-bold text-xs">10点</span><span class="text-[9px] text-yellow-400">1:6</span></div>
+                        <div class="bet-cell" data-bet="sum_11"><span class="font-bold text-xs">11点</span><span class="text-[9px] text-yellow-400">1:6</span></div>
+                        <div class="bet-cell" data-bet="sum_12"><span class="font-bold text-xs">12点</span><span class="text-[9px] text-yellow-400">1:6</span></div>
+                        <div class="bet-cell" data-bet="sum_13"><span class="font-bold text-xs">13点</span><span class="text-[9px] text-yellow-400">1:8</span></div>
+                        <div class="bet-cell" data-bet="sum_14"><span class="font-bold text-xs">14点</span><span class="text-[9px] text-yellow-400">1:12</span></div>
+                        <div class="bet-cell" data-bet="sum_15"><span class="font-bold text-xs">15点</span><span class="text-[9px] text-yellow-400">1:15</span></div>
+                        <div class="bet-cell" data-bet="sum_16"><span class="font-bold text-xs">16点</span><span class="text-[9px] text-yellow-400">1:20</span></div>
+                        <div class="bet-cell" data-bet="sum_17"><span class="font-bold text-xs">17点</span><span class="text-[9px] text-yellow-400">1:50</span></div>
+                    </div>
+
+                    <!-- 下注操作栏 -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
+                        <!-- 筹码选择 -->
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400">选择筹码:</span>
+                            <div class="chip-btn chip-10 w-9 h-9 text-xs cursor-pointer" data-val="10">10</div>
+                            <div class="chip-btn chip-50 w-10 h-10 text-xs cursor-pointer ring-2 ring-yellow-400 scale-105" data-val="50">50</div>
+                            <div class="chip-btn chip-100 w-10 h-10 text-xs cursor-pointer" data-val="100">100</div>
+                            <div class="chip-btn chip-500 w-11 h-11 text-xs cursor-pointer" data-val="500">500</div>
+                        </div>
+
+                        <!-- 功能按钮组 -->
+                        <div class="flex items-center space-x-2">
+                            <button id="sicbo-repeat-btn" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-all">
+                                🔁 重复下注
+                            </button>
+                            <button id="sicbo-clear-btn" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-rose-400 rounded-lg text-xs font-medium transition-all">
+                                🗑️ 清空下注
+                            </button>
+                            <button id="sicbo-roll-btn" class="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-sm rounded-lg shadow-lg hover:shadow-yellow-500/20 active:scale-95 transition-all">
+                                🎲 摇骰开奖！
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 结算通告 -->
+                <div id="sicbo-result-banner" class="hidden"></div>
+            </div>
+
+            <!-- 模式 2: 吹牛大话骰 -->
+            <div id="panel-liar" class="mode-panel hidden flex flex-col gap-3">
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col gap-3">
+                    <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2">
+                        <div class="font-bold text-amber-400 text-sm">🗣️ 人机吹牛大话骰</div>
+                        <div id="liar-stats" class="text-xs text-slate-400">胜率统计加载中...</div>
+                    </div>
+
+                    <!-- 双方骰盅与手牌 -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- 玩家方 -->
+                        <div class="bg-slate-950/60 border border-cyan-500/30 rounded-xl p-3 flex flex-col items-center gap-2">
+                            <div class="text-xs font-bold text-cyan-400 flex items-center space-x-1">
+                                <span>👤 你的手牌 (仅自己可见)</span>
+                            </div>
+                            <div id="liar-player-hand" class="flex space-x-2">
+                                <!-- 5颗骰子 -->
+                            </div>
+                        </div>
+
+                        <!-- AI 方 -->
+                        <div class="bg-slate-950/60 border border-amber-500/30 rounded-xl p-3 flex flex-col items-center gap-2">
+                            <div class="text-xs font-bold text-amber-400 flex items-center space-x-1">
+                                <span>🤖 AI 心理对手</span>
+                            </div>
+                            <div id="liar-ai-hand" class="flex space-x-2">
+                                <!-- 5颗暗骰 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 对决叫骰广播与历史记录 -->
+                    <div class="bg-slate-950 rounded-lg p-3 border border-slate-800">
+                        <div id="liar-current-call-banner" class="text-sm font-bold text-center text-slate-300 pb-2 border-b border-slate-800">
+                            等待对决开始...
+                        </div>
+                        <div id="liar-dialog-log" class="h-28 overflow-y-auto mt-2 flex flex-col space-y-1">
+                            <!-- 滚动日志 -->
+                        </div>
+                    </div>
+
+                    <!-- 叫骰与开骰控制台 -->
+                    <div id="liar-call-box" class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <div id="liar-bid-controls" class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400">我要叫:</span>
+                            <select id="liar-call-count" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold focus:outline-none">
+                                <option value="2">2 个</option>
+                                <option value="3">3 个</option>
+                                <option value="4">4 个</option>
+                                <option value="5">5 个</option>
+                                <option value="6">6 个</option>
+                                <option value="7">7 个</option>
+                                <option value="8">8 个</option>
+                                <option value="9">9 个</option>
+                                <option value="10">10 个</option>
+                            </select>
+                            <select id="liar-call-val" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold focus:outline-none">
+                                <option value="1">1 点 (斋/无万能)</option>
+                                <option value="2">2 点</option>
+                                <option value="3">3 点</option>
+                                <option value="4">4 点</option>
+                                <option value="5">5 点</option>
+                                <option value="6">6 点</option>
+                            </select>
+                            <button id="liar-call-btn" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-all">
+                                📣 确认叫骰
+                            </button>
+                            <button id="liar-open-btn" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-lg shadow-md transition-all active:scale-95" disabled>
+                                ⚡ 开你！(质疑)
+                            </button>
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            <button id="liar-start-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg">
+                                开始对决 (底注100)
+                            </button>
+                            <button id="liar-restart-btn" class="hidden px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg shadow-md transition-all">
+                                🔄 重新发牌 (下一局)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="liar-result-banner" class="hidden"></div>
+                </div>
+            </div>
+
+            <!-- 模式 3: 快艇骰子 (Yahtzee) -->
+            <div id="panel-yahtzee" class="mode-panel hidden">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <!-- 左侧：投掷与锁定区 -->
+                    <div class="md:col-span-6 bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col justify-between gap-4">
+                        <div>
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                                <h3 class="font-bold text-amber-400 text-sm">⛵ 快艇投掷区</h3>
+                                <div class="text-xs text-slate-400">历史最高分: <span id="yahtzee-best-score" class="text-yellow-400 font-bold">0</span></div>
+                            </div>
+                            <p id="yahtzee-info-banner" class="text-xs text-slate-300 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 mb-3">
+                                点击【掷骰子】开始！可点击保留/锁定不想改变的骰子。
+                            </p>
+
+                            <!-- 点击锁定骰子容器 -->
+                            <div class="text-xs text-slate-400 mb-1.5">点击下方骰子可锁定 (保留不重掷):</div>
+                            <div id="yahtzee-hold-container" class="flex items-center justify-center space-x-2 py-2">
+                                <!-- 5颗可选锁定骰子 -->
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 pt-3 border-t border-slate-800">
+                            <button id="yahtzee-roll-btn" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-sm rounded-lg shadow-lg active:scale-95 transition-all">
+                                掷骰子 (剩余 3 次)
+                            </button>
+                            <button id="yahtzee-new-game-btn" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-lg transition-all">
+                                新一局
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：13 项计分表 -->
+                    <div class="md:col-span-6 bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col justify-between">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                            <span class="font-bold text-sm text-slate-200">13 项组合记分表</span>
+                            <span class="text-xs text-amber-400">点击数字选定记分</span>
+                        </div>
+
+                        <div class="overflow-y-auto max-h-[300px] border border-slate-800 rounded-lg">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-950/80 text-[10px] text-slate-400 uppercase">
+                                    <tr>
+                                        <th class="py-1 px-3">组合类别</th>
+                                        <th class="py-1 px-3 text-right">得分</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="yahtzee-score-body">
+                                    <!-- 动态计分行 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 汇总区域 -->
+                        <div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800 text-center mt-3">
+                            <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                                <div class="text-[10px] text-slate-400">上半区奖励进度</div>
+                                <div id="yahtzee-upper-total" class="font-bold text-xs text-slate-200">0 / 63</div>
+                            </div>
+                            <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                                <div class="text-[10px] text-slate-400">满63红利</div>
+                                <div id="yahtzee-bonus" class="font-bold text-xs text-amber-400">+0</div>
+                            </div>
+                            <div class="bg-slate-950 p-2 rounded-lg border border-amber-500/40">
+                                <div class="text-[10px] text-amber-300 font-bold">最终总分</div>
+                                <div id="yahtzee-grand-total" class="font-black text-base text-yellow-400">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模式 4: 自由掷骰 -->
+            <div id="panel-free" class="mode-panel hidden">
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h3 class="font-bold text-amber-400 text-sm">🎲 自由随心掷骰</h3>
+                        <span class="text-xs text-slate-400">日常决定、桌游、聚会决策</span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400">骰子数量:</span>
+                            <button class="free-count-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-medium text-xs hover:bg-slate-700" data-count="1">1 颗</button>
+                            <button class="free-count-btn px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs ring-2 ring-amber-300" data-count="2">2 颗</button>
+                            <button class="free-count-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-medium text-xs hover:bg-slate-700" data-count="3">3 颗</button>
+                            <button class="free-count-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-medium text-xs hover:bg-slate-700" data-count="4">4 颗</button>
+                            <button class="free-count-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-medium text-xs hover:bg-slate-700" data-count="5">5 颗</button>
+                            <button class="free-count-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-medium text-xs hover:bg-slate-700" data-count="6">6 颗</button>
+                        </div>
+
+                        <button id="free-roll-btn" class="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-sm rounded-lg shadow-lg active:scale-95 transition-all">
+                            掷一把！
+                        </button>
+                    </div>
+
+                    <div id="free-result-text" class="p-3 bg-slate-950 rounded-lg border border-slate-800 text-sm text-center text-slate-300">
+                        点击【掷一把！】投掷骰子
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 底部版权信息 -->
+    <footer class="mt-auto border-t border-slate-900 py-3 text-center text-xs text-slate-500">
+        🎲 3D 骰王争霸 · 纯本地独立运行 · D:\ai项目\games\dice-game
+    </footer>
+
+    <!-- 规则说明模态框 (Help Modal) -->
+    <div id="help-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h2 class="font-black text-lg text-amber-400 flex items-center space-x-2">
+                    <span>📖</span><span>游戏玩法规则指南</span>
+                </h2>
+                <button id="close-help-btn" class="text-slate-400 hover:text-white text-xl font-bold px-2">✕</button>
+            </div>
+
+            <div class="flex flex-col space-y-4 text-xs text-slate-300 leading-relaxed">
+                <div>
+                    <h4 class="font-bold text-sm text-amber-300 mb-1">1. 🎯 骰宝 (Sic Bo / 押大小)</h4>
+                    <p>3 颗骰子摇盅。点数 4~10 为【小】，11~17 为【大】。如出现 3 颗点数相同的【围骰/豹子】，则庄家通吃大小与单双！全围豹子享有 1:24 高额赔率。</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm text-amber-300 mb-1">2. 🗣️ 吹牛大话骰 (Liar's Dice)</h4>
+                    <p>双方各持 5 颗暗骰。轮流叫出场上所有骰子中特定点数的数量。下一位叫骰数量必须更多，或数量相同时点数更大。1 点在被叫出前为【万能点】（可充当任意点数），一旦有人叫了 1 点则万能规则失效。当你怀疑对方叫的数量超出全场实际时，点击【开你！】判定输赢！</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm text-amber-300 mb-1">3. ⛵ 快艇骰子 (Yahtzee)</h4>
+                    <p>经典策略骰子游戏。5 颗骰子每轮有 3 次投掷机会，可自由锁定满意的骰子。一局共 13 轮，需要将 13 种计分项填满。上半区 6 项点数总和达 63 分以上可激活 35 分巨额奖励！5 颗全同为最高荣誉【快艇 50分】！</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm text-amber-300 mb-1">4. 🪙 筹码与破产救济</h4>
+                    <p>纯单机娱乐，初始赠送 1,000 筹码。当余额少于 50 时，可随时点击右上角【🎁 救济金】领取 500 筹码无限续航！</p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-right">
+                <button onclick="document.getElementById('help-modal').classList.add('hidden')" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-all">
+                    我知道了，开始游戏
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本引入：Three.js -> 音频 -> 状态 -> 各模式 -> 主程序 -->
+    <script src="js/three.min.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/dice3d.js"></script>
+    <script src="js/game-sicbo.js"></script>
+    <script src="js/game-liar.js"></script>
+    <script src="js/game-yahtzee.js"></script>
+    <script src="js/game-free.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

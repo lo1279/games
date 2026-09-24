@@ -1,0 +1,603 @@
+/* ============================================================
+   扫雷游戏样式表 (Minesweeper Stylesheet)
+   包含：现代暗夜毛玻璃风格 (theme-modern) & 经典 Win98 复古拟物风格 (theme-classic)
+   ============================================================ */
+
+/* 全局重置与基础设定 */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  padding: 20px 10px;
+  overflow-x: hidden;
+}
+
+/* 粒子画布 */
+#particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ============================================================
+   主题变量定义
+   ============================================================ */
+
+/* 1. 现代暗夜风格 (Modern Dark Cyber Glass) */
+body.theme-modern {
+  --bg-color: #0b0f19;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --panel-bg: rgba(22, 30, 46, 0.85);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+  --btn-bg: #1e293b;
+  --btn-hover: #334155;
+  --btn-border: #475569;
+  --btn-text: #f8fafc;
+  
+  --hud-bg: #030712;
+  --led-bg: #111827;
+  --led-color: #ef4444;
+  --led-glow: rgba(239, 68, 68, 0.5);
+
+  --cell-size: 34px;
+  --cell-hidden-bg: #1e293b;
+  --cell-hidden-border: #334155;
+  --cell-hover-bg: #2d3d54;
+  --cell-revealed-bg: #0f172a;
+  --cell-revealed-border: rgba(255, 255, 255, 0.06);
+
+  --num-1: #38bdf8;
+  --num-2: #4ade80;
+  --num-3: #f87171;
+  --num-4: #c084fc;
+  --num-5: #fb923c;
+  --num-6: #2dd4bf;
+  --num-7: #f472b6;
+  --num-8: #94a3b8;
+
+  --modal-bg: #111827;
+  --modal-border: #374151;
+  background-color: var(--bg-color);
+  background-image: 
+    radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(239, 68, 68, 0.06) 0%, transparent 40%);
+  color: var(--text-main);
+}
+
+/* 2. 经典 Windows 98 复古拟物风格 (Classic Win98 Retro) */
+body.theme-classic {
+  --bg-color: #008080; /* Win98 经典蓝绿色桌面底色 */
+  --text-main: #000000;
+  --text-muted: #555555;
+  --panel-bg: #c0c0c0;
+  --panel-border: #ffffff;
+  --panel-shadow: 2px 2px 0px #000000;
+  --btn-bg: #c0c0c0;
+  --btn-hover: #d0d0d0;
+  --btn-border: #808080;
+  --btn-text: #000000;
+
+  --hud-bg: #000000;
+  --led-bg: #000000;
+  --led-color: #ff0000;
+  --led-glow: transparent;
+
+  --cell-size: 26px;
+  --cell-hidden-bg: #c0c0c0;
+  --cell-hidden-border: #ffffff;
+  --cell-hover-bg: #c0c0c0;
+  --cell-revealed-bg: #c0c0c0;
+  --cell-revealed-border: #808080;
+
+  --num-1: #0000ff;
+  --num-2: #008000;
+  --num-3: #ff0000;
+  --num-4: #000080;
+  --num-5: #800000;
+  --num-6: #008080;
+  --num-7: #000000;
+  --num-8: #808080;
+
+  --modal-bg: #c0c0c0;
+  --modal-border: #ffffff;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+}
+
+/* ============================================================
+   主容器布局
+   ============================================================ */
+.game-window {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 98vw;
+}
+
+body.theme-classic .game-window {
+  border-radius: 0;
+  border-top: 3px solid #ffffff;
+  border-left: 3px solid #ffffff;
+  border-right: 3px solid #808080;
+  border-bottom: 3px solid #808080;
+  padding: 10px;
+}
+
+/* 顶部窗口标题 (复古风格) */
+.title-bar {
+  display: none;
+}
+
+body.theme-classic .title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 13px;
+  padding: 3px 6px;
+  width: 100%;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+/* 顶部工具栏与控制区 */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.controls-left, .controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select-input, .btn {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.select-input:hover, .btn:hover {
+  background: var(--btn-hover);
+}
+
+body.theme-classic .select-input,
+body.theme-classic .btn {
+  border-radius: 0;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-right: 2px solid #808080;
+  border-bottom: 2px solid #808080;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+body.theme-classic .btn:active {
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+}
+
+/* 自定义难度输入条 */
+.custom-config {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  width: 100%;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.custom-config input {
+  width: 50px;
+  padding: 4px;
+  text-align: center;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+}
+
+/* ============================================================
+   HUD 仪表盘 (剩余雷数、笑脸、计时器)
+   ============================================================ */
+.hud-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: var(--hud-bg);
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  border: 1px solid var(--panel-border);
+}
+
+body.theme-classic .hud-panel {
+  border-radius: 0;
+  background: #c0c0c0;
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+
+/* LED 数码管数字管 */
+.led-display {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 26px;
+  font-weight: 900;
+  background: var(--led-bg);
+  color: var(--led-color);
+  text-shadow: 0 0 8px var(--led-glow);
+  padding: 2px 10px;
+  border-radius: 4px;
+  letter-spacing: 2px;
+  min-width: 68px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.theme-classic .led-display {
+  background: #000000;
+  color: #ff0000;
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  border-radius: 0;
+  padding: 1px 6px;
+  font-size: 24px;
+}
+
+/* 笑脸重置按钮 */
+.smiley-btn {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.smiley-btn:hover {
+  transform: scale(1.06);
+}
+
+.smiley-btn:active {
+  transform: scale(0.94);
+}
+
+body.theme-classic .smiley-btn {
+  border-radius: 0;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  background: #c0c0c0;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-right: 2px solid #808080;
+  border-bottom: 2px solid #808080;
+  box-shadow: none;
+}
+
+body.theme-classic .smiley-btn:active {
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+}
+
+/* ============================================================
+   雷区网格 (Board Grid)
+   ============================================================ */
+.board-container {
+  overflow: auto;
+  max-width: 95vw;
+  max-height: 70vh;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  scrollbar-width: thin;
+}
+
+body.theme-classic .board-container {
+  border-radius: 0;
+  background: #c0c0c0;
+  border-top: 3px solid #808080;
+  border-left: 3px solid #808080;
+  border-right: 3px solid #ffffff;
+  border-bottom: 3px solid #ffffff;
+  padding: 2px;
+}
+
+.board {
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  margin: 0 auto;
+  align-content: center;
+}
+
+body.theme-classic .board {
+  gap: 0;
+}
+
+/* 单元格基础 */
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, transform 0.05s ease;
+}
+
+body.theme-classic .cell {
+  border-radius: 0;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+}
+
+/* 未翻开状态 */
+.cell-hidden {
+  background: var(--cell-hidden-bg);
+  border: 1px solid var(--cell-hidden-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cell-hidden:hover {
+  background: var(--cell-hover-bg);
+}
+
+body.theme-classic .cell-hidden {
+  background: #c0c0c0;
+  border-top: 2px solid #ffffff;
+  border-left: 2px solid #ffffff;
+  border-right: 2px solid #808080;
+  border-bottom: 2px solid #808080;
+  box-shadow: none;
+}
+
+body.theme-classic .cell-hidden:active {
+  border: 1px solid #808080;
+}
+
+/* 已翻开状态 */
+.cell-revealed {
+  background: var(--cell-revealed-bg);
+  border: 1px solid var(--cell-revealed-border);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+body.theme-classic .cell-revealed {
+  background: #c0c0c0;
+  border-top: 1px solid #808080;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #808080;
+  border-bottom: 1px solid #808080;
+  box-shadow: none;
+}
+
+/* 数字颜色 */
+.cell-num-1 { color: var(--num-1); }
+.cell-num-2 { color: var(--num-2); }
+.cell-num-3 { color: var(--num-3); }
+.cell-num-4 { color: var(--num-4); }
+.cell-num-5 { color: var(--num-5); }
+.cell-num-6 { color: var(--num-6); }
+.cell-num-7 { color: var(--num-7); }
+.cell-num-8 { color: var(--num-8); }
+
+/* 地雷与爆炸 */
+.cell-mine {
+  background: #450a0a !important;
+  border-color: #ef4444 !important;
+}
+
+body.theme-classic .cell-mine {
+  background: #c0c0c0 !important;
+}
+
+.cell-exploded {
+  background: #dc2626 !important;
+  animation: pulse-explode 0.6s infinite alternate;
+}
+
+body.theme-classic .cell-exploded {
+  background: #ff0000 !important;
+}
+
+@keyframes pulse-explode {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.3); }
+}
+
+/* 标错的旗帜 (False Flag) */
+.cell-false-flag {
+  background: #475569;
+  font-size: 13px;
+}
+
+/* 震动特效 */
+.shake {
+  animation: screen-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes screen-shake {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(3px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
+}
+
+/* ============================================================
+   弹窗与提示遮罩 (Modal & Dialog)
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+body.theme-classic .modal {
+  border-radius: 0;
+  border-top: 3px solid #ffffff;
+  border-left: 3px solid #ffffff;
+  border-right: 3px solid #808080;
+  border-bottom: 3px solid #808080;
+  box-shadow: 2px 2px 0px #000;
+  padding: 16px;
+}
+
+.modal h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: var(--text-main);
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+body.theme-classic .record-item {
+  background: #dfdfdf;
+  border: 1px solid #808080;
+  border-radius: 0;
+}
+
+.record-diff {
+  font-weight: 600;
+}
+
+.record-time {
+  color: #38bdf8;
+  font-weight: bold;
+}
+
+body.theme-classic .record-time {
+  color: #000080;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 快捷键与操作帮助条 */
+.footer-tips {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 2px 5px;
+  font-size: 11px;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  margin: 0 2px;
+}
+
+body.theme-classic .kbd {
+  background: #e0e0e0;
+  border: 1px solid #808080;
+  color: #000;
+}

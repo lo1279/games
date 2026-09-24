@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>俄罗斯方块 - TETRIS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- 顶部标题 -->
+    <header class="game-header">
+        <h1 class="game-title">TETRIS</h1>
+        <p class="game-subtitle">经典俄罗斯方块 · 霓虹版</p>
+    </header>
+
+    <!-- 游戏主体容器 -->
+    <main class="game-wrapper">
+        
+        <!-- 左侧面板：暂存与统计 -->
+        <aside class="side-panel side-left">
+            <div class="glass-box">
+                <span class="box-title">暂存 (HOLD)</span>
+                <canvas id="hold-canvas" class="preview-canvas"></canvas>
+            </div>
+            <div class="glass-box">
+                <span class="box-title">最高得分</span>
+                <span id="high-score" class="box-value highlight">0</span>
+            </div>
+            <div class="glass-box">
+                <span class="box-title">消除行数</span>
+                <span id="lines" class="box-value">0</span>
+            </div>
+        </aside>
+
+        <!-- 中间主舞台 -->
+        <section class="board-container">
+            <canvas id="board"></canvas>
+
+            <!-- 状态遮罩层 (准备 / 暂停 / 结束) -->
+            <div id="overlay" class="overlay">
+                <h2 id="overlay-title" class="overlay-title">俄罗斯方块</h2>
+                <p id="overlay-subtitle" class="overlay-subtitle">按空格键或点击下方按钮开始</p>
+            </div>
+        </section>
+
+        <!-- 右侧面板：下一块与状态 -->
+        <aside class="side-panel side-right">
+            <div class="glass-box">
+                <span class="box-title">下一个 (NEXT)</span>
+                <canvas id="next-canvas" class="preview-canvas"></canvas>
+            </div>
+            <div class="glass-box">
+                <span class="box-title">当前得分</span>
+                <span id="score" class="box-value highlight">0</span>
+            </div>
+            <div class="glass-box">
+                <span class="box-title">当前等级</span>
+                <span id="level" class="box-value">1</span>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- 控制按钮栏 -->
+    <div class="control-buttons">
+        <button id="btn-start" class="btn btn-primary">🎮 开始游戏</button>
+        <button id="btn-pause" class="btn btn-secondary">⏸ 暂停 (P)</button>
+        <button id="btn-sound" class="btn btn-secondary">🔊 音效</button>
+    </div>
+
+    <!-- 移动端虚拟触控按键 -->
+    <div class="touch-controls">
+        <button id="ctrl-hold" class="touch-btn">暂存</button>
+        <button id="ctrl-rotate" class="touch-btn">旋转 ↻</button>
+        <button id="ctrl-drop" class="touch-btn">瞬降 ⤓</button>
+        <button id="ctrl-left" class="touch-btn">◀ 左移</button>
+        <button id="ctrl-down" class="touch-btn">▼ 下落</button>
+        <button id="ctrl-right" class="touch-btn">右移 ▶</button>
+    </div>
+
+    <!-- 键盘操作说明 -->
+    <footer class="controls-guide">
+        <div class="controls-guide-title">键盘快捷操作指南</div>
+        <div class="controls-grid">
+            <div><span class="key-badge">←</span> / <span class="key-badge">A</span> 左移</div>
+            <div><span class="key-badge">→</span> / <span class="key-badge">D</span> 右移</div>
+            <div><span class="key-badge">↑</span> / <span class="key-badge">W</span> 顺时针旋转</div>
+            <div><span class="key-badge">↓</span> / <span class="key-badge">S</span> 软降加速</div>
+            <div><span class="key-badge">Space</span> 硬降 (直接到底)</div>
+            <div><span class="key-badge">C</span> / <span class="key-badge">Shift</span> 暂存 (Hold)</div>
+        </div>
+    </footer>
+
+    <!-- 游戏脚本入口（兼容直接双击与本地服务器） -->
+    <script src="game.bundle.js"></script>
+</body>
+</html>

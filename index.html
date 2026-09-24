@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>星云电竞·综合游戏大厅 (Game Hub Arcade)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  <link rel="stylesheet" href="css/hall.css">
+</head>
+<body>
+
+  <!-- 顶部导航栏 -->
+  <header class="hub-nav">
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <span class="brand-icon">🎮</span>
+        <div>
+          <h1 class="brand-title">GAME HUB ARCADE</h1>
+          <p class="brand-subtitle">综合游戏大厅 · 极速畅玩中心</p>
+        </div>
+      </a>
+
+      <!-- 实时状态与统计徽章 -->
+      <div class="nav-stats">
+        <div class="stat-item" title="当前大厅收录的游戏总数">
+          <span>📦 收录:</span>
+          <span class="stat-val" id="totalGamesCount">7</span>
+          <span>款</span>
+        </div>
+        <div class="stat-item" title="本地总游玩启动次数">
+          <span>🔥 累计游玩:</span>
+          <span class="stat-val" id="totalPlaysCount">0</span>
+          <span>次</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 大厅主体内容 -->
+  <main class="hub-main">
+    
+    <!-- 英雄展示区 (Hero Banner) -->
+    <section class="hero-banner">
+      <div class="hero-content">
+        <div class="hero-tag">✨ 7 款精选 Web 独立游戏</div>
+        <h2 class="hero-title">点开即玩 · 沉浸体验 · 纯净无广告</h2>
+        <p class="hero-desc">
+          汇聚 3D 物理掷骰、FC 经典坦克大战、霓虹赛博俄罗斯方块、多神话卡牌肉鸽、三国群英塔防、扫雷及太空雷霆战机。支持大厅内沉浸游玩与独立窗口运行，自动保存游玩纪录。
+        </p>
+        <div class="hero-actions">
+          <button class="hero-quick-btn" id="randomGameBtn">
+            <span>🎲</span> 试试手气 · 随机挑一款
+          </button>
+          <a href="#gamesGrid" class="hero-outline-btn">
+            <span>👇</span> 浏览全部游戏
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-badge-art">
+        <span class="art-float-1">🎲</span>
+        <span class="art-float-2">🛡️</span>
+        <span class="art-float-3">⚡</span>
+      </div>
+    </section>
+
+    <!-- 工具与筛选栏 -->
+    <section class="hub-toolbar">
+      <!-- 分类选项卡 -->
+      <div class="category-tabs" id="categoryTabs">
+        <!-- 动态生成 -->
+      </div>
+
+      <!-- 搜索与排序 -->
+      <div class="toolbar-right">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" class="search-input" placeholder="搜索游戏名称、标签或特点...">
+        </div>
+        <select id="sortSelect" class="sort-select" aria-label="游戏排序方式">
+          <option value="default">默认推荐</option>
+          <option value="popular">游玩次数最多</option>
+          <option value="recent">最近游玩</option>
+          <option value="title">游戏名称排序</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- 游戏卡片展示网格 -->
+    <section class="games-grid" id="gamesGrid">
+      <!-- 由 js/hall.js 动态渲染 -->
+    </section>
+
+  </main>
+
+  <!-- 🎬 沉浸式游戏剧场浮层 (Arcade Theater Modal) -->
+  <div class="theater-overlay" id="theaterOverlay">
+    <!-- 顶部快捷控制条 -->
+    <div class="theater-header">
+      <div class="theater-left">
+        <button class="theater-back-btn" id="theaterCloseBtn" title="返回大厅 (Esc)">
+          <span>←</span> 返回大厅
+        </button>
+        <div class="theater-game-title">
+          <span id="theaterIcon">🎮</span>
+          <span id="theaterTitle">游戏加载中...</span>
+        </div>
+      </div>
+
+      <div class="theater-right">
+        <button class="theater-tool-btn" id="theaterGuideBtn" title="查看本游戏玩法与操作说明">
+          <span>📖</span> 操作指南
+        </button>
+        <button class="theater-tool-btn" id="theaterReloadBtn" title="重新开始 / 刷新游戏">
+          <span>🔄</span> 重新开始
+        </button>
+        <button class="theater-tool-btn" id="theaterFullscreenBtn" title="切换全屏沉浸模式">
+          <span>⛶</span> 全屏
+        </button>
+        <a href="#" target="_blank" class="theater-tool-btn" id="theaterNewTabBtn" title="在新浏览器标签页中打开">
+          <span>↗</span> 新窗口
+        </a>
+      </div>
+    </div>
+
+    <!-- 游戏视图窗口 -->
+    <div class="theater-viewport">
+      <div class="theater-loading" id="theaterLoading">
+        <div class="loading-spinner"></div>
+        <p>正在启动游戏引擎，请稍候...</p>
+      </div>
+      <iframe id="theaterIframe" class="game-iframe" src="about:blank" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- 📖 游戏详情与操作指南模态弹窗 -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose" title="关闭 (Esc)">✕</button>
+      <div class="modal-header">
+        <div class="modal-icon" id="modalIcon">🎮</div>
+        <div>
+          <h3 class="modal-title" id="modalTitle">游戏标题</h3>
+          <div class="modal-eng" id="modalEng">English Title</div>
+        </div>
+      </div>
+
+      <div class="modal-section-title">游戏简介</div>
+      <div class="modal-desc-box" id="modalDesc">游戏描述详情...</div>
+
+      <div class="modal-section-title">操作与按键指引</div>
+      <div class="modal-controls-box" id="modalControls">操作说明...</div>
+
+      <div class="modal-section-title">核心特色亮点</div>
+      <div class="modal-features-list" id="modalFeatures"></div>
+
+      <button class="btn-play-theater" style="width: 100%;" id="modalPlayBtn">
+        <span>▶</span> 立即进入游戏畅玩
+      </button>
+    </div>
+  </div>
+
+  <!-- 底部页脚 -->
+  <footer class="hub-footer">
+    <p>🎮 综合游戏大厅 · 纯本地静态部署 · 支持离线畅玩 · 自动存档</p>
+    <div class="footer-links">
+      <a href="dice-game/index.html" target="_blank">3D 骰王争霸</a>
+      <a href="minesweeper/index.html" target="_blank">经典扫雷</a>
+      <a href="mythology-deckbuilder/dist/index.html" target="_blank">万神纪元</a>
+      <a href="tank-battle/index.html" target="_blank">坦克大战</a>
+      <a href="tetris/index.html" target="_blank">俄罗斯方块</a>
+      <a href="three-kingdoms-td/dist/index.html" target="_blank">三国群英塔防</a>
+      <a href="thunder-fighter/index.html" target="_blank">雷霆战机</a>
+    </div>
+  </footer>
+
+  <script src="js/hall.js"></script>
+</body>
+</html>

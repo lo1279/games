@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>扫雷 (Minesweeper)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-modern">
+  <!-- 粒子特效画布 (胜利彩带等) -->
+  <canvas id="particle-canvas"></canvas>
+
+  <div class="game-window" id="app">
+    <!-- 经典复古标题栏 (仅在 classic 主题下呈现) -->
+    <div class="title-bar">
+      <span>💣 Minesweeper 扫雷</span>
+      <span>✕</span>
+    </div>
+
+    <!-- 顶部工具栏 -->
+    <header class="toolbar">
+      <div class="controls-left">
+        <select id="difficulty-select" class="select-input" aria-label="难度选择">
+          <option value="beginner">初级 (9×9)</option>
+          <option value="intermediate">中级 (16×16)</option>
+          <option value="expert">高级 (30×16)</option>
+          <option value="custom">自定义...</option>
+        </select>
+        <button id="records-btn" class="btn" title="查看本地最佳纪录">🏆 排行榜</button>
+      </div>
+
+      <div class="controls-right">
+        <button id="sound-toggle" class="btn" title="音效开关">🔊 音效</button>
+        <button id="theme-toggle" class="btn" title="切换经典/现代风格">✨ 现代暗色</button>
+      </div>
+    </header>
+
+    <!-- 自定义难度输入区 (默认折叠) -->
+    <div id="custom-config" class="custom-config hidden">
+      <label>行: <input type="number" id="custom-rows" min="8" max="30" value="12"></label>
+      <label>列: <input type="number" id="custom-cols" min="8" max="40" value="12"></label>
+      <label>雷: <input type="number" id="custom-mines" min="1" max="400" value="20"></label>
+      <button id="apply-custom-btn" class="btn">开始</button>
+    </div>
+
+    <!-- HUD 仪表盘 -->
+    <div class="hud-panel">
+      <div id="mine-digits" class="led-display" title="剩余地雷数">010</div>
+      <button id="reset-btn" class="smiley-btn" title="点击重新开始">
+        <span id="smiley-icon">😊</span>
+      </button>
+      <div id="timer-digits" class="led-display" title="游戏计时 (秒)">000</div>
+    </div>
+
+    <!-- 雷区容器 -->
+    <main class="board-container" id="board-container">
+      <div class="board" id="board"></div>
+    </main>
+
+    <!-- 底部操作说明 -->
+    <footer class="footer-tips">
+      <p><span class="kbd">左键</span> 翻开方格 ｜ <span class="kbd">右键 / 长按</span> 插旗标记 (🚩/❓)</p>
+      <p><span class="kbd">双击 / 左右键同时按</span> 快捷展开周围 (Chording)</p>
+    </footer>
+  </div>
+
+  <!-- 弹窗通用遮罩 -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <!-- 排行榜弹窗 -->
+    <div id="records-modal" class="modal hidden">
+      <h2>🏆 最佳通关记录</h2>
+      <div id="records-list" class="records-list"></div>
+      <div class="modal-actions">
+        <button id="clear-records-btn" class="btn">清除记录</button>
+        <button id="close-modal-btn" class="btn">关闭</button>
+      </div>
+    </div>
+
+    <!-- 胜利结算弹窗 -->
+    <div id="win-banner" class="modal hidden">
+      <h2>🎉 挑战成功！</h2>
+      <p id="win-time-text" style="margin: 16px 0; font-size: 16px; font-weight: 500;"></p>
+      <div class="modal-actions">
+        <button id="win-close-btn" class="btn">再来一局</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 游戏脚本入口（直接双击 index.html 即可开箱畅玩） -->
+  <script src="game.bundle.js"></script>
+</body>
+</html>

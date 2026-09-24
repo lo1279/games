@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>雷霆战机 - Thunder Fighter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- 游戏主画布 -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD 实时战斗数据面板 -->
+        <div id="hud">
+            <div class="hud-top">
+                <div class="hud-score-box">
+                    <span class="hud-label">SCORE</span>
+                    <span id="hud-score">0000000</span>
+                </div>
+                <div class="hud-stage-badge" id="hud-stage">STAGE 01</div>
+            </div>
+
+            <!-- 生命、护盾与暴走能量条 -->
+            <div class="status-bars">
+                <div class="bar-row">
+                    <span class="bar-tag">HP</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="hp-bar"></div>
+                    </div>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-tag">SHD</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="shield-bar"></div>
+                    </div>
+                </div>
+                <div class="bar-row">
+                    <span class="bar-tag">RAGE</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="rage-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hud-combo-badge" id="hud-combo">5 COMBO!</div>
+        </div>
+
+        <!-- Boss 战独立血条 -->
+        <div id="boss-hud" class="hidden">
+            <div id="boss-name">TITAN-DREADNOUGHT</div>
+            <div class="boss-bar-track">
+                <div id="boss-hp-bar"></div>
+            </div>
+        </div>
+
+        <!-- 悬浮快捷控制栏 -->
+        <div id="hud-controls">
+            <button class="circle-btn" id="sound-toggle">🔊 音效</button>
+            <button class="circle-btn bomb-btn" id="bomb-btn">
+                <span id="hud-bombs">💣💣</span> 释放核弹 [B]
+            </button>
+        </div>
+
+        <!-- 开始/主菜单弹窗 -->
+        <div id="start-screen" class="screen-overlay">
+            <h1 class="game-title">雷霆战机</h1>
+            <div class="game-subtitle">THUNDER FIGHTER</div>
+            
+            <div class="feature-list">
+                <p>🚀 <strong>战机升级</strong>：拾取 <strong>P</strong> 勋章强化主炮，满阶开启<strong>暴走形态</strong></p>
+                <p>🛡️ <strong>能量护盾</strong>：拾取 <strong>S</strong> 修复护盾，抵挡强敌致命创伤</p>
+                <p>💣 <strong>雷霆核弹</strong>：按 <strong>B 键</strong> 或点击底部核弹，释放全屏 EMP 清除弹幕</p>
+                <p>🎯 <strong>战斗操控</strong>：支持<strong>鼠标指针对准/拖拽</strong>、<strong>WASD/方向键</strong>平移</p>
+            </div>
+
+            <button class="btn-primary" id="start-btn">启 动 战 机</button>
+        </div>
+
+        <!-- 暂停弹窗 -->
+        <div id="pause-screen" class="screen-overlay hidden">
+            <h2 class="game-title">战斗暂停</h2>
+            <div class="game-subtitle">SYSTEM PAUSED</div>
+            <button class="btn-primary" id="resume-btn" style="margin-top: 20px;">继 续 战 斗</button>
+        </div>
+
+        <!-- 战败结算弹窗 -->
+        <div id="game-over-screen" class="screen-overlay hidden">
+            <h2 class="game-over-title">战 机 陨 落</h2>
+            <div class="stats-grid">
+                <div class="stat-row">
+                    <span>最终战功 (Score):</span>
+                    <span class="stat-value" id="final-score">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>击坠敌舰 (Kills):</span>
+                    <span class="stat-value" id="final-kills">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>最高连击 (Max Combo):</span>
+                    <span class="stat-value" id="final-combo">0</span>
+                </div>
+            </div>
+            <button class="btn-primary" id="restart-btn">重 新 出 击</button>
+        </div>
+    </div>
+
+    <!-- 逻辑模块依赖链引入 -->
+    <script src="js/audio.js"></script>
+    <script src="js/particle.js"></script>
+    <script src="js/background.js"></script>
+    <script src="js/bullet.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/boss.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
