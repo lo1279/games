@@ -51,6 +51,7 @@ export interface PlacedTower {
   skillTimer: number;
   totalDamageDealt: number;
   kills: number;
+  totalHealingDealt?: number; // 累计治疗量
   targetId: string | null;
   angle: number; // 朝向
   buffTimer?: number; // 曹操鼓舞攻速 Buff 剩余时间
@@ -59,6 +60,7 @@ export interface PlacedTower {
   maxHp: number; // 最大生命值
   isDown: boolean; // 是否处于负伤力竭休整状态
   recoveryTimer: number; // 负伤休整倒计时（秒）
+  autoSkill?: boolean; // 是否自动释放战法（默认继承全局）
 }
 
 // 敌人配置

@@ -253,6 +253,29 @@ class Boss {
         ctx.shadowColor = glowColor;
         ctx.shadowBlur = 14;
 
+        // 优先使用高清巨型母舰 Boss 贴图
+        const bossImg = window.assets && window.assets.getImage('boss', this.hitFlash > 0);
+        if (bossImg) {
+            const size = 180;
+            ctx.drawImage(bossImg, -size / 2, -size / 2, size, size);
+
+            // 叠加核心能量反应炉 (带脉动辉光)
+            const corePulse = Math.sin(Date.now() * 0.008) * 3;
+            ctx.fillStyle = glowColor;
+            ctx.beginPath();
+            ctx.arc(0, 5, 14 + corePulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, 5, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+            return;
+        }
+
+        // ================= Fallback 矢量几何绘制 =================
         ctx.fillStyle = this.hitFlash > 0 ? '#ffffff' : '#1a1e2e';
         ctx.strokeStyle = glowColor;
         ctx.lineWidth = 3;

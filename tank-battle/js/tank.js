@@ -29,6 +29,9 @@ class Tank {
     this.bulletPower = 1;
     this.canBreakSteel = false;
 
+    // 碰撞状态追踪
+    this.collidedTank = null;
+
     // 外观颜色
     this.primaryColor = '#e6c300';
     this.trackColor = '#6b5c00';
@@ -77,10 +80,12 @@ class Tank {
 
     // 1. 地图障碍物碰撞检查
     if (this.mapManager.isObstacle(nextX, nextY, this.width, this.height)) {
+      this.collidedTank = null;
       return false;
     }
 
-    // 2. 其它活着的坦克实体阻挡检查 (杜绝坦克穿模)
+    // 2. 其它活着的坦克实体阻挡检查 (捕获撞击目标)
+    this.collidedTank = null;
     if (otherTanks && otherTanks.length > 0) {
       for (const t of otherTanks) {
         if (t !== this && !t.destroyed && !t.spawning) {
@@ -90,6 +95,7 @@ class Tank {
             nextY < t.y + t.height &&
             nextY + this.height > t.y
           ) {
+            this.collidedTank = t;
             return false;
           }
         }
@@ -134,7 +140,8 @@ class Tank {
       this.bulletSpeed,
       ownerType,
       this.bulletPower,
-      this.canBreakSteel
+      this.canBreakSteel,
+      this // 关键: 传递发射者实例
     );
   }
 

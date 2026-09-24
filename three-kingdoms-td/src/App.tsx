@@ -40,6 +40,11 @@ export const App: React.FC = () => {
     victory: false,
   });
 
+  // 战法手操与阵位调遣状态
+  const [autoSkillEnabled, setAutoSkillEnabled] = useState<boolean>(true);
+  const [aimingSkillTower, setAimingSkillTower] = useState<PlacedTower | null>(null);
+  const [relocatingTower, setRelocatingTower] = useState<PlacedTower | null>(null);
+
   // 全量图片资源加载状态
   const [loadingState, setLoadingState] = useState<{
     loaded: number;
@@ -82,6 +87,15 @@ export const App: React.FC = () => {
       onPrepCountdownChange: (secondsLeft) => {
         setPrepCountdown(secondsLeft);
       },
+      onAutoSkillChange: (enabled) => {
+        setAutoSkillEnabled(enabled);
+      },
+      onAimingSkillChange: (tower) => {
+        setAimingSkillTower(tower);
+      },
+      onRelocatingTowerChange: (tower) => {
+        setRelocatingTower(tower);
+      },
       onAssetsLoadingProgress: (loaded, total, percent) => {
         setLoadingState((prev) => ({
           ...prev,
@@ -111,6 +125,8 @@ export const App: React.FC = () => {
     setGameOverState({ show: false, victory: false });
     setSelectedTower(null);
     setPlacingHeroId(null);
+    setAimingSkillTower(null);
+    setRelocatingTower(null);
     setDeployedHeroIds([]);
     setPrepCountdown(0);
     setSkillsCooldown({ freezeCd: 0, maxFreezeCd: 20, fireCd: 0, maxFireCd: 30 });
@@ -124,6 +140,8 @@ export const App: React.FC = () => {
       setGameOverState({ show: false, victory: false });
       setSelectedTower(null);
       setPlacingHeroId(null);
+      setAimingSkillTower(null);
+      setRelocatingTower(null);
       setDeployedHeroIds([]);
       setPrepCountdown(0);
       setSkillsCooldown({ freezeCd: 0, maxFreezeCd: 20, fireCd: 0, maxFireCd: 30 });
@@ -215,6 +233,20 @@ export const App: React.FC = () => {
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top) * scaleY;
 
+    // 0. 如果正在战术瞄准定点施法
+    if (aimingSkillTower) {
+      engine.triggerManualSkillAt(aimingSkillTower, clickX, clickY);
+      return;
+    }
+
+    // 0.1 如果正在阵位调遣
+    if (relocatingTower) {
+      const col = Math.floor(clickX / 50);
+      const row = Math.floor(clickY / 50);
+      engine.confirmRelocateTower(col, row);
+      return;
+    }
+
     // 1. 如果正在放置武将
     if (placingHeroId) {
       const col = Math.floor(clickX / 50);
@@ -267,6 +299,8 @@ export const App: React.FC = () => {
     setPlacingHeroId(null);
     if (engineRef.current) {
       engineRef.current.placingHeroId = null;
+      engineRef.current.cancelAimingSkill();
+      engineRef.current.cancelRelocateTower();
       engineRef.current.selectTower(null);
     }
   };
@@ -292,6 +326,20 @@ export const App: React.FC = () => {
 
     const engine = engineRef.current;
     if (!engine) return;
+
+    // 0. 移动端战法定点瞄准释放
+    if (aimingSkillTower) {
+      engine.triggerManualSkillAt(aimingSkillTower, coords.x, coords.y);
+      return;
+    }
+
+    // 0.1 移动端阵位调遣移驻
+    if (relocatingTower) {
+      const col = Math.floor(coords.x / 50);
+      const row = Math.floor(coords.y / 50);
+      engine.confirmRelocateTower(col, row);
+      return;
+    }
 
     // 1. 如果正在放置武将
     if (placingHeroId) {
@@ -382,13 +430,21 @@ export const App: React.FC = () => {
                 gold={gold}
                 onUpgrade={handleUpgradeTower}
                 onSell={handleSellTower}
+                onCastSkill={(t) => engineRef.current?.startAimingSkill(t)}
+                onRelocate={(t) => engineRef.current?.startRelocateTower(t)}
+                isAiming={aimingSkillTower?.id === selectedTower?.id}
+                isRelocating={relocatingTower?.id === selectedTower?.id}
                 onClose={() => {
-                  if (engineRef.current) engineRef.current.selectTower(null);
+                  if (engineRef.current) {
+                    engineRef.current.cancelAimingSkill();
+                    engineRef.current.cancelRelocateTower();
+                    engineRef.current.selectTower(null);
+                  }
                 }}
               />
             )}
 
-            {/* 底部控制台：发兵、锦囊技能 */}
+            {/* 底部控制台：发兵、锦囊技能与战法自动/手操切换 */}
             <BottomControls
               gold={gold}
               waveInProgress={waveInProgress}
@@ -396,6 +452,8 @@ export const App: React.FC = () => {
               totalWaves={totalWaves}
               skillsCooldown={skillsCooldown}
               prepCountdown={prepCountdown}
+              autoSkillEnabled={autoSkillEnabled}
+              onToggleAutoSkill={() => engineRef.current?.toggleAutoSkill()}
               onStartWave={handleStartWave}
               onCastFreeze={handleCastFreeze}
               onCastFireBomb={handleCastFireBomb}

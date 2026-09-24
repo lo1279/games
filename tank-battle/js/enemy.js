@@ -91,6 +91,10 @@ class EnemyTank extends Tank {
     if (!moved || this.changeDirTimer <= 0) {
       this.dir = this.chooseSmartDirection(eaglePos, player);
       this.changeDirTimer = Math.random() * 2.5 + 1.0;
+      // 遇到阻挡或相撞时，积极开炮轰击阻挡物/玩家
+      if (!moved && Math.random() < 0.6) {
+        this.shootTimer = Math.min(this.shootTimer, 0.15);
+      }
     }
 
     // 2. 开炮逻辑

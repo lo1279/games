@@ -44,6 +44,7 @@ class TankGame {
     this.stageBannerTimer = 0;
     this.gameOverTimer = 0;
     this.playerRespawnTimer = 0;
+    this.lastClashSoundTime = 0;
 
     // 按键输入跟踪
     this.keys = {};
@@ -243,6 +244,38 @@ class TankGame {
       enemy.updateAI(dt, isFrozen, this.player, this.mapManager.eaglePos, this.bullets, allTanks);
     }
 
+    // 5.1 敌我坦克相撞物理反馈与金钟罩碾压杀敌
+    if (this.player && !this.player.destroyed && this.player.collidedTank) {
+      const targetEnemy = this.player.collidedTank;
+      if (!targetEnemy.destroyed && !targetEnemy.spawning) {
+        // A. 若玩家处于无敌金钟罩护盾中，直接撞爆敌方坦克！
+        if (this.player.shieldTimer > 0) {
+          targetEnemy.destroyed = true;
+          this.player.score += targetEnemy.scoreValue;
+          this.explosions.push(new Explosion(targetEnemy.x + targetEnemy.width / 2, targetEnemy.y + targetEnemy.height / 2, true));
+          soundEngine.playExplosion();
+          if (targetEnemy.isBonusTank) {
+            this.dropRandomPowerUp();
+          }
+          if (window.touchController) window.touchController.vibrate(30);
+        } else {
+          // B. 普通相撞：产生撞击火花、金属碰撞音效、手机震动反馈
+          const now = performance.now();
+          if (now - this.lastClashSoundTime > 260) {
+            soundEngine.playHitSteel();
+            this.lastClashSoundTime = now;
+            // 产生接触面火花
+            const sparkX = (this.player.x + targetEnemy.x + 38) / 2;
+            const sparkY = (this.player.y + targetEnemy.y + 38) / 2;
+            this.explosions.push(new Explosion(sparkX, sparkY, false));
+            if (window.touchController) window.touchController.vibrate(12);
+          }
+          // 敌军遇撞击立即警觉，果断开火反击！
+          targetEnemy.shootTimer = Math.min(targetEnemy.shootTimer, 0.2);
+        }
+      }
+    }
+
     // 6. 子弹更新与全方位碰撞判定
     this.updateBullets(dt);
 
@@ -369,10 +402,12 @@ class TankGame {
       }
     }
 
-    // 过滤已销毁的子弹，并回收坦克炮弹发射配额
+    // 过滤已销毁的子弹，并精确回收坦克炮弹发射配额 (彻底解决敌军哑火)
     for (const b of this.bullets) {
       if (b.destroyed) {
-        if (b.ownerType === 'PLAYER' && this.player) {
+        if (b.ownerTank) {
+          b.ownerTank.activeBullets = Math.max(0, b.ownerTank.activeBullets - 1);
+        } else if (b.ownerType === 'PLAYER' && this.player) {
           this.player.activeBullets = Math.max(0, this.player.activeBullets - 1);
         }
       }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wind, Flame, Swords, ShieldAlert } from 'lucide-react';
+import { Wind, Flame, Swords, ShieldAlert, Zap } from 'lucide-react';
 import { MasterSkillsCooldown } from '../core/GameEngine';
 
 interface BottomControlsProps {
@@ -9,6 +9,8 @@ interface BottomControlsProps {
   totalWaves: number;
   skillsCooldown?: MasterSkillsCooldown;
   prepCountdown?: number;
+  autoSkillEnabled?: boolean;
+  onToggleAutoSkill?: () => void;
   onStartWave: () => void;
   onCastFreeze: () => void;
   onCastFireBomb: () => void;
@@ -21,6 +23,8 @@ export const BottomControls: React.FC<BottomControlsProps> = ({
   totalWaves,
   skillsCooldown = { freezeCd: 0, maxFreezeCd: 20, fireCd: 0, maxFireCd: 30 },
   prepCountdown = 0,
+  autoSkillEnabled = true,
+  onToggleAutoSkill,
   onStartWave,
   onCastFreeze,
   onCastFireBomb,
@@ -47,6 +51,27 @@ export const BottomControls: React.FC<BottomControlsProps> = ({
 
   return (
     <div className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 flex flex-wrap items-center justify-end gap-1.5 sm:gap-3 z-20 pointer-events-auto">
+      {/* 战法手操/自动模式切换按钮 */}
+      {onToggleAutoSkill && (
+        <button
+          onClick={onToggleAutoSkill}
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition btn-press border shadow-lg backdrop-blur-md ${
+            autoSkillEnabled
+              ? 'bg-emerald-950/90 text-emerald-300 border-emerald-600/60 hover:bg-emerald-900 shadow-emerald-950/40'
+              : 'bg-amber-950/90 text-amber-300 border-amber-600/60 hover:bg-amber-900 shadow-amber-950/40'
+          }`}
+          title={
+            autoSkillEnabled
+              ? '当前为【自动战法】：武将满怒遇敌将自行释放必杀。点击可切换为手操模式！'
+              : '当前为【手动战法】：武将满怒后由主公手动指派目标轰炸。点击可切回自动！'
+          }
+        >
+          <Zap size={14} className={autoSkillEnabled ? 'text-emerald-400' : 'text-amber-400 fill-amber-400'} />
+          <span className="hidden xs:inline">{autoSkillEnabled ? '战法: 自动' : '战法: 手操'}</span>
+          <span className="xs:hidden">{autoSkillEnabled ? '自动' : '手操'}</span>
+        </button>
+      )}
+
       {/* 主公锦囊妙计快捷栏 */}
       <div className="bg-stone-900/95 border border-amber-900/60 rounded-xl p-1 sm:p-1.5 flex items-center gap-1 sm:gap-2 backdrop-blur-md shadow-xl">
         <div className="hidden sm:flex text-[11px] font-bold text-amber-400/80 px-1.5 sm:px-2 items-center gap-1 border-r border-stone-800">

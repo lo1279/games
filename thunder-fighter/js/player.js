@@ -21,11 +21,23 @@ class Wingman {
     draw(ctx, isRage = false) {
         ctx.save();
         ctx.translate(this.x, this.y);
+
+        // 优先使用高清贴图
+        const wingmanImg = window.assets && window.assets.getImage('wingman');
+        if (wingmanImg) {
+            const size = 26;
+            ctx.shadowColor = isRage ? '#ff0055' : '#00f6ff';
+            ctx.shadowBlur = 8;
+            ctx.drawImage(wingmanImg, -size / 2, -size / 2, size, size);
+            ctx.restore();
+            return;
+        }
+
         ctx.fillStyle = isRage ? '#ff0055' : '#00f6ff';
         ctx.shadowColor = isRage ? '#ff0055' : '#00f6ff';
         ctx.shadowBlur = 8;
 
-        // 浮游机菱形构造
+        // 浮游机菱形构造 (Fallback)
         ctx.beginPath();
         ctx.moveTo(0, -10);
         ctx.lineTo(7, 4);
@@ -66,6 +78,7 @@ class Player {
         this.hp = 100;
         this.maxShield = 100;
         this.shield = 100;
+        this.shieldHitTimer = 0; // 护盾受击蜂窝矩阵激发计时
         this.bombs = 2; // 初始核弹
         this.score = 0;
 
@@ -136,6 +149,7 @@ class Player {
 
         if (this.shield > 0) {
             this.shield -= amount;
+            this.shieldHitTimer = 18; // 激发蜂窝护盾高能电弧脉冲
             if (window.sounds) window.sounds.playShieldHit();
             if (this.shield < 0) {
                 this.hp += this.shield; // 剩余穿透到生命值
@@ -255,9 +269,12 @@ class Player {
             }
         }
 
-        // 5. 无敌闪烁计时
+        // 5. 无敌闪烁计时与护盾受击反馈
         if (this.invincibleTimer > 0) {
             this.invincibleTimer--;
+        }
+        if (this.shieldHitTimer > 0) {
+            this.shieldHitTimer--;
         }
 
         // 6. 自动/手动开火逻辑
@@ -369,6 +386,29 @@ class Player {
         ctx.translate(this.x, this.y);
 
         const mainColor = this.isRage ? '#ff0055' : '#00f6ff';
+        const spriteKey = this.isRage ? 'player_rage' : 'player';
+        const isFlash = (this.invincibleTimer > 0 && this.invincibleTimer % 4 < 2);
+
+        // 优先使用高清精美战机贴图渲染
+        if (window.assets && window.assets.isLoaded(spriteKey)) {
+            const img = window.assets.getImage(spriteKey, isFlash);
+            if (img) {
+                const size = this.isRage ? 74 : 68;
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = this.isRage ? 18 : 10;
+                ctx.drawImage(img, -size / 2, -size / 2, size, size);
+
+                // 护盾发生器高科技蜂窝能量力场
+                if (this.shield > 0) {
+                    this.drawEnergyShield(ctx, this.isRage ? 45 : 40);
+                }
+
+                ctx.restore();
+                return;
+            }
+        }
+
+        // ================= Fallback 矢量几何绘制 =================
         const bodyColor = '#161d2d';
         const wingColor = '#243049';
 
@@ -429,13 +469,84 @@ class Player {
         ctx.lineTo(26, 12);
         ctx.stroke();
 
-        // 5. 护盾发生器能量光罩 (有护盾时环绕淡蓝光圈)
+        // 5. 护盾发生器高科技蜂窝能量力场
         if (this.shield > 0) {
-            const shieldAlpha = 0.25 + (this.shield / this.maxShield) * 0.35 + Math.sin(Date.now() * 0.008) * 0.1;
-            ctx.strokeStyle = `rgba(0, 240, 255, ${shieldAlpha})`;
-            ctx.lineWidth = 2.5;
+            this.drawEnergyShield(ctx, 38);
+        }
+
+        ctx.restore();
+    }
+
+    // 绘制现代科幻战机蜂窝能量偏折护盾 (取代简陋生硬圆圈)
+    drawEnergyShield(ctx, radius) {
+        ctx.save();
+        const time = Date.now() * 0.003;
+        const shieldRatio = this.shield / this.maxShield;
+        const isHit = this.shieldHitTimer > 0;
+        const baseColor = this.isRage ? '255, 0, 85' : '0, 240, 255';
+
+        // 1. 柔和通透的边缘径向离子微光 (内部通透，绝不遮挡机体细节)
+        const glowAlpha = isHit 
+            ? 0.45 
+            : (0.06 + shieldRatio * 0.08 + Math.sin(time * 2) * 0.03);
+        const grad = ctx.createRadialGradient(0, 0, radius * 0.6, 0, 0, radius * 1.15);
+        grad.addColorStop(0, `rgba(${baseColor}, 0)`);
+        grad.addColorStop(0.7, `rgba(${baseColor}, ${glowAlpha * 0.5})`);
+        grad.addColorStop(1, `rgba(${baseColor}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 1.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. 旋转的六边形力场发生锚点与能量环线
+        const hexAngleOffset = time * 0.5;
+        const lineAlpha = isHit 
+            ? (0.6 + (this.shieldHitTimer / 18) * 0.35) 
+            : (0.15 + shieldRatio * 0.15 + Math.sin(time * 3) * 0.05);
+
+        ctx.strokeStyle = `rgba(${baseColor}, ${lineAlpha})`;
+        ctx.lineWidth = isHit ? 2.2 : 1.2;
+        ctx.shadowColor = `rgb(${baseColor})`;
+        ctx.shadowBlur = isHit ? 14 : 5;
+
+        // 绘制正六边形偏折偏振网
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = hexAngleOffset + (i * Math.PI) / 3;
+            const hx = Math.cos(angle) * radius;
+            const hy = Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(hx, hy);
+            else ctx.lineTo(hx, hy);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // 3. 六个微型能量发生器节点 (Emitter Nodes)
+        for (let i = 0; i < 6; i++) {
+            const angle = hexAngleOffset + (i * Math.PI) / 3;
+            const hx = Math.cos(angle) * radius;
+            const hy = Math.sin(angle) * radius;
+
+            ctx.fillStyle = isHit ? '#ffffff' : `rgba(${baseColor}, ${lineAlpha + 0.3})`;
             ctx.beginPath();
-            ctx.arc(0, 0, 36, 0, Math.PI * 2);
+            ctx.arc(hx, hy, isHit ? 2.5 : 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 4. 受击激发的蜂窝晶格力场网 (Hexagonal Lattice Flash)
+        if (isHit) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${this.shieldHitTimer / 20})`;
+            ctx.lineWidth = 1.5;
+            // 内部小六边形晶格折射
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = -hexAngleOffset + (i * Math.PI) / 3;
+                const hx = Math.cos(angle) * (radius * 0.55);
+                const hy = Math.sin(angle) * (radius * 0.55);
+                if (i === 0) ctx.moveTo(hx, hy);
+                else ctx.lineTo(hx, hy);
+            }
+            ctx.closePath();
             ctx.stroke();
         }
 

@@ -31,6 +31,9 @@ export interface GameEngineCallbacks {
   onPrepCountdownChange?: (secondsLeft: number) => void;
   onAssetsLoadingProgress?: (loaded: number, total: number, percent: number) => void;
   onAssetsLoaded?: () => void;
+  onAutoSkillChange?: (enabled: boolean) => void;
+  onAimingSkillChange?: (tower: PlacedTower | null) => void;
+  onRelocatingTowerChange?: (tower: PlacedTower | null) => void;
 }
 
 export class GameEngine {
@@ -47,6 +50,12 @@ export class GameEngine {
   public isRunning: boolean = false;
   public selectedTower: PlacedTower | null = null;
   public placingHeroId: string | null = null; // 当前正在准备放置的英雄
+
+  // 战法手操与阵位调遣状态
+  public autoSkillEnabled: boolean = true; // 全局战法自动开关（true=自动，false=手操）
+  public aimingSkillTower: PlacedTower | null = null; // 当前正在战术瞄准定点施法的武将
+  public relocatingTower: PlacedTower | null = null; // 当前正在调遣换位的武将
+  public static readonly RELOCATE_COST: number = 25; // 阵位调遣所需军饷
 
   // 主公锦囊技能冷却时间（秒）
   public static readonly MAX_FREEZE_CD = 20;
@@ -216,6 +225,8 @@ export class GameEngine {
     this.visualEffects = [];
     this.selectedTower = null;
     this.placingHeroId = null;
+    this.aimingSkillTower = null;
+    this.relocatingTower = null;
     this.waveInProgress = false;
     this.waveEnemyQueue = [];
     this.waveTimer = 0;
@@ -371,6 +382,7 @@ export class GameEngine {
       skillTimer: 0,
       totalDamageDealt: 0,
       kills: 0,
+      totalHealingDealt: 0,
       targetId: null,
       angle: 0,
       hp: maxHp,
@@ -469,6 +481,187 @@ export class GameEngine {
   public selectTower(tower: PlacedTower | null): void {
     this.selectedTower = tower;
     this.callbacks.onSelectTower(tower ? { ...tower } : null);
+  }
+
+  // 切换全局战法自动/手操模式
+  public toggleAutoSkill(): boolean {
+    this.autoSkillEnabled = !this.autoSkillEnabled;
+    this.callbacks.onAutoSkillChange?.(this.autoSkillEnabled);
+    if (!this.autoSkillEnabled) {
+      this.addFloatingText(500, 260, '已切换为【手动战法】！满怒武将点击面板即可指派必杀', '#38bdf8', 20, true);
+    } else {
+      this.addFloatingText(500, 260, '已恢复为【自动战法】！名将遇敌将自行施展战法', '#4ade80', 20, true);
+      // 清空正在进行的瞄准
+      this.cancelAimingSkill();
+    }
+    return this.autoSkillEnabled;
+  }
+
+  // 开始手动瞄准定点施法
+  public startAimingSkill(tower: PlacedTower): void {
+    const hero = HEROES.find((h) => h.id === tower.heroId);
+    if (!hero) return;
+    if (tower.isDown) {
+      sound.playAlarm();
+      this.addFloatingText(tower.x, tower.y - 20, '武将重伤休整中，无法施展战法!', '#f87171', 16, true);
+      return;
+    }
+    if (tower.skillTimer < hero.skillCooldown) {
+      sound.playAlarm();
+      const remain = (hero.skillCooldown - tower.skillTimer).toFixed(1);
+      this.addFloatingText(tower.x, tower.y - 20, `战法蓄势中 (还剩 ${remain}s)!`, '#facc15', 16, true);
+      return;
+    }
+
+    // 全场/自身技能直接立即释放，无需地面瞄准
+    if (hero.id === 'liubei' || hero.id === 'caocao' || hero.id === 'zhangfei' || hero.id === 'sunshangxiang') {
+      this.triggerManualSkillAt(tower, tower.x, tower.y);
+      return;
+    }
+
+    // 定向/定点技能进入战术瞄准模式
+    this.aimingSkillTower = tower;
+    this.relocatingTower = null;
+    this.placingHeroId = null;
+    this.callbacks.onAimingSkillChange?.(tower);
+    sound.playUpgrade();
+    this.addFloatingText(tower.x, tower.y - 32, `【${hero.skillName}】请点击战场指定落点!`, '#38bdf8', 19, true);
+  }
+
+  // 取消战法瞄准
+  public cancelAimingSkill(): void {
+    if (this.aimingSkillTower) {
+      this.aimingSkillTower = null;
+      this.callbacks.onAimingSkillChange?.(null);
+    }
+  }
+
+  // 手动在指定战场坐标释放战法
+  public triggerManualSkillAt(tower: PlacedTower, targetX: number, targetY: number): boolean {
+    const hero = HEROES.find((h) => h.id === tower.heroId);
+    if (!hero) return false;
+
+    // 清空冷却与重置瞄准状态
+    tower.skillTimer = 0;
+    tower.attackAnimationTimer = 0.55;
+    this.aimingSkillTower = null;
+    this.callbacks.onAimingSkillChange?.(null);
+
+    // 寻找最近的敌军或友军
+    let nearestEnemy: EnemyEntity | undefined;
+    let minEnemyDist = Infinity;
+    this.enemies.forEach((e) => {
+      const d = Math.hypot(e.x - targetX, e.y - targetY);
+      if (d < minEnemyDist) {
+        minEnemyDist = d;
+        nearestEnemy = e;
+      }
+    });
+
+    let nearestAlly: PlacedTower | undefined;
+    let minAllyDist = Infinity;
+    this.towers.forEach((t) => {
+      const d = Math.hypot(t.x - targetX, t.y - targetY);
+      if (d < minAllyDist) {
+        minAllyDist = d;
+        nearestAlly = t;
+      }
+    });
+
+    this.triggerHeroSkill(tower, hero, nearestEnemy, nearestAlly, { x: targetX, y: targetY });
+    return true;
+  }
+
+  // 发起阵位调遣
+  public startRelocateTower(tower: PlacedTower): boolean {
+    if (this.gold < GameEngine.RELOCATE_COST) {
+      sound.playAlarm();
+      this.addFloatingText(tower.x, tower.y - 20, `军饷不足! 调遣需 ${GameEngine.RELOCATE_COST} 军饷`, '#f87171', 16, true);
+      return false;
+    }
+    this.relocatingTower = tower;
+    this.aimingSkillTower = null;
+    this.placingHeroId = null;
+    this.callbacks.onRelocatingTowerChange?.(tower);
+    sound.playUpgrade();
+    this.addFloatingText(tower.x, tower.y - 30, '调遣令：请点击合法平地移驻阵位', '#34d399', 18, true);
+    return true;
+  }
+
+  // 取消阵位调遣
+  public cancelRelocateTower(): void {
+    if (this.relocatingTower) {
+      this.relocatingTower = null;
+      this.callbacks.onRelocatingTowerChange?.(null);
+    }
+  }
+
+  // 确认在网格 (col, row) 执行阵位调遣
+  public confirmRelocateTower(col: number, row: number): boolean {
+    if (!this.relocatingTower) return false;
+    if (this.gold < GameEngine.RELOCATE_COST) {
+      sound.playAlarm();
+      this.cancelRelocateTower();
+      return false;
+    }
+
+    if (!this.isPositionValidForTower(col, row)) {
+      sound.playAlarm();
+      this.addFloatingText(col * 50 + 25, row * 50 + 25, '此地不可移驻!', '#f87171', 15);
+      return false;
+    }
+
+    const isOccupied = this.towers.some((t) => t.id !== this.relocatingTower?.id && t.col === col && t.row === row);
+    if (isOccupied) {
+      sound.playAlarm();
+      this.addFloatingText(col * 50 + 25, row * 50 + 25, '已有武将驻守!', '#f87171', 15);
+      return false;
+    }
+
+    // 扣除调遣军饷
+    this.gold -= GameEngine.RELOCATE_COST;
+    this.callbacks.onGoldChange(this.gold);
+
+    const oldX = this.relocatingTower.x;
+    const oldY = this.relocatingTower.y;
+    const newX = col * 50 + 25;
+    const newY = row * 50 + 25;
+
+    // 原地风影残像粒子
+    this.spawnParticles(oldX, oldY, '#94a3b8', 20);
+
+    // 变更坐标
+    this.relocatingTower.col = col;
+    this.relocatingTower.row = row;
+    this.relocatingTower.x = newX;
+    this.relocatingTower.y = newY;
+
+    // 新阵位移驻特效与音效
+    this.spawnParticles(newX, newY, '#34d399', 25);
+    sound.playUpgrade();
+    sound.playDrum();
+
+    const hero = HEROES.find((h) => h.id === this.relocatingTower?.heroId);
+    this.addFloatingText(newX, newY - 25, `${hero?.name || '名将'} 调遣移驻完成! (-${GameEngine.RELOCATE_COST}军饷)`, '#34d399', 20, true);
+
+    const movedTower = this.relocatingTower;
+    this.cancelRelocateTower();
+    this.selectTower(movedTower);
+    return true;
+  }
+
+  // 寻找距离指定坐标最近的友军
+  private findNearestAllyToPos(x: number, y: number): PlacedTower | null {
+    let nearest: PlacedTower | null = null;
+    let minDist = Infinity;
+    this.towers.forEach((t) => {
+      const d = Math.hypot(t.x - x, t.y - y);
+      if (d < minDist) {
+        minDist = d;
+        nearest = t;
+      }
+    });
+    return nearest;
   }
 
   // 主公技能：借东风（全屏冰冻/静止 3.5秒）
@@ -894,10 +1087,16 @@ export class GameEngine {
       }
 
       // 主动战法技能释放（支持武将在场上无敌兵时也可以释放全军回春/仁德）
-      if (tower.skillTimer >= hero.skillCooldown && (bestTarget || woundedAlly || (isSupport && this.waveInProgress))) {
-        tower.skillTimer = 0;
-        tower.attackAnimationTimer = 0.45;
-        this.triggerHeroSkill(tower, hero, bestTarget || undefined, woundedAlly || undefined);
+      const isAutoSkill = tower.autoSkill ?? this.autoSkillEnabled;
+      if (tower.skillTimer >= hero.skillCooldown) {
+        if (isAutoSkill && (bestTarget || woundedAlly || (isSupport && this.waveInProgress))) {
+          tower.skillTimer = 0;
+          tower.attackAnimationTimer = 0.45;
+          this.triggerHeroSkill(tower, hero, bestTarget || undefined, woundedAlly || undefined);
+        } else {
+          // 手动战法模式：封顶满怒就绪状态，等待主公手动指派战法
+          tower.skillTimer = hero.skillCooldown;
+        }
       }
       // 华佗专属普攻：优先治疗友军（大幅强化治疗量与续航能力）
       else if (hero.id === 'huatuo' && woundedAlly && tower.attackTimer >= effectiveInterval) {
@@ -1126,15 +1325,27 @@ export class GameEngine {
     }
   }
 
-  // 释放专属名将大招技能
-  private triggerHeroSkill(tower: PlacedTower, hero: HeroConfig, target?: EnemyEntity, ally?: PlacedTower): void {
-    if (hero.id === 'guanyu' && target) {
+  // 释放专属名将大招技能（支持自动索敌释放与手操指定坐标释放）
+  private triggerHeroSkill(
+    tower: PlacedTower,
+    hero: HeroConfig,
+    target?: EnemyEntity,
+    ally?: PlacedTower,
+    manualPos?: { x: number; y: number }
+  ): void {
+    if (hero.id === 'guanyu' && (target || manualPos)) {
       // 关羽【青龙偃月斩】：呼啸而出的巨型青龙破空烈风刀芒
       sound.playSlash();
       sound.playThunder();
       const dmg = tower.damage * 3.2;
-      this.applyDamageToEnemy(target, dmg, 'physical', tower, true);
+      if (target) {
+        this.applyDamageToEnemy(target, dmg, 'physical', tower, true);
+      }
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】青龙破千军!`, '#22c55e', 24, true);
+
+      const targetX = target ? target.x : manualPos!.x;
+      const targetY = target ? target.y : manualPos!.y;
+      tower.angle = Math.atan2(targetY - tower.y, targetX - tower.x);
 
       // 扇形贯穿判定与大招刀气实体
       this.visualEffects.push({
@@ -1142,8 +1353,8 @@ export class GameEngine {
         type: 'guanyu_dragon',
         x: tower.x,
         y: tower.y,
-        targetX: target.x,
-        targetY: target.y,
+        targetX,
+        targetY,
         angle: tower.angle,
         radius: 180,
         color: '#22c55e',
@@ -1163,7 +1374,7 @@ export class GameEngine {
           this.spawnParticles(e.x, e.y, '#22c55e', 15);
         }
       });
-      this.spawnParticles(target.x, target.y, '#4ade80', 35);
+      this.spawnParticles(targetX, targetY, '#4ade80', 35);
     } else if (hero.id === 'zhangfei') {
       // 张飞【当阳怒吼】：当阳桥碎骨咆哮，全场三重雷霆冲击波
       sound.playDrum();
@@ -1190,16 +1401,19 @@ export class GameEngine {
         }
       });
       this.spawnParticles(tower.x, tower.y, '#fbbf24', 40);
-    } else if (hero.id === 'zhugeliang' && target) {
+    } else if (hero.id === 'zhugeliang' && (target || manualPos)) {
       // 诸葛亮【八卦神雷阵】：八卦阵盘显现，九天落雷轰炸
       sound.playThunder();
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】雷霆听吾号令!`, '#38bdf8', 24, true);
 
+      const castX = target ? target.x : manualPos!.x;
+      const castY = target ? target.y : manualPos!.y;
+
       this.visualEffects.push({
         id: `fx_zhuge_${Date.now()}`,
         type: 'zhuge_lightning',
-        x: target.x,
-        y: target.y,
+        x: castX,
+        y: castY,
         angle: 0,
         radius: 160,
         color: '#38bdf8',
@@ -1209,22 +1423,26 @@ export class GameEngine {
       });
 
       this.enemies.forEach((e) => {
-        if (Math.hypot(e.x - target.x, e.y - target.y) <= 160) {
+        if (Math.hypot(e.x - castX, e.y - castY) <= 160) {
           this.applyDamageToEnemy(e, tower.damage * 2.5, 'magic', tower);
           e.slowTimer = 4.0;
           this.spawnLightningEffect(tower.x, tower.y, e.x, e.y);
         }
       });
-    } else if (hero.id === 'zhouyu' && target) {
+    } else if (hero.id === 'zhouyu' && (target || manualPos)) {
       // 周瑜【火烧赤壁】：凤凰业火焚天
       sound.playExplosion();
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】赤壁业火，燃尽千帆!`, '#ef4444', 24, true);
 
+      const castX = target ? target.x : manualPos!.x;
+      const castY = target ? target.y : manualPos!.y;
+      tower.angle = Math.atan2(castY - tower.y, castX - tower.x);
+
       this.visualEffects.push({
         id: `fx_fire_${Date.now()}`,
         type: 'zhouyu_firestorm',
-        x: target.x,
-        y: target.y,
+        x: castX,
+        y: castY,
         angle: tower.angle,
         radius: 150,
         color: '#ef4444',
@@ -1234,13 +1452,13 @@ export class GameEngine {
       });
 
       this.enemies.forEach((e) => {
-        if (Math.hypot(e.x - target.x, e.y - target.y) <= 150) {
+        if (Math.hypot(e.x - castX, e.y - castY) <= 150) {
           this.applyDamageToEnemy(e, tower.damage * 2.2, 'magic', tower);
           e.burnTimer = 5.0;
           e.burnDps = 100;
         }
       });
-      this.spawnParticles(target.x, target.y, '#dc2626', 45);
+      this.spawnParticles(castX, castY, '#dc2626', 45);
     } else if (hero.id === 'caocao') {
       // 曹操：短歌行·对酒当歌，全场帝王金龙霸气大阵与三军战旗
       sound.playDrum();
@@ -1266,18 +1484,22 @@ export class GameEngine {
         this.spawnParticles(t.x, t.y, '#f59e0b', 20);
         this.addFloatingText(t.x, t.y - 20, '魏武神威·攻速+50%!', '#fde047', 15, true);
       });
-    } else if (hero.id === 'zhaoyun' && target) {
+    } else if (hero.id === 'zhaoyun' && (target || manualPos)) {
       // 赵云：龙胆破军，银枪连刺
       sound.playSlash();
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】一身是胆，破阵如风!`, '#059669', 24, true);
+
+      const castX = target ? target.x : manualPos!.x;
+      const castY = target ? target.y : manualPos!.y;
+      tower.angle = Math.atan2(castY - tower.y, castX - tower.x);
 
       this.visualEffects.push({
         id: `fx_spear_${Date.now()}`,
         type: 'zhaoyun_spear_storm',
         x: tower.x,
         y: tower.y,
-        targetX: target.x,
-        targetY: target.y,
+        targetX: castX,
+        targetY: castY,
         angle: tower.angle,
         radius: 120,
         color: '#10b981',
@@ -1288,17 +1510,29 @@ export class GameEngine {
 
       for (let i = 0; i < 5; i++) {
         setTimeout(() => {
-          if (!target.isDead && !target.reachedEnd) {
+          if (target && !target.isDead && !target.reachedEnd) {
             this.applyDamageToEnemy(target, tower.damage * 1.0, 'physical', tower, true);
-            this.spawnCrescentSlash(tower.x, tower.y, tower.angle + (Math.random() - 0.5) * 0.3, 85, '#34d399', '#a7f3d0');
+          } else {
+            // 手操定点：对目标点周围敌人连环刺击
+            this.enemies.forEach((e) => {
+              if (Math.hypot(e.x - castX, e.y - castY) <= 120) {
+                this.applyDamageToEnemy(e, tower.damage * 0.7, 'physical', tower);
+              }
+            });
           }
+          this.spawnCrescentSlash(tower.x, tower.y, tower.angle + (Math.random() - 0.5) * 0.3, 85, '#34d399', '#a7f3d0');
         }, i * 65);
       }
     } else if (hero.id === 'huangzhong') {
       // 黄忠：落日穿云箭，全场超远贯穿弹道
       sound.playArrowShoot();
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】穿云贯日，百步穿杨!`, '#d97706', 24, true);
-      const angle = tower.angle;
+      
+      let angle = tower.angle;
+      if (manualPos) {
+        angle = Math.atan2(manualPos.y - tower.y, manualPos.x - tower.x);
+        tower.angle = angle;
+      }
       const targetDist = 950;
       this.projectiles.push({
         id: `pierce_${Date.now()}`,
@@ -1406,7 +1640,9 @@ export class GameEngine {
           this.addFloatingText(t.x, t.y - 25, '仁德感召·休整-10s!', '#86efac', 18, true);
           if (t.recoveryTimer === 0) {
             t.isDown = false;
-            t.hp = Math.floor(maxHp * 0.8);
+            const revivedHp = Math.floor(maxHp * 0.8);
+            t.hp = revivedHp;
+            tower.totalHealingDealt = (tower.totalHealingDealt || 0) + revivedHp;
             this.addFloatingText(t.x, t.y - 35, `【${allyHero?.name}】闻声力竭复苏!`, '#4ade80', 20, true);
           }
         } else {
@@ -1414,6 +1650,7 @@ export class GameEngine {
           t.hp = Math.min(maxHp, t.hp + healAmt);
           const actualHealed = t.hp - oldHp;
           if (actualHealed > 0) {
+            tower.totalHealingDealt = (tower.totalHealingDealt || 0) + actualHealed;
             this.addFloatingText(t.x, t.y - 20, `+${actualHealed} 仁德`, '#4ade80', 17, true);
           }
         }
@@ -1424,7 +1661,7 @@ export class GameEngine {
       sound.playUpgrade();
       sound.playDrum();
 
-      const healTarget = ally || tower;
+      const healTarget = ally || (manualPos ? this.findNearestAllyToPos(manualPos.x, manualPos.y) : tower) || tower;
       const healAmt = 1000 + (tower.level - 1) * 250;
       const allyHero = HEROES.find((h) => h.id === healTarget.heroId);
       const maxHp = healTarget.maxHp || (allyHero?.baseHp || 700);
@@ -1449,12 +1686,18 @@ export class GameEngine {
       if (healTarget.isDown) {
         healTarget.isDown = false;
         healTarget.recoveryTimer = 0;
-        healTarget.hp = Math.floor(maxHp * 0.9);
+        const revivedHp = Math.floor(maxHp * 0.9);
+        healTarget.hp = revivedHp;
+        tower.totalHealingDealt = (tower.totalHealingDealt || 0) + revivedHp;
         this.addFloatingText(healTarget.x, healTarget.y - 30, `【${allyHero?.name}】神药复苏! +${healTarget.hp}`, '#2dd4bf', 22, true);
       } else {
         const oldHp = healTarget.hp;
         healTarget.hp = Math.min(maxHp, healTarget.hp + healAmt);
-        this.addFloatingText(healTarget.x, healTarget.y - 20, `+${healTarget.hp - oldHp} 青囊回春`, '#2dd4bf', 19, true);
+        const actualHealed = healTarget.hp - oldHp;
+        if (actualHealed > 0) {
+          tower.totalHealingDealt = (tower.totalHealingDealt || 0) + actualHealed;
+        }
+        this.addFloatingText(healTarget.x, healTarget.y - 20, `+${actualHealed} 青囊回春`, '#2dd4bf', 19, true);
       }
       this.spawnParticles(healTarget.x, healTarget.y, '#2dd4bf', 24);
 
@@ -1496,6 +1739,7 @@ export class GameEngine {
     target.hp = Math.min(maxHp, target.hp + amount);
     const actual = target.hp - oldHp;
     if (actual > 0) {
+      healer.totalHealingDealt = (healer.totalHealingDealt || 0) + actual;
       this.addFloatingText(target.x, target.y - 18, `+${actual}`, '#2dd4bf', 15);
       this.spawnParticles(target.x, target.y, '#2dd4bf', 6);
     }
@@ -1744,7 +1988,13 @@ export class GameEngine {
     // 9. 绘制建造放置预览与范围圈
     this.renderPlacementPreview();
 
-    // 10. 绘制伤害飘字
+    // 10. 绘制阵位调遣预览
+    this.renderRelocatePreview();
+
+    // 11. 绘制战术定点瞄准预览
+    this.renderAimingSkillPreview();
+
+    // 12. 绘制伤害飘字
     this.renderFloatingTexts();
   }
 
@@ -1966,8 +2216,8 @@ export class GameEngine {
     const time = performance.now();
     const breathe = 0.3 + 0.18 * Math.sin(time * 0.004);
 
-    // 1. 当玩家正在从点将台选将部署时，全图平地呈现轻柔翠金/米黄战术八卦阵点，明确提示玩家全图皆可布防！
-    if (this.placingHeroId) {
+    // 1. 当玩家选将部署或战术调遣换位时，全图平地呈现轻柔翠金/米黄战术八卦阵点，明确提示玩家全图皆可布防！
+    if (this.placingHeroId || this.relocatingTower) {
       ctx.save();
       for (let col = 0; col < 20; col++) {
         for (let row = 0; row < 12; row++) {
@@ -2142,6 +2392,44 @@ export class GameEngine {
 
       ctx.save();
       ctx.translate(tower.x, tower.y);
+
+      // 战法就绪特效：脚下金色旋转八卦流光阵
+      if (tower.skillTimer >= hero.skillCooldown && !tower.isDown) {
+        const time = performance.now();
+        const spin = (time * 0.003) % (Math.PI * 2);
+        const pulse = 1 + 0.12 * Math.sin(time * 0.008);
+        ctx.save();
+        ctx.rotate(spin);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 24 * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 战术瞄准聚焦光圈
+      if (this.aimingSkillTower?.id === tower.id) {
+        const time = performance.now();
+        const pulse = 1 + 0.15 * Math.sin(time * 0.01);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 26 * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // 调遣移驻虚影光圈
+      if (this.relocatingTower?.id === tower.id) {
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 26, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
 
       // 武将底盘光圈
       ctx.fillStyle = hero.color;
@@ -2379,6 +2667,138 @@ export class GameEngine {
       ctx.textBaseline = 'middle';
       ctx.fillText(hero.avatarChar, cx, cy);
     }
+  }
+
+  // 阵位调遣预览渲染
+  private renderRelocatePreview(): void {
+    if (!this.relocatingTower || !this.mousePos) return;
+    const hero = HEROES.find((h) => h.id === this.relocatingTower?.heroId);
+    if (!hero) return;
+
+    const { ctx } = this;
+    const col = Math.floor(this.mousePos.x / 50);
+    const row = Math.floor(this.mousePos.y / 50);
+
+    const isSlotValid = this.isPositionValidForTower(col, row);
+    const isOccupied = this.towers.some((t) => t.id !== this.relocatingTower?.id && t.col === col && t.row === row);
+    const canRelocate = isSlotValid && !isOccupied && this.gold >= GameEngine.RELOCATE_COST;
+
+    const cx = col * 50 + 25;
+    const cy = row * 50 + 25;
+
+    // 绘制吸附网格框 (50x50)
+    ctx.save();
+    ctx.strokeStyle = canRelocate ? '#34d399' : '#f87171';
+    ctx.fillStyle = canRelocate ? 'rgba(52, 211, 153, 0.25)' : 'rgba(239, 68, 68, 0.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(col * 50 + 2, row * 50 + 2, 46, 46, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // 绘制原阵位到新阵位的行军虚线连线
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(this.relocatingTower.x, this.relocatingTower.y);
+    ctx.lineTo(cx, cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 绘制射程圈
+    ctx.strokeStyle = canRelocate ? 'rgba(52, 211, 153, 0.6)' : 'rgba(239, 68, 68, 0.6)';
+    ctx.fillStyle = canRelocate ? 'rgba(52, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, this.relocatingTower.range, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 半透明预览头像
+    ctx.globalAlpha = 0.85;
+    const avatarImg = this.imageCache.get(hero.id);
+    if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(avatarImg, cx - 18, cy - 18, 36, 36);
+    } else {
+      ctx.fillStyle = hero.color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(hero.avatarChar, cx, cy);
+    }
+    ctx.restore();
+  }
+
+  // 战术定点瞄准预览渲染
+  private renderAimingSkillPreview(): void {
+    if (!this.aimingSkillTower || !this.mousePos) return;
+    const hero = HEROES.find((h) => h.id === this.aimingSkillTower?.heroId);
+    if (!hero) return;
+
+    const { ctx } = this;
+    const tx = this.mousePos.x;
+    const ty = this.mousePos.y;
+    const time = performance.now();
+    const pulse = 1 + 0.08 * Math.sin(time * 0.01);
+
+    ctx.save();
+
+    // 1. 从武将到瞄准落点的能量连线 (虚线)
+    ctx.strokeStyle = hero.color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(this.aimingSkillTower.x, this.aimingSkillTower.y);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 2. 根据英雄技能类型绘制精准范围指示圈
+    let radius = 150;
+    if (hero.id === 'zhugeliang') radius = 160;
+    else if (hero.id === 'zhouyu') radius = 150;
+    else if (hero.id === 'huatuo') radius = 140;
+    else if (hero.id === 'zhaoyun') radius = 120;
+    else if (hero.id === 'guanyu') radius = 180;
+    else if (hero.id === 'huangzhong') radius = 80;
+
+    // 半透明落点范围圈
+    ctx.fillStyle = `${hero.color}22`;
+    ctx.strokeStyle = hero.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(tx, ty, radius * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 准星十字线
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(tx - 18, ty);
+    ctx.lineTo(tx + 18, ty);
+    ctx.moveTo(tx, ty - 18);
+    ctx.lineTo(tx, ty + 18);
+    ctx.stroke();
+
+    // 提示文本：“点击释放战法【技能名】”
+    ctx.font = 'bold 12px serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.lineWidth = 3;
+    const tipText = `点击指派【${hero.skillName}】`;
+    ctx.strokeText(tipText, tx, ty - radius - 12);
+    ctx.fillText(tipText, tx, ty - radius - 12);
+
+    ctx.restore();
   }
 
   // 飘字渲染

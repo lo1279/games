@@ -10,13 +10,15 @@ class Bullet {
    * @param {string} ownerType 'PLAYER' | 'ENEMY'
    * @param {number} power 破坏威力 (1:普通, 2:终极重炮)
    * @param {boolean} canBreakSteel 是否可击穿铁墙
+   * @param {Tank} ownerTank 发射该子弹的坦克实例引用
    */
-  constructor(x, y, dir, speed, ownerType, power = 1, canBreakSteel = false) {
+  constructor(x, y, dir, speed, ownerType, power = 1, canBreakSteel = false, ownerTank = null) {
     this.dir = dir;
     this.speed = speed;
     this.ownerType = ownerType;
     this.power = power;
     this.canBreakSteel = canBreakSteel;
+    this.ownerTank = ownerTank;
     this.destroyed = false;
 
     // 经典小炮弹尺寸 (6x6)

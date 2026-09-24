@@ -122,6 +122,18 @@ class ScoutFighter extends Enemy {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+
+        // 优先使用高清精美敌机贴图
+        const img = window.assets && window.assets.getImage('enemy_scout', this.hitFlash > 0);
+        if (img) {
+            const size = 38;
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = 6;
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+            ctx.restore();
+            return;
+        }
+
         ctx.fillStyle = this.hitFlash > 0 ? '#ffffff' : '#2f3542';
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 1.8;
@@ -191,13 +203,25 @@ class Cruiser extends Enemy {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+
+        // 优先使用高清精美巡航舰贴图
+        const img = window.assets && window.assets.getImage('enemy_cruiser', this.hitFlash > 0);
+        if (img) {
+            const size = 58;
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = 8;
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+            ctx.restore();
+            return;
+        }
+
         ctx.fillStyle = this.hitFlash > 0 ? '#ffffff' : '#1e272e';
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 2;
         ctx.shadowColor = this.color;
         ctx.shadowBlur = 8;
 
-        // 重型六边形舰体
+        // 重型六边形舰体 (Fallback)
         ctx.beginPath();
         ctx.moveTo(0, 24);
         ctx.lineTo(24, 6);
@@ -270,13 +294,25 @@ class Gunship extends Enemy {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+
+        // 优先使用高清精美装甲炮艇贴图
+        const img = window.assets && window.assets.getImage('enemy_gunship', this.hitFlash > 0);
+        if (img) {
+            const size = 76;
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = 10;
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+            ctx.restore();
+            return;
+        }
+
         ctx.fillStyle = this.hitFlash > 0 ? '#ffffff' : '#2c2c54';
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 2.5;
         ctx.shadowColor = this.color;
         ctx.shadowBlur = 10;
 
-        // 堡垒机身构造
+        // 堡垒机身构造 (Fallback)
         ctx.beginPath();
         ctx.moveTo(0, 30);
         ctx.lineTo(26, 12);
@@ -347,13 +383,24 @@ class Kamikaze extends Enemy {
         const rot = this.state === 'charging' ? this.targetAngle - Math.PI / 2 : 0;
         ctx.rotate(rot);
 
+        // 优先使用高清精美自杀机贴图
+        const img = window.assets && window.assets.getImage('enemy_kamikaze', this.hitFlash > 0);
+        if (img) {
+            const size = 38;
+            ctx.shadowColor = '#ff1744';
+            ctx.shadowBlur = 10;
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+            ctx.restore();
+            return;
+        }
+
         ctx.fillStyle = this.hitFlash > 0 ? '#ffffff' : '#3d0c11';
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 2;
         ctx.shadowColor = '#ff1744';
         ctx.shadowBlur = 10;
 
-        // 箭头尖刺形态
+        // 箭头尖刺形态 (Fallback)
         ctx.beginPath();
         ctx.moveTo(0, 18);
         ctx.lineTo(12, -14);

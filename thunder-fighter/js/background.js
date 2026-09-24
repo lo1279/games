@@ -20,40 +20,40 @@ class Starfield {
 
     initStars() {
         this.stars = [];
-        // 远景层星星 90 颗
+        // 远景层星星 90 颗 (极细微弱星)
         for (let i = 0; i < 90; i++) {
             this.stars.push({
                 x: Math.random() * this.width,
                 y: Math.random() * this.height,
-                size: Math.random() * 1.2 + 0.5,
-                speed: Math.random() * 0.4 + 0.3,
-                brightness: Math.random() * 0.6 + 0.2,
-                twinkleSpeed: Math.random() * 0.04 + 0.01,
-                color: '#8ab4f8'
+                size: Math.random() * 0.5 + 0.3,
+                speed: Math.random() * 0.35 + 0.2,
+                brightness: Math.random() * 0.2 + 0.08,
+                twinkleSpeed: Math.random() * 0.03 + 0.01,
+                color: '#6c82a3'
             });
         }
-        // 中景层星星 45 颗
+        // 中景层星星 45 颗 (柔和暗白点)
         for (let i = 0; i < 45; i++) {
             this.stars.push({
                 x: Math.random() * this.width,
                 y: Math.random() * this.height,
-                size: Math.random() * 1.8 + 1.2,
-                speed: Math.random() * 1.2 + 0.8,
-                brightness: Math.random() * 0.7 + 0.3,
-                twinkleSpeed: Math.random() * 0.05 + 0.02,
-                color: '#ffffff'
+                size: Math.random() * 0.5 + 0.6,
+                speed: Math.random() * 0.9 + 0.6,
+                brightness: Math.random() * 0.22 + 0.12,
+                twinkleSpeed: Math.random() * 0.04 + 0.02,
+                color: '#9cb3d1'
             });
         }
-        // 近景疾驰星尘 25 颗
-        for (let i = 0; i < 25; i++) {
+        // 近景疾驰星尘 20 颗 (温润微光星丝，绝不抢镜或误判为子弹)
+        for (let i = 0; i < 20; i++) {
             this.stars.push({
                 x: Math.random() * this.width,
                 y: Math.random() * this.height,
-                size: Math.random() * 2.2 + 1.8,
-                speed: Math.random() * 2.8 + 2.2,
-                brightness: 0.9,
+                size: Math.random() * 0.5 + 0.8,
+                speed: Math.random() * 2.2 + 1.6,
+                brightness: 0.22,
                 twinkleSpeed: 0,
-                color: '#cbf0ff'
+                color: '#b0d6ff'
             });
         }
     }
@@ -122,13 +122,11 @@ class Starfield {
         ctx.fillStyle = grad2;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // 3. 星群渲染
+        // 3. 细腻深空星群渲染 (微弱半透明，绝不遮挡视野或混淆子弹)
         for (let s of this.stars) {
             ctx.save();
             ctx.globalAlpha = s.brightness;
             ctx.fillStyle = s.color;
-            ctx.shadowColor = s.color;
-            ctx.shadowBlur = s.size > 2 ? 6 : 0;
             ctx.beginPath();
             ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
             ctx.fill();
