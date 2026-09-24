@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist (保留 dist 用于 GitHub Pages 在线运行)
 dist-ssr
 *.local
 
