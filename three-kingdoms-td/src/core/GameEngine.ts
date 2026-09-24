@@ -99,7 +99,7 @@ export class GameEngine {
   private preloadEnemyImages(): void {
     Object.values(ENEMIES).forEach((enemy) => {
       const img = new Image();
-      img.src = `/assets/enemies/${enemy.id}.png`;
+      img.src = `./assets/enemies/${enemy.id}.png`;
       this.imageCache.set(`enemy_${enemy.id}`, img);
     });
   }
@@ -116,19 +116,19 @@ export class GameEngine {
 
       // 待机姿态 (idle)
       const idleImg = new Image();
-      idleImg.src = `/assets/heroes/${h.id}_idle.png`;
+      idleImg.src = `./assets/heroes/${h.id}_idle.png`;
       this.imageCache.set(`${h.id}_idle`, idleImg);
 
       // 攻击姿态 (attack)
       const attackImg = new Image();
-      attackImg.src = `/assets/heroes/${h.id}_attack.png`;
+      attackImg.src = `./assets/heroes/${h.id}_attack.png`;
       this.imageCache.set(`${h.id}_attack`, attackImg);
     });
   }
 
   // 加载关卡地图背景图
   private loadMapBackground(): void {
-    const bgUrl = `/assets/maps/${this.stage.id}_bg.jpg`;
+    const bgUrl = `./assets/maps/${this.stage.id}_bg.jpg`;
     const img = new Image();
     img.src = bgUrl;
     img.onload = () => {

@@ -18,7 +18,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 7,
     color: '#16a34a', // 蜀绿
     projectileType: 'slash',
-    avatarUrl: '/assets/heroes/guanyu.jpg',
+    avatarUrl: './assets/heroes/guanyu.jpg',
     baseHp: 950,
   },
   {
@@ -38,7 +38,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 8,
     color: '#15803d',
     projectileType: 'spear',
-    avatarUrl: '/assets/heroes/zhangfei.jpg',
+    avatarUrl: './assets/heroes/zhangfei.jpg',
     baseHp: 1100,
   },
   {
@@ -58,7 +58,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 6,
     color: '#059669',
     projectileType: 'spear',
-    avatarUrl: '/assets/heroes/zhaoyun.jpg',
+    avatarUrl: './assets/heroes/zhaoyun.jpg',
     baseHp: 850,
   },
   {
@@ -78,7 +78,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 9,
     color: '#d97706', // 琥珀黄
     projectileType: 'arrow',
-    avatarUrl: '/assets/heroes/huangzhong.jpg',
+    avatarUrl: './assets/heroes/huangzhong.jpg',
     baseHp: 580,
   },
   {
@@ -98,7 +98,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 10,
     color: '#0284c7', // 天蓝/青白
     projectileType: 'lightning',
-    avatarUrl: '/assets/heroes/zhugeliang.jpg',
+    avatarUrl: './assets/heroes/zhugeliang.jpg',
     baseHp: 620,
   },
   {
@@ -118,7 +118,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 8.5,
     color: '#dc2626', // 吴赤红
     projectileType: 'fireball',
-    avatarUrl: '/assets/heroes/zhouyu.jpg',
+    avatarUrl: './assets/heroes/zhouyu.jpg',
     baseHp: 600,
   },
   {
@@ -138,7 +138,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 14,
     color: '#2563eb', // 魏蓝
     projectileType: 'slash',
-    avatarUrl: '/assets/heroes/caocao.jpg',
+    avatarUrl: './assets/heroes/caocao.jpg',
     baseHp: 780,
   },
   {
@@ -158,7 +158,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 6.5,
     color: '#ea580c',
     projectileType: 'arrow',
-    avatarUrl: '/assets/heroes/sunshangxiang.jpg',
+    avatarUrl: './assets/heroes/sunshangxiang.jpg',
     baseHp: 550,
   },
   {
@@ -178,7 +178,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 12,
     color: '#15803d', // 汉昭烈墨绿/金绿
     projectileType: 'slash',
-    avatarUrl: '/assets/heroes/liubei.jpg',
+    avatarUrl: './assets/heroes/liubei.jpg',
     baseHp: 900,
   },
   {
@@ -198,7 +198,7 @@ export const HEROES: HeroConfig[] = [
     skillCooldown: 11,
     color: '#0d9488', // 青囊水绿
     projectileType: 'slash',
-    avatarUrl: '/assets/heroes/huatuo.jpg',
+    avatarUrl: './assets/heroes/huatuo.jpg',
     baseHp: 650,
   },
 ];
