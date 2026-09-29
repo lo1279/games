@@ -1,0 +1,207 @@
+import type { Talent } from '../types/game';
+
+export const TALENTS_POOL: Talent[] = [
+  // 传说 (Gold - Grade 4)
+  {
+    id: 't_immortal',
+    name: '修真传承',
+    description: '天生怀有天地灵根，体质与悟性超凡脱俗，有望开启修真奇遇！',
+    grade: 4,
+    statBonus: { intelligence: 15, strength: 20, spiritualRoot: 80, luck: 15 },
+    specialTag: 'immortal_seed',
+  },
+  {
+    id: 't_tycoon_heir',
+    name: '千亿继承人',
+    description: '含着钻石汤匙出生，顶级跨国财阀唯一的掌上明珠。',
+    grade: 4,
+    statBonus: { wealth: 50, happiness: 15, charm: 10 },
+    specialTag: 'rich_heir',
+  },
+  {
+    id: 't_destiny_child',
+    name: '天道宠儿',
+    description: '命中带大吉星，全属性均衡增幅，买彩票和遇难都能逢凶化吉。',
+    grade: 4,
+    statBonus: { charm: 10, intelligence: 10, strength: 10, wealth: 10, happiness: 10, luck: 40 },
+    specialTag: 'destiny_child',
+  },
+  {
+    id: 't_time_traveler',
+    name: '先知直觉',
+    description: '脑海中不时闪过未来的经济周期与科技潮流片段，智商与运气极高。',
+    grade: 4,
+    statBonus: { intelligence: 30, luck: 25, wealth: 10 },
+    specialTag: 'visionary',
+  },
+
+  // 史诗 (Purple - Grade 3)
+  {
+    id: 't_prodigy',
+    name: '绝世神童',
+    description: '三岁识千字，五岁背离骚，拥有过目不忘的惊人智商。',
+    grade: 3,
+    statBonus: { intelligence: 35, happiness: -5 },
+    specialTag: 'prodigy',
+  },
+  {
+    id: 't_peerless_beauty',
+    name: '盛世容颜',
+    description: '眉目如画，气质绝尘，走在路上回头率百分之百。',
+    grade: 3,
+    statBonus: { charm: 35, happiness: 10 },
+    specialTag: 'peerless_beauty',
+  },
+  {
+    id: 't_longevity',
+    name: '彭祖长寿',
+    description: '细胞修复能力极强，免疫力卓越，注定长命百岁。',
+    grade: 3,
+    statBonus: { strength: 35, happiness: 5 },
+    specialTag: 'longevity',
+  },
+  {
+    id: 't_lucky_koi',
+    name: '锦鲤本鲤',
+    description: '喝饮料常能再来一瓶，抽卡从不吃保底，随身自带幸运光环。',
+    grade: 3,
+    statBonus: { luck: 35, happiness: 15 },
+  },
+  {
+    id: 't_business_genius',
+    name: '经商鬼才',
+    description: '对金钱与商业模式具有野兽般的直觉，投资眼光毒辣。',
+    grade: 3,
+    statBonus: { wealth: 25, intelligence: 15 },
+  },
+
+  // 优秀 (Blue - Grade 2)
+  {
+    id: 't_scholarly_family',
+    name: '书香门第',
+    description: '父母皆是高知学者，家庭文化氛围浓郁，起跑线领先。',
+    grade: 2,
+    statBonus: { wealth: 12, intelligence: 15 },
+  },
+  {
+    id: 't_athlete',
+    name: '运动健将',
+    description: '运动神经极为发达，骨骼惊奇，各项体能测试轻松满分。',
+    grade: 2,
+    statBonus: { strength: 18, charm: 6 },
+  },
+  {
+    id: 't_optimist',
+    name: '乐天派',
+    description: '心理弹性极高，不论遇到多大风浪都能保持积极乐观。',
+    grade: 2,
+    statBonus: { happiness: 25, strength: 5 },
+  },
+  {
+    id: 't_social_butterfly',
+    name: '社交名流',
+    description: '情商极高，善解人意，能轻松结交各路贵人。',
+    grade: 2,
+    statBonus: { charm: 12, happiness: 12, intelligence: 5 },
+  },
+  {
+    id: 't_iron_stomach',
+    name: '铁打的胃',
+    description: '消化吸收一流，体魄强健，百毒不侵。',
+    grade: 2,
+    statBonus: { strength: 15, happiness: 8 },
+  },
+  {
+    id: 't_tech_geek',
+    name: '极客潜质',
+    description: '自幼对电脑与各类机械充满兴趣，动手能力与逻辑极强。',
+    grade: 2,
+    statBonus: { intelligence: 18, charm: -4 },
+  },
+
+  // 普通 (White - Grade 1)
+  {
+    id: 't_early_bird',
+    name: '早睡早起',
+    description: '养成规律健康的作息习惯，不易疲劳。',
+    grade: 1,
+    statBonus: { strength: 8, happiness: 5 },
+  },
+  {
+    id: 't_curious',
+    name: '求知欲旺盛',
+    description: '对未知世界充满好奇，喜欢追根问底。',
+    grade: 1,
+    statBonus: { intelligence: 8 },
+  },
+  {
+    id: 't_good_looking',
+    name: '五官端正',
+    description: '清秀耐看，容易获得别人的初印象好感。',
+    grade: 1,
+    statBonus: { charm: 8 },
+  },
+  {
+    id: 't_well_off',
+    name: '衣食无忧',
+    description: '小康家庭，童年衣食无缺，生活平稳安逸。',
+    grade: 1,
+    statBonus: { wealth: 10, happiness: 5 },
+  },
+  {
+    id: 't_contentment',
+    name: '知足常乐',
+    description: '心满意足便是福，从不内耗与攀比。',
+    grade: 1,
+    statBonus: { happiness: 15 },
+  },
+  {
+    id: 't_handicraft',
+    name: '心灵手巧',
+    description: '手工制作与细致活儿完成得极好，手艺过硬。',
+    grade: 1,
+    statBonus: { intelligence: 6, charm: 4 },
+  },
+  {
+    id: 't_foodie',
+    name: '资深老饕',
+    description: '对美食有着无比深沉的热爱，吃好吃的就能满血复活。',
+    grade: 1,
+    statBonus: { happiness: 10, strength: 3 },
+  },
+  {
+    id: 't_late_bloomer',
+    name: '大器晚成',
+    description: '前期平平无奇，但随着阅历增加，中年期各项能力稳步上升。',
+    grade: 1,
+    statBonus: { luck: 8, happiness: 5 },
+    specialTag: 'late_bloomer',
+  },
+
+  // 轮回神殿限定专属神级天赋 (Grade 4)
+  {
+    id: 'divine_god_favored',
+    name: '天道酬勤',
+    description: '受天道眷顾，每长 1 岁所有属性额外自动 +1，自带鸿运光环。',
+    grade: 4,
+    statBonus: { luck: 15, happiness: 10 },
+    specialTag: 'divine_god_favored',
+  },
+  {
+    id: 'divine_business_oracle',
+    name: '商业先知',
+    description: '洞悉每一次金融周期，理财投资收益翻倍，创业成功率暴增。',
+    grade: 4,
+    statBonus: { intelligence: 20, wealth: 30 },
+    specialTag: 'divine_business_oracle',
+  },
+  {
+    id: 'divine_immortal_vessel',
+    name: '真仙降世',
+    description: '自带无垢灵根，百病不侵，寿命大幅延长，极高概率飞升渡劫。',
+    grade: 4,
+    statBonus: { strength: 40, spiritualRoot: 80, charm: 20 },
+    specialTag: 'divine_immortal_vessel',
+  },
+];
+

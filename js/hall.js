@@ -40,6 +40,23 @@ const GAMES_DATA = [
     features: ['经典与现代双主题随心切', '自定义长宽与雷数', '本地最佳纪录榜', '首踩无雷防猝死机制']
   },
   {
+    id: 'life-simulator',
+    title: '人生模拟器 · 轮回录',
+    englishTitle: 'Life Simulator: Samsara',
+    category: 'strategy',
+    categoryLabel: '策略卡牌',
+    tags: ['文字模拟', '随机事件', '人生重开', '因果轮回', '家族传承'],
+    icon: '🌱',
+    accentColor: '#10b981',
+    gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.08) 100%)',
+    borderGlow: 'rgba(16, 185, 129, 0.45)',
+    summary: '高自由度文字人生重开模拟。开局抽选玄妙天赋、自由分配六维属性，经历生老病死与命运抉择，解锁因果神殿与世代家族传承。',
+    path: 'life-simulator/dist/index.html',
+    controls: '鼠标点击选择天赋与分配属性，点击推进年份或投掷命运骰子，抉择重大人生分支。',
+    rating: '4.9',
+    features: ['开局天赋抽卡与六维属性加点', '丰富随机事件与命运分支决策', '因果轮回殿永久属性与特权升级', '产业投资经商与家族世代传承']
+  },
+  {
     id: 'mythology-deckbuilder',
     title: '万神纪元：诸神对决',
     englishTitle: 'Mythology Deckbuilder',
@@ -123,6 +140,23 @@ const GAMES_DATA = [
     controls: 'WASD 或 方向键移动战机，J 键自动/手动射击，空格键释放全屏毁灭大招。',
     rating: '4.8',
     features: ['绚丽粒子光效与弹幕轨迹', '僚机副武器进阶系统', '狂暴过载暴走状态', '巨型 BOSS 多阶段战斗']
+  },
+  {
+    id: 'life-simulator',
+    title: '人生模拟器 · 轮回录',
+    englishTitle: 'Life Simulator: Reincarnation',
+    category: 'strategy',
+    categoryLabel: '模拟养成',
+    tags: ['人生模拟', '轮回神殿', '商海大亨', 'D20检定', '世代传承'],
+    icon: '✨',
+    accentColor: '#ec4899',
+    gradient: 'linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(168, 85, 247, 0.08) 100%)',
+    borderGlow: 'rgba(236, 72, 153, 0.45)',
+    summary: '高自由度人生转生模拟器！融合功德神殿局外升级、商海理财创业、红尘良缘婚育、D20 骰子渡劫奇遇与家族世代传承。',
+    path: 'life-simulator/dist/index.html',
+    controls: '触屏或鼠标点选天赋与自由属性点，点击「下一年」演进人生，可在商海理财与家族谱系中经营决策。',
+    rating: '5.0',
+    features: ['局外功德神殿永久养成', '商海大亨：基金/房产/创办独角兽', '良缘恋爱、婚育与家族世代继承', 'D20 命运转盘物理检定奇遇']
   }
 ];
 
