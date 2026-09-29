@@ -194,8 +194,8 @@ export const App: React.FC = () => {
           </div>
           <div>
             <span className="font-extrabold text-sm tracking-tight text-white">人生模拟器</span>
-            <span className="text-[10px] text-indigo-400 font-bold ml-1.5 px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
-              轮回录 V2.0
+            <span className="text-[10px] text-pink-400 font-bold ml-1.5 px-1.5 py-0.5 rounded bg-pink-500/10 border border-pink-500/20">
+              轮回录 V3.0
             </span>
           </div>
         </div>

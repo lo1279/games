@@ -40,23 +40,6 @@ const GAMES_DATA = [
     features: ['经典与现代双主题随心切', '自定义长宽与雷数', '本地最佳纪录榜', '首踩无雷防猝死机制']
   },
   {
-    id: 'life-simulator',
-    title: '人生模拟器 · 轮回录',
-    englishTitle: 'Life Simulator: Samsara',
-    category: 'strategy',
-    categoryLabel: '策略卡牌',
-    tags: ['文字模拟', '随机事件', '人生重开', '因果轮回', '家族传承'],
-    icon: '🌱',
-    accentColor: '#10b981',
-    gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.08) 100%)',
-    borderGlow: 'rgba(16, 185, 129, 0.45)',
-    summary: '高自由度文字人生重开模拟。开局抽选玄妙天赋、自由分配六维属性，经历生老病死与命运抉择，解锁因果神殿与世代家族传承。',
-    path: 'life-simulator/dist/index.html',
-    controls: '鼠标点击选择天赋与分配属性，点击推进年份或投掷命运骰子，抉择重大人生分支。',
-    rating: '4.9',
-    features: ['开局天赋抽卡与六维属性加点', '丰富随机事件与命运分支决策', '因果轮回殿永久属性与特权升级', '产业投资经商与家族世代传承']
-  },
-  {
     id: 'mythology-deckbuilder',
     title: '万神纪元：诸神对决',
     englishTitle: 'Mythology Deckbuilder',
@@ -123,6 +106,23 @@ const GAMES_DATA = [
     controls: '鼠标点击武将卡拖拽布阵，点击已部署武将可升级或释放专属绝技。',
     rating: '4.9',
     features: ['蜀魏吴知名武将阵容', '技能动画与大招特效', '兵种相克与攻击范围机制', '关卡策略与兵线运营']
+  },
+  {
+    id: 'three-kingdoms-slg',
+    title: '三国志·鼎立战略版 (战役卡牌·无限金铢版)',
+    englishTitle: 'Three Kingdoms: Strategy & Cards',
+    category: 'strategy',
+    categoryLabel: '策略卡牌',
+    tags: ['无限金铢', '经典战役', '演武爬塔', '战法搭配', '兵种克制', '单机策略'],
+    icon: '⚔️',
+    accentColor: '#f59e0b',
+    gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(180, 83, 9, 0.08) 100%)',
+    borderGlow: 'rgba(245, 158, 11, 0.45)',
+    summary: '致敬《三国志·战略版》！单机专属战役卡牌对战重构！告别繁琐铺路与漫长征兵，聚焦历史战役演义（虎牢关/官渡/赤壁/夷陵）、演武试炼通天阁、满兵自由配队与无限连抽五星神将。',
+    path: 'three-kingdoms-slg/index.html',
+    controls: '鼠标或触屏点选历史战役与演武试炼出征；自由搭配魏蜀吴群五星神将与传承战法；点击金铢或拜将台无限抽卡。',
+    rating: '5.0',
+    features: ['三国经典战役演义(1~3星评定)', '演武试炼阶梯天梯通天阁', '全套指挥/被动/主动/突击战法全解锁', '骑盾弓枪循环相克与主将斩首机制', '无限金铢特权·五星神将无限畅抽']
   },
   {
     id: 'thunder-fighter',

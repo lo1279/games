@@ -6,6 +6,7 @@ import { sounds } from '../audio/soundSynth';
 interface MapViewProps {
   floors: MapNode[][];
   currentFloor: number;
+  currentAct?: number;
   onSelectNode: (node: MapNode) => void;
   playerDeckCount: number;
   playerHp: number;
@@ -19,6 +20,7 @@ interface MapViewProps {
 export const MapView: React.FC<MapViewProps> = ({
   floors,
   currentFloor,
+  currentAct = 1,
   onSelectNode,
   playerDeckCount,
   playerHp,
@@ -45,6 +47,19 @@ export const MapView: React.FC<MapViewProps> = ({
     }
   };
 
+  const getActTitle = () => {
+    switch (currentAct) {
+      case 1:
+        return '第一幕 · 凡尘裂隙与古战场 (镇守: 蚩尤战魂)';
+      case 2:
+        return '第二幕 · 泰坦圣所与诸神殿 (镇守: 克洛诺斯)';
+      case 3:
+        return '第三幕 · 世界之树与诸神黄昏 (镇守: 灭世黑龙)';
+      default:
+        return `第 ${currentAct} 幕 · 裂隙前线`;
+    }
+  };
+
   const getNodeTypeName = (type: NodeType) => {
     switch (type) {
       case 'battle':
@@ -58,7 +73,7 @@ export const MapView: React.FC<MapViewProps> = ({
       case 'event':
         return '奇遇';
       case 'boss':
-        return '灭世神王';
+        return '关底首领';
     }
   };
 
@@ -97,8 +112,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* 爬塔节点树路线图 */}
       <div className="my-3 sm:my-6 flex-1 flex flex-col justify-center items-center gap-4 sm:gap-6 relative">
-        <div className="text-[10px] sm:text-xs uppercase tracking-widest text-slate-500 font-bold">
-          诸神长廊 · 前线 (第 {currentFloor + 1} 层)
+        <div className="text-[10px] sm:text-xs text-amber-400 font-black px-3 py-1 bg-amber-950/40 rounded-full border border-amber-500/40 shadow">
+          {getActTitle()} · 第 {currentFloor + 1} 层
         </div>
 
         {/* 倒序显示楼层（从最上层 Boss 到当前层） */}

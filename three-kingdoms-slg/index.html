@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>三国志·鼎立战略版 (战役对决·无限金铢版)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 顶部轻量 HUD -->
+  <header class="res-hud">
+    <div class="brand-area">
+      <span style="font-size:24px;">⚔️</span>
+      <div>
+        <div class="game-title">三国·战略版</div>
+        <div style="font-size: 10px; color: #9ca3af;">历史战役 · 策略卡牌对决</div>
+      </div>
+    </div>
+
+    <!-- 实时资源显示栏 -->
+    <div class="res-items">
+      <div class="res-badge gold" id="badgeGold" title="✨ 点击一键充盈 999,999 无限金铢" style="cursor: pointer; border: 1px solid #fbbf24; box-shadow: 0 0 10px rgba(251,191,36,0.4);">
+        <span>👑 金铢:</span>
+        <span class="val" id="resGold">999,999</span>
+        <span style="font-size:9px; background:#d97706; color:#fff; border-radius:3px; padding:0 3px; margin-left:2px;">无限</span>
+      </div>
+      <div class="res-badge" title="用于研习战法升级(Lv.1~10)，通过解甲武将或通关战役获得" style="border: 1px solid #059669; background: rgba(5, 150, 105, 0.15);">
+        <span>🪙 铜币:</span>
+        <span class="val" id="resCopper" style="color:#6ee7b7; font-weight:bold;">0</span>
+      </div>
+      <div class="res-badge" title="木材：用于主城建筑升级与军备制造">
+        <span>🌲 木材:</span>
+        <span class="val" id="resWood" style="color:#86efac;">0</span>
+      </div>
+      <div class="res-badge" title="铁矿：用于主城建筑升级与兵刃锻造">
+        <span>⛏️ 铁矿:</span>
+        <span class="val" id="resIron" style="color:#cbd5e1;">0</span>
+      </div>
+      <div class="res-badge" title="石料：核心城建资源，君王殿与要塞关键">
+        <span>🪨 石料:</span>
+        <span class="val" id="resStone" style="color:#fdba74;">0</span>
+      </div>
+      <div class="res-badge" title="粮食：三军粮饷，出征与征兵消耗">
+        <span>🌾 粮食:</span>
+        <span class="val" id="resGrain" style="color:#fde047;">0</span>
+      </div>
+      <div class="res-badge" title="历史战役获得的总星数">
+        <span>⭐ 战役:</span>
+        <span class="val" id="resCampaignStars" style="color:#fde047;">0</span>
+        <span>星</span>
+      </div>
+      <div class="res-badge" title="当前演武试炼已通关层数">
+        <span>🏛️ 试炼:</span>
+        <span class="val" id="resTrialFloor" style="color:#38bdf8;">第 1 层</span>
+      </div>
+      <div class="res-badge" title="已收归麾下的名将总数">
+        <span>🎴 将领:</span>
+        <span class="val" id="resOwnedCount" style="color:#34d399;">0</span>
+        <span>位</span>
+      </div>
+      <button id="btnResetGame" title="重置当前存档，恢复初始状态重新开局" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 4px 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+        <span>🔄 重置</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 视窗容器 -->
+  <main class="slg-viewport">
+    
+    <!-- 0. 沙盘大地图 (World Map & Expansion) -->
+    <section class="slg-tab-page active" id="tabMap">
+      <div class="map-container">
+        <div class="map-controls">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <h2 style="font-size:18px; color:#fbbf24;">🗺️ 中原沙盘 · 开荒拓土</h2>
+            <div style="font-size:12px; color:#9ca3af;">
+              占领领地持续产出 <b style="color:#86efac;">木</b> / <b style="color:#cbd5e1;">铁</b> / <b style="color:#fdba74;">石</b> / <b style="color:#fde047;">粮</b> 4大战略资源！
+            </div>
+          </div>
+          <div style="font-size:12px; display:flex; gap:12px; align-items:center;">
+            <span style="color:#10b981;">🟩 已占领地块</span>
+            <span style="color:#fbbf24;">👑 主都中枢 (4, 4)</span>
+            <span style="color:#9ca3af;">⬜ 需相邻连地出征</span>
+          </div>
+        </div>
+
+        <div class="map-grid-wrap">
+          <div class="world-map-grid" id="worldMapGrid">
+            <!-- 9x9 动态生成 81 格沙盘地块 -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.5. 主城内政城建 (City & Construction) -->
+    <section class="slg-tab-page" id="tabCity">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div>
+          <h2 style="font-size:18px; color:#fbbf24;">🏯 主城内政 · 营建中枢</h2>
+          <p style="font-size:12px; color:#9ca3af; margin-top:2px;">升级君王殿解锁 Cost 统御上限，修筑兵营提升带兵容量，营建资源所扩大每小时产能！</p>
+        </div>
+        <div style="font-size:12px; color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid #d97706; padding:4px 10px; border-radius:6px;" id="cityStatsBanner">
+          部队统御上限: Cost 15 · 兵营加成: +0 兵
+        </div>
+      </div>
+      <div id="cityBuildingsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px;">
+        <!-- 动态生成君王殿、兵营、军舍、征兵处、四大资源所等卡片 -->
+      </div>
+    </section>
+    
+    <!-- 1. 征战天下 (Battle & Campaigns) -->
+    <section class="slg-tab-page" id="tabBattle">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div style="display:flex; gap:10px;">
+          <button class="nav-tab-btn active" id="subTabCampaigns" style="padding:6px 14px; border:1px solid #374151; font-size:13px;">
+            📜 三国历史经典战役
+          </button>
+          <button class="nav-tab-btn" id="subTabTrials" style="padding:6px 14px; border:1px solid #374151; font-size:13px;">
+            🏛️ 演武试炼通天阁
+          </button>
+        </div>
+        <div style="font-size:12px; color:#9ca3af;">
+          💡 兵种相克：<b style="color:#fbbf24;">骑克盾 · 盾克弓 · 弓克枪 · 枪克骑</b>
+        </div>
+      </div>
+
+      <!-- 历史战役视图 -->
+      <div id="campaignsContainer" style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- 动态生成5大经典战役卡片 -->
+      </div>
+
+      <!-- 演武试炼视图 -->
+      <div id="trialsContainer" style="display: none; flex-direction: column; gap: 14px;">
+        <!-- 动态生成试炼阶梯卡片 -->
+      </div>
+    </section>
+
+    <!-- 2. 军团编制配置 (Troops) -->
+    <section class="slg-tab-page" id="tabTroops">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div>
+          <h2 style="font-size:18px; color:#fbbf24;">🛡️ 出征主力军团配置</h2>
+          <p style="font-size:12px; color:#9ca3af; margin-top:2px;">自由选拔3位名将上阵，任意切换兵种，每战默认 10,000 满兵出击！</p>
+        </div>
+        <div style="font-size:12px; color:#34d399; background:rgba(52,211,153,0.1); border:1px solid #059669; padding:4px 10px; border-radius:6px;">
+          统御限制已解禁 (Cost 上限 21) · 随心组建全神将大核！
+        </div>
+      </div>
+      <div id="troopsContainer" style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- 动态渲染主副将槽位与兵种切换 -->
+      </div>
+    </section>
+
+    <!-- 3. 武将图鉴与战法研习 (Generals & Tactics) -->
+    <section class="slg-tab-page" id="tabGenerals">
+      <!-- 二级导航栏 -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #374151; padding-bottom:10px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:8px;">
+          <button class="nav-tab-btn active" id="btnSubTabGenerals" style="font-weight:bold; font-size:13px; padding:6px 14px;">
+            🎴 麾下名将与配装
+          </button>
+          <button class="nav-tab-btn" id="btnSubTabTactics" style="font-weight:bold; font-size:13px; padding:6px 14px; border:1px solid #d97706; color:#fbbf24;">
+            📚 传承战法研习阁 (Lv.1~10)
+          </button>
+        </div>
+        <div id="generalsActionBar" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="upgrade-btn" id="btnQuickAutoPromote" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding:4px 12px; font-size:12px;">
+            🌟 一键同名升星进阶
+          </button>
+          <button class="upgrade-btn" id="btnQuickSellThreeStars" style="background:#4b5563; padding:4px 12px; font-size:12px;">
+            🪙 一键解甲全部3星将
+          </button>
+          <button class="nav-tab-btn active" id="btnFilterAllGen" style="padding:4px 10px; border:1px solid #374151;">全部武将</button>
+          <button class="nav-tab-btn" id="btnFilterFiveStar" style="padding:4px 10px; border:1px solid #374151;">五星神将</button>
+        </div>
+      </div>
+
+      <!-- 子视图 1：麾下名将网格 -->
+      <div id="viewOwnedGenerals">
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;" id="ownedGeneralsGrid">
+          <!-- 动态渲染武将卡牌 -->
+        </div>
+      </div>
+
+      <!-- 子视图 2：战法研习阁网格 -->
+      <div id="viewTacticsUpgrade" style="display: none;">
+        <div style="background: rgba(217, 119, 6, 0.1); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-weight: bold; color: #fbbf24; font-size: 14px;">🪙 研习战法需要消耗大量铜币</div>
+            <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">分解闲置武将（解甲）或通关历史战役可赚取海量铜币，将核心战法升至 Lv.10 可大幅提高伤害率与发动几率！</div>
+          </div>
+          <div style="font-size: 14px; color: #fde047; font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 12px; border-radius: 6px; border: 1px solid #4b5563;">
+            当前可用铜币: <span id="tacticViewCopperVal" style="color: #6ee7b7; font-weight: 900;">0</span>
+          </div>
+        </div>
+        <div class="tactic-upgrade-grid" id="tacticsUpgradeContainer">
+          <!-- 动态渲染战法研习卡片 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 点将招募卡池 (Gacha) -->
+    <section class="slg-tab-page" id="tabGacha">
+      <div class="gacha-page">
+        <div style="text-align: center;">
+          <h2 style="font-size:22px; color:#fbbf24; margin-bottom:4px;">🏮 拜将台 · 英雄招募</h2>
+          <p style="font-size:12px; color:#9ca3af;">天下大乱，英雄辈出，起用良将辅佐社稷！</p>
+        </div>
+
+        <!-- ✨ 无限金铢特权控制台 -->
+        <div style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.2) 0%, rgba(180, 83, 9, 0.08) 100%); border: 1px solid #d97706; border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 704px; box-shadow: 0 0 15px rgba(217,119,6,0.25);">
+          <div>
+            <div style="font-weight: bold; color: #fbbf24; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+              <span>👑 GM无限金铢特权已启用</span>
+              <span style="font-size: 11px; background: #059669; color: #fff; border-radius: 4px; padding: 1px 6px;">无限畅抽</span>
+            </div>
+            <div style="font-size: 12px; color: #d1d5db; margin-top: 2px;">招募无需顾虑金铢消耗，抽空卡池，五星全图鉴随心收集！</div>
+          </div>
+          <button class="upgrade-btn" id="btnFillGoldMax" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); padding: 6px 14px; font-size: 12px; white-space: nowrap;">
+            💎 一键充盈 999,999 金铢
+          </button>
+        </div>
+
+        <div class="gacha-banners">
+          <!-- 名将卡池 (金铢) -->
+          <div class="gacha-banner">
+            <h3>👑 名将招募 · 群英逐鹿</h3>
+            <div class="pool-rates">含32位官方五星神将 (出率5.6%) · 4星良将 (36.0%)<br>保底机制：<span id="gachaPityCount" style="color:#fbbf24; font-weight:bold;">0</span> / 30 抽必出五星名将 (每5抽必出紫卡)</div>
+            <div class="gacha-btn-group">
+              <button class="gacha-btn" id="btnGachaFamousSingle">招募 1 次<br><small>198 金铢</small></button>
+              <button class="gacha-btn" id="btnGachaFamousFive" style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);">招募 5 次<br><small>948 金铢</small></button>
+            </div>
+          </div>
+
+          <!-- 良将卡池 (铜币) -->
+          <div class="gacha-banner copper">
+            <h3>🪙 良将招募 · 招贤纳士</h3>
+            <div class="pool-rates">招募随军武将 (3星50.0% · 2星49.5% · 4星0.5%)<br>可一键解甲为铜币，研习战法进阶！</div>
+            <div class="gacha-btn-group">
+              <button class="gacha-btn" id="btnGachaCopperSingle" style="background:#475569;">招募 1 次<br><small>300 铜币</small></button>
+              <button class="gacha-btn" id="btnGachaCopperTen" style="background:#334155;">招募 10 次<br><small>2700 铜币</small></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 战报全书 (Reports) -->
+    <section class="slg-tab-page" id="tabReports">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size:18px; color:#fbbf24;">📜 战报推演全书</h2>
+        <button class="upgrade-btn" id="btnClearReports" style="background:#4b5563; padding:4px 10px;">清空历史</button>
+      </div>
+      <div id="battleReportsList" style="display: flex; flex-direction: column; gap: 12px;">
+        <!-- 战报卡片列表 -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 底部固定导航栏 (共7大核心系统) -->
+  <nav class="bottom-nav">
+    <button class="nav-tab-btn active" data-tab="tabMap">
+      <span class="icon">🗺️</span>
+      <span>沙盘</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabCity">
+      <span class="icon">🏯</span>
+      <span>主城</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabBattle">
+      <span class="icon">⚔️</span>
+      <span>征战</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabTroops">
+      <span class="icon">🛡️</span>
+      <span>编队</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabGenerals">
+      <span class="icon">🎴</span>
+      <span>武将</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabGacha">
+      <span class="icon">🏮</span>
+      <span>招募</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabReports">
+      <span class="icon">📜</span>
+      <span>战报</span>
+    </button>
+  </nav>
+
+  <!-- 🗺️ 地块攻占 / 侦查 / 屯田全息 Modal -->
+  <div class="modal-mask" id="tileActionModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <div class="modal-title" id="tileModalTitle">🗺️ 领地军情探查</div>
+        <button class="modal-close-btn" id="btnTileModalClose">✕</button>
+      </div>
+      <div class="modal-body" id="tileModalBody" style="display:flex; flex-direction:column; gap:14px;">
+        <!-- 动态填充地块信息、守军状态、行军士气预测与操作按钮 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚔️ 详尽战报推演全息 Modal -->
+  <div class="modal-mask" id="battleDetailModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="battleDetailTitle">⚔️ 战役推演详报</div>
+        <button class="modal-close-btn" id="btnBattleDetailClose">✕</button>
+      </div>
+      <div class="modal-body" id="battleDetailBody">
+        <!-- 动态填充8回合战况日记 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ✨ 抽卡开箱展示浮层 -->
+  <div class="gacha-showcase-mask" id="gachaShowcase" style="display: none;">
+    <h2 style="font-size:24px; color:#fbbf24; margin-bottom:20px; font-weight:900;">🎉 英雄集结！恭获名将</h2>
+    <div class="gacha-cards-display" id="gachaCardsContainer"></div>
+    <button class="gacha-btn" id="btnGachaShowcaseConfirm" style="max-width:200px; width:100%;">收归麾下</button>
+  </div>
+
+  <!-- 核心逻辑调度入口 -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

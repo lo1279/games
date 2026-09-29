@@ -4,6 +4,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 实例化 3D 物理渲染引擎
     const diceEngine = new Dice3DEngine('dice-viewport');
+    window.diceEngine = diceEngine;
 
     // 状态管理
     const state = window.gameState;

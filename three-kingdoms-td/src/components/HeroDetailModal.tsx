@@ -145,6 +145,23 @@ export const HeroDetailModal: React.FC<HeroDetailModalProps> = ({
                 >
                   {roleInfo.title}
                 </span>
+                {hero.damageCategory && (
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
+                      hero.damageCategory === 'pierce'
+                        ? 'bg-amber-950/90 text-amber-300 border-amber-500/60'
+                        : hero.damageCategory === 'magic'
+                        ? 'bg-purple-950/90 text-purple-300 border-purple-500/60'
+                        : 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60'
+                    }`}
+                  >
+                    {hero.damageCategory === 'pierce'
+                      ? '穿刺·克轻甲'
+                      : hero.damageCategory === 'magic'
+                      ? '法术·克重甲'
+                      : '挥砍·均衡物理'}
+                  </span>
+                )}
               </div>
               <div className="text-xs text-amber-400/90 font-medium mt-1">
                 {hero.title}
@@ -227,9 +244,6 @@ export const HeroDetailModal: React.FC<HeroDetailModalProps> = ({
               <span>武将定位与战术价值</span>
             </div>
             <p className="text-stone-300">{hero.description}</p>
-            <p className="text-stone-400 text-[11px] mt-1.5 pt-1.5 border-t border-stone-800/80">
-              {roleInfo.desc}
-            </p>
           </div>
 
           {/* 专属战法绝技卡片 */}

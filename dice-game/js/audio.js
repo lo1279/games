@@ -98,39 +98,78 @@ class SoundEngine {
     }
 
     /**
-     * 骰子撞击桌面声 (木质/桌布拟真碰撞)
+     * 摇晃微撞击触发器
      */
-    playDiceHit(volume = 0.25, pitch = 400) {
+    triggerWoodHit(time, volume, pitch) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(pitch, time);
+            osc.frequency.exponentialRampToValueAtTime(pitch * 0.4, time + 0.02);
+
+            gain.gain.setValueAtTime(volume, time);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.025);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(time);
+            osc.stop(time + 0.03);
+        } catch (e) {
+            // 忽略音频调度边缘时序异常
+        }
+    }
+
+    /**
+     * 骰子撞击桌面声 (双层复合音色：表面坚硬撞击 + 木质/呢绒深层共振)
+     * @param {number} intensity 碰撞强度 0.1 ~ 1.0 (根据下落瞬时速度计算)
+     */
+    playDiceHit(intensity = 0.5) {
         if (!this.enabled) return;
         const ctx = this.ensureContext();
         if (!ctx) return;
-        this.triggerWoodHit(ctx.currentTime, volume, pitch);
-    }
+        const now = ctx.currentTime;
 
-    triggerWoodHit(time, volume = 0.2, freq = 450) {
-        const ctx = this.ctx;
-        if (!ctx) return;
+        const volume = Math.min(Math.max(intensity * 0.4, 0.08), 0.45);
+        const pitch = 380 + Math.random() * 80;
 
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
+        // 1. 高频清脆击打层 (模拟坚硬树脂骰子与桌面表层的接触)
+        const snapOsc = ctx.createOscillator();
+        const snapGain = ctx.createGain();
+        snapOsc.type = 'triangle';
+        snapOsc.frequency.setValueAtTime(pitch * 2.2, now);
+        snapOsc.frequency.exponentialRampToValueAtTime(pitch * 0.8, now + 0.025);
 
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, time);
-        osc.frequency.exponentialRampToValueAtTime(freq * 0.4, time + 0.04);
+        snapGain.gain.setValueAtTime(volume * 0.7, now);
+        snapGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
 
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1200, time);
+        snapOsc.connect(snapGain);
+        snapGain.connect(ctx.destination);
+        snapOsc.start(now);
+        snapOsc.stop(now + 0.035);
 
-        gain.gain.setValueAtTime(volume, time);
-        gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+        // 2. 低频木质/托盘共振层 (模拟托盘木质空腔共鸣)
+        const resOsc = ctx.createOscillator();
+        const resGain = ctx.createGain();
+        const resFilter = ctx.createBiquadFilter();
 
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
+        resOsc.type = 'sine';
+        resOsc.frequency.setValueAtTime(pitch, now);
+        resOsc.frequency.exponentialRampToValueAtTime(pitch * 0.35, now + 0.05);
 
-        osc.start(time);
-        osc.stop(time + 0.06);
+        resFilter.type = 'lowpass';
+        resFilter.frequency.setValueAtTime(800, now);
+
+        resGain.gain.setValueAtTime(volume, now);
+        resGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
+
+        resOsc.connect(resFilter);
+        resFilter.connect(resGain);
+        resGain.connect(ctx.destination);
+
+        resOsc.start(now);
+        resOsc.stop(now + 0.07);
     }
 
     /**

@@ -13,6 +13,9 @@ export interface GridPos {
   row: number;
 }
 
+export type ArmorType = 'heavy' | 'light' | 'cloth'; // 护甲类型：重装铁甲、轻装皮甲、布衣法袍
+export type DamageCategory = 'pierce' | 'slash' | 'magic' | 'true'; // 伤害模式：穿刺、挥砍、魔法、真实
+
 // 武将配置模版
 export interface HeroConfig {
   id: string;
@@ -31,6 +34,7 @@ export interface HeroConfig {
   skillCooldown: number; // 技能冷却 (秒)
   color: string;
   projectileType: 'slash' | 'arrow' | 'lightning' | 'fireball' | 'spear';
+  damageCategory?: DamageCategory; // 伤害类型（穿刺、挥砍、法术、真实）
   avatarUrl?: string;
   baseHp?: number; // 基础生命值（猛将高、射手法师适中）
 }
@@ -61,6 +65,7 @@ export interface PlacedTower {
   isDown: boolean; // 是否处于负伤力竭休整状态
   recoveryTimer: number; // 负伤休整倒计时（秒）
   autoSkill?: boolean; // 是否自动释放战法（默认继承全局）
+  stunTimer?: number; // 受到震荡力竭/眩晕的持续时间（>0 时无法普攻与释放战法）
 }
 
 // 敌人配置
@@ -72,6 +77,7 @@ export interface EnemyConfig {
   speed: number;
   armor: number; // 物理防御百分比 (0-0.8)
   magicResist: number; // 法术防御百分比 (0-0.8)
+  armorType?: ArmorType; // 护甲类型：heavy(重装铁甲), light(轻装皮甲), cloth(布衣法袍)
   rewardGold: number;
   color: string;
   size: number;
@@ -94,6 +100,7 @@ export interface EnemyEntity {
   baseSpeed: number;
   armor: number;
   magicResist: number;
+  armorType?: ArmorType;
   rewardGold: number;
   color: string;
   size: number;
@@ -106,10 +113,19 @@ export interface EnemyEntity {
   stunTimer: number;
   burnTimer: number;
   burnDps: number;
+  shockTimer?: number; // 【感电】持续时间（受到物理攻击必定暴击1.5倍并传导电弧）
+  meltArmorReduction?: number; // 【熔甲】削减物理护甲比例（最高削减 50%）
   isDead: boolean;
   reachedEnd: boolean;
   facingRight?: boolean; // 行进朝向：true 为向右，false 为向左
   attackTowerTimer?: number; // 对点将台武将反击的内置冷却计时器
+  // Boss 专属玩法与战斗机制扩展
+  bossPhase?: number; // Boss 战斗阶段（如吕布一阶段/二阶段）
+  bossCastTimer?: number; // 主动技能释放冷却计时器
+  bossChannelingTimer?: number; // 大招吟唱/蓄力计时器（>0 时处于蓄力中，可被眩晕打断）
+  bossChannelingSkill?: 'zhangjiao_thunder' | 'lvbu_sweep'; // 当前正在蓄力的大招类型
+  bossShieldHp?: number; // Boss 铁壁护盾生命值（如华雄半血护盾）
+  bossShieldMax?: number; // 护盾上限
 }
 
 // 弹道飞行物

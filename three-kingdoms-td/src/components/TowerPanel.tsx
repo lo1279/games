@@ -13,6 +13,8 @@ import {
   Zap,
   Sparkles,
   Compass,
+  Shield,
+  Coins,
 } from 'lucide-react';
 
 interface TowerPanelProps {
@@ -79,7 +81,26 @@ export const TowerPanel: React.FC<TowerPanelProps> = ({
                 {'★'.repeat(tower.level)}
               </span>
             </div>
-            <div className="text-[11px] text-stone-400">{hero.title}</div>
+            <div className="text-[11px] text-stone-400 flex items-center gap-1.5 mt-0.5">
+              <span>{hero.title}</span>
+              {hero.damageCategory && (
+                <span
+                  className={`text-[9px] px-1.5 py-0.2 rounded font-semibold border ${
+                    hero.damageCategory === 'pierce'
+                      ? 'bg-amber-950/90 text-amber-300 border-amber-600/60'
+                      : hero.damageCategory === 'magic'
+                      ? 'bg-purple-950/90 text-purple-300 border-purple-600/60'
+                      : 'bg-emerald-950/90 text-emerald-300 border-emerald-600/60'
+                  }`}
+                >
+                  {hero.damageCategory === 'pierce'
+                    ? '穿刺·克轻甲'
+                    : hero.damageCategory === 'magic'
+                    ? '法术·克重甲'
+                    : '挥砍·物理'}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -157,6 +178,17 @@ export const TowerPanel: React.FC<TowerPanelProps> = ({
         )}
       </div>
 
+      {/* 名将定位与专属被动/光环特性 */}
+      <div className="text-[11px] bg-stone-950/70 p-2.5 rounded-lg border border-stone-800/80 mb-2.5">
+        <div className="flex items-center gap-1.5 text-amber-300 font-bold mb-1">
+          <Shield size={12} className="text-amber-400" />
+          <span>名将特质与常驻被动</span>
+        </div>
+        <p className="text-stone-300 text-[10.5px] leading-relaxed">
+          {hero.description}
+        </p>
+      </div>
+
       {/* 战法说明与手动释放按钮 */}
       <div className="text-[11px] bg-amber-950/30 p-2.5 rounded-lg border border-amber-900/40 text-amber-200/90 mb-3 shadow-inner">
         <div className="flex items-center justify-between mb-1.5">
@@ -168,7 +200,7 @@ export const TowerPanel: React.FC<TowerPanelProps> = ({
             {isSkillReady ? (
               <span className="text-emerald-400 font-bold animate-pulse">就绪 READY</span>
             ) : (
-              <span className="text-stone-400">冷却: {skillRemainSec}s</span>
+              <span className="text-stone-400">基准冷却: {hero.skillCooldown}s</span>
             )}
           </span>
         </div>

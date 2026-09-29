@@ -5,11 +5,12 @@ export const ENEMIES: Record<string, EnemyConfig> = {
     id: 'yellow_turban_scout',
     name: '黄巾流寇',
     char: '卒',
-    maxHp: 240, // 180 -> 240
+    maxHp: 240,
     speed: 58,
     armor: 0.05,
     magicResist: 0.05,
-    rewardGold: 8, // 14 -> 8
+    armorType: 'light', // 轻装皮甲：移速适中，易被弓箭穿刺与挥砍收割
+    rewardGold: 8,
     color: '#eab308',
     size: 14,
   },
@@ -17,11 +18,12 @@ export const ENEMIES: Record<string, EnemyConfig> = {
     id: 'yellow_turban_spearman',
     name: '黄巾长枪兵',
     char: '枪',
-    maxHp: 450, // 320 -> 450
+    maxHp: 450,
     speed: 46,
     armor: 0.18,
     magicResist: 0.1,
-    rewardGold: 12, // 20 -> 12
+    armorType: 'cloth', // 布衣步兵：中庸防御
+    rewardGold: 12,
     color: '#ca8a04',
     size: 16,
   },
@@ -29,11 +31,12 @@ export const ENEMIES: Record<string, EnemyConfig> = {
     id: 'shield_guard',
     name: '大盾重步兵',
     char: '盾',
-    maxHp: 950, // 650 -> 950
+    maxHp: 950,
     speed: 32,
-    armor: 0.6, // 高物理护甲，克制物理箭矢
-    magicResist: 0.05, // 弱法术
-    rewardGold: 20, // 35 -> 20
+    armor: 0.65, // 重装巨盾：极高物防，严重抵挡穿刺弓箭，极度惧怕雷火法术融甲！
+    magicResist: 0.05,
+    armorType: 'heavy', // 重装铁甲
+    rewardGold: 20,
     color: '#71717a',
     size: 18,
   },
@@ -41,11 +44,12 @@ export const ENEMIES: Record<string, EnemyConfig> = {
     id: 'xiliang_cavalry',
     name: '西凉突骑',
     char: '骑',
-    maxHp: 620, // 420 -> 620
-    speed: 92, // 极高移速，威胁防线后排
-    armor: 0.22,
+    maxHp: 620,
+    speed: 95, // 极速冲阵，对防线造成极大压迫，极易被穿刺弓箭狙杀
+    armor: 0.2,
     magicResist: 0.2,
-    rewardGold: 18, // 30 -> 18
+    armorType: 'light', // 轻装战马皮甲
+    rewardGold: 18,
     color: '#f97316',
     size: 17,
   },
@@ -53,11 +57,12 @@ export const ENEMIES: Record<string, EnemyConfig> = {
     id: 'siege_ram',
     name: '破阵冲车',
     char: '车',
-    maxHp: 2600, // 1600 -> 2600
+    maxHp: 2600,
     speed: 26,
-    armor: 0.45,
+    armor: 0.5,
     magicResist: 0.35,
-    rewardGold: 35, // 60 -> 35
+    armorType: 'heavy', // 重装巨型器械
+    rewardGold: 35,
     color: '#78350f',
     size: 22,
   },
@@ -65,59 +70,63 @@ export const ENEMIES: Record<string, EnemyConfig> = {
     id: 'evil_sorcerer',
     name: '太平妖术士',
     char: '术',
-    maxHp: 680, // 480 -> 680
+    maxHp: 680,
     speed: 42,
     armor: 0.05,
-    magicResist: 0.65, // 高魔抗
-    rewardGold: 22, // 40 -> 22
+    magicResist: 0.7, // 符文护体：高法术抗性，惧怕物理狙杀
+    armorType: 'cloth', // 道袍布衣
+    rewardGold: 22,
     color: '#9333ea',
     size: 16,
   },
 
-  // Boss 级敌人（大幅增强威严与耐久）
+  // Boss 级敌人
   boss_zhangjiao: {
     id: 'boss_zhangjiao',
     name: '天公将军·张角',
     char: '角',
-    maxHp: 5800, // 3800 -> 5800
+    maxHp: 6200,
     speed: 35,
-    armor: 0.28,
-    magicResist: 0.5,
-    rewardGold: 120, // 200 -> 120
+    armor: 0.25,
+    magicResist: 0.55,
+    armorType: 'cloth', // 太平天书法袍
+    rewardGold: 130,
     color: '#a855f7',
     size: 26,
     isBoss: true,
-    bossSkillName: '黄天当立',
-    bossSkillDesc: '苍天已死，黄天当立！释放雷云护体，免疫大量负面减速状态。',
+    bossSkillName: '太平唤生·五雷正法',
+    bossSkillDesc: '【布衣法袍】免疫减速。周期召唤 3 名黄巾死士护体，并吟唱 2 秒降下天罚神雷直击我方名将（可用眩晕打断吟唱）！',
   },
   boss_huaxiong: {
     id: 'boss_huaxiong',
     name: '关西猛将·华雄',
     char: '雄',
-    maxHp: 8800, // 5600 -> 8800
+    maxHp: 9200,
     speed: 40,
-    armor: 0.52,
+    armor: 0.55,
     magicResist: 0.25,
-    rewardGold: 160, // 260 -> 160
+    armorType: 'heavy', // 关西百炼玄铁重铠
+    rewardGold: 180,
     color: '#b91c1c',
     size: 27,
     isBoss: true,
-    bossSkillName: '骁勇劈山',
-    bossSkillDesc: '威风凛凛，血量低于 50% 时进入怒火冲锋，移速提升 40%！',
+    bossSkillName: '骁勇重劈·陷阵铁壁',
+    bossSkillDesc: '【玄铁重铠】攻击使我方武将震荡力竭 1.5 秒！半血时狂暴冲锋并激发生命铁壁护盾，需用法术破甲（诸葛亮/周瑜/关羽）克制！',
   },
   boss_lvbu: {
     id: 'boss_lvbu',
     name: '温侯·吕布',
     char: '布',
-    maxHp: 16800, // 9500 -> 16800 终极战神血量
+    maxHp: 18800,
     speed: 55,
-    armor: 0.55,
+    armor: 0.58,
     magicResist: 0.45,
-    rewardGold: 260, // 450 -> 260
+    armorType: 'heavy', // 兽面吞头连环铠
+    rewardGold: 300,
     color: '#ef4444',
     size: 30,
     isBoss: true,
-    bossSkillName: '天下无双',
-    bossSkillDesc: '人中吕布，马中赤兔！方天画戟威震群雄，周期性激发生命护盾并清除自身减速！',
+    bossSkillName: '天下无双·鬼神灭世',
+    bossSkillDesc: '【终极魔王·双阶段】一阶段辕门穿云射击退我方名将；半血进入魔神降世霸体，蓄力 2 秒发动 180 码鬼神灭世横扫（可用手操眩晕打断或阵位调遣撤离）！',
   },
 };

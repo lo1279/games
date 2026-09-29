@@ -1,10 +1,11 @@
 import React from 'react';
-import { Flame, Heart, Sparkles } from 'lucide-react';
+import { Flame, Heart, Sparkles, Hammer } from 'lucide-react';
 import { sounds } from '../audio/soundSynth';
 
 interface RestModalProps {
   onHeal: () => void;
   onFortify: () => void;
+  onUpgradeCard: () => void;
   currentHp: number;
   maxHp: number;
 }
@@ -12,6 +13,7 @@ interface RestModalProps {
 export const RestModal: React.FC<RestModalProps> = ({
   onHeal,
   onFortify,
+  onUpgradeCard,
   currentHp,
   maxHp,
 }) => {
@@ -28,28 +30,28 @@ export const RestModal: React.FC<RestModalProps> = ({
 
         <h2 className="text-lg sm:text-2xl font-black text-amber-300">诸神圣火 · 静息之所</h2>
         <p className="text-[10px] sm:text-xs text-slate-400 mt-1 max-w-xs">
-          在神圣庇护所中，你可以选择休整疗愈，或在神火中淬炼神躯。
+          在神圣庇护所中，你可以选择休整疗愈，淬炼神躯，或在熔炉中强化本命神术。
         </p>
 
         <div className="text-xs font-bold text-rose-400 my-2">
           当前生命: {currentHp} / {maxHp}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 w-full mt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full mt-2">
           {/* 选项 1: 打坐冥想 */}
           <button
             onClick={() => {
               sounds.playShield();
               onHeal();
             }}
-            className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-950 border border-slate-700 hover:border-emerald-500/70 hover:bg-emerald-950/20 transition-all flex flex-col items-center gap-1.5 cursor-pointer active:scale-95"
+            className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-950 border border-slate-700 hover:border-emerald-500/70 hover:bg-emerald-950/20 transition-all flex flex-col items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
               <Heart className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div className="font-extrabold text-xs sm:text-sm text-slate-100">神识归一 · 冥想</div>
+            <div className="font-extrabold text-xs sm:text-sm text-slate-100">神识归一</div>
             <div className="text-[11px] sm:text-xs text-emerald-400 font-semibold">
-              恢复 {healAmount} 点生命
+              恢复 {healAmount} 生命
             </div>
           </button>
 
@@ -59,14 +61,31 @@ export const RestModal: React.FC<RestModalProps> = ({
               sounds.playVictory();
               onFortify();
             }}
-            className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-950 border border-slate-700 hover:border-amber-500/70 hover:bg-amber-950/20 transition-all flex flex-col items-center gap-1.5 cursor-pointer active:scale-95"
+            className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-950 border border-slate-700 hover:border-amber-500/70 hover:bg-amber-950/20 transition-all flex flex-col items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
               <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div className="font-extrabold text-xs sm:text-sm text-slate-100">神躯淬炼 · 强化</div>
+            <div className="font-extrabold text-xs sm:text-sm text-slate-100">神躯淬炼</div>
             <div className="text-[11px] sm:text-xs text-amber-400 font-semibold">
-              最大生命值上限 +10
+              生命上限 +10
+            </div>
+          </button>
+
+          {/* 选项 3: 神术熔炉强化卡牌 */}
+          <button
+            onClick={() => {
+              sounds.playBuff();
+              onUpgradeCard();
+            }}
+            className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-950 border border-amber-500/80 hover:border-yellow-400 hover:bg-yellow-950/30 transition-all flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+          >
+            <div className="p-2 rounded-lg bg-yellow-500/20 text-yellow-300">
+              <Hammer className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+            </div>
+            <div className="font-extrabold text-xs sm:text-sm text-yellow-300">淬炼神术</div>
+            <div className="text-[11px] sm:text-xs text-yellow-400 font-semibold">
+              强化 1 张卡牌
             </div>
           </button>
         </div>

@@ -3,6 +3,7 @@ import type { Hero } from '../types/hero';
 import type { Enemy } from '../types/enemy';
 import type { Card } from '../types/card';
 import type { Relic } from '../types/relic';
+import type { Potion } from '../types/potion';
 import { CardComponent } from './CardComponent';
 import { 
   Shield, Zap, Swords, Flame, Skull, 
@@ -18,6 +19,8 @@ interface BattleArenaProps {
   drawPile: Card[];
   discardPile: Card[];
   relics: Relic[];
+  potions: (Potion | null)[];
+  onUsePotion: (index: number) => void;
   onPlayCard: (card: Card) => void;
   onEndTurn: () => void;
   combatLogs: string[];
@@ -31,6 +34,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   drawPile,
   discardPile,
   relics,
+  potions,
+  onUsePotion,
   onPlayCard,
   onEndTurn,
   combatLogs,
@@ -109,10 +114,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   return (
     <div className="relative w-full h-full min-h-screen min-h-[100dvh] bg-radial from-slate-900 via-slate-950 to-black text-slate-100 flex flex-col justify-between overflow-hidden select-none safe-area-container">
       
-      {/* 顶部状态栏：避让微信胶囊、展示神器与金币 */}
+      {/* 顶部状态栏：避让微信胶囊、展示神器、药水与金币 */}
       <div className="flex items-center justify-between z-20 bg-slate-950/80 backdrop-blur-md px-3 sm:px-4 py-1.5 rounded-xl border border-slate-800 shadow-md">
         {/* 神器栏 */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[50%]">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[35%]">
           <span className="text-[10px] sm:text-xs text-slate-400 font-semibold uppercase whitespace-nowrap">神器:</span>
           {relics.length === 0 && <span className="text-[10px] text-slate-600">无</span>}
           {relics.map((relic) => (
@@ -123,6 +128,32 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             >
               <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </div>
+          ))}
+        </div>
+
+        {/* 战术法宝仙丹栏 (2个药水栏位) */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-slate-400 font-semibold hidden sm:inline">仙丹:</span>
+          {potions.map((potion, idx) => (
+            <button
+              key={idx}
+              disabled={!potion || !isPlayerTurn}
+              onClick={() => {
+                if (potion && isPlayerTurn) {
+                  sounds.playBuff();
+                  onUsePotion(idx);
+                }
+              }}
+              title={potion ? `${potion.name}: ${potion.description} (点击饮用)` : '空药水槽'}
+              className={`
+                w-7 h-7 sm:w-8 sm:h-8 rounded-lg border flex items-center justify-center text-sm sm:text-base transition-all
+                ${potion 
+                  ? 'bg-emerald-950/80 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] cursor-pointer active:scale-90 hover:scale-105' 
+                  : 'bg-slate-900 border-slate-800 text-slate-600 cursor-default'}
+              `}
+            >
+              {potion ? potion.icon : <span className="text-[9px] text-slate-600 font-mono">+</span>}
+            </button>
           ))}
         </div>
 

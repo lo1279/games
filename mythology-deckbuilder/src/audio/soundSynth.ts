@@ -198,6 +198,33 @@ class SoundEngine {
     });
   }
 
+  // 增益强化音效
+  public playBuff() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const notes = [349.23, 440.0, 523.25]; // F4, A4, C5
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      const time = this.ctx!.currentTime + idx * 0.08;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, time + 0.2);
+
+      gain.gain.setValueAtTime(0.18, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+
+      osc.start(time);
+      osc.stop(time + 0.25);
+    });
+  }
+
   // UI 点击音效
   public playClick() {
     if (!this.enabled) return;

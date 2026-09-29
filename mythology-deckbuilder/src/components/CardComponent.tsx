@@ -107,6 +107,13 @@ export const CardComponent: React.FC<CardProps> = ({
         ${disabled || !isPlayable ? 'opacity-40 grayscale cursor-not-allowed hover:transform-none' : 'shadow-md'}
       `}
     >
+      {/* 强化角标 (Upgraded Badge) */}
+      {card.upgraded && (
+        <div className="absolute -top-1.5 -right-1.5 z-20 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-[10px] px-1.5 py-0.5 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.8)] border border-amber-200 animate-pulse">
+          +
+        </div>
+      )}
+
       {/* 顶部：神力消耗能量宝石 + 卡牌名称 */}
       <div className="flex items-center justify-between gap-1 z-10">
         <div className={`
@@ -116,7 +123,7 @@ export const CardComponent: React.FC<CardProps> = ({
         `}>
           {card.cost}
         </div>
-        <div className={`font-bold tracking-wide text-amber-100 truncate text-right flex-1 ${compact ? 'text-[11px] sm:text-xs' : 'text-xs sm:text-sm'}`}>
+        <div className={`font-bold tracking-wide truncate text-right flex-1 ${card.upgraded ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]' : 'text-amber-100'} ${compact ? 'text-[11px] sm:text-xs' : 'text-xs sm:text-sm'}`}>
           {card.name}
         </div>
       </div>
@@ -127,14 +134,21 @@ export const CardComponent: React.FC<CardProps> = ({
         <div className={`rounded-full bg-slate-900/60 border border-slate-700/60 shadow-inner ${compact ? 'p-1.5' : 'p-2.5 sm:p-3'}`}>
           {renderCardIcon()}
         </div>
-        <span className={`text-[8px] sm:text-[9px] uppercase font-semibold px-1.5 py-0.2 rounded-full border mt-1 ${theme.badge}`}>
-          {theme.tag}
-        </span>
+        <div className="flex items-center gap-1 mt-1">
+          <span className={`text-[8px] sm:text-[9px] uppercase font-semibold px-1.5 py-0.2 rounded-full border ${theme.badge}`}>
+            {theme.tag}
+          </span>
+          {card.upgraded && (
+            <span className="text-[8px] font-bold text-yellow-300 bg-yellow-950/80 px-1 rounded border border-yellow-500/60">
+              已强化
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 效果描述与属性 */}
-      <div className={`z-10 bg-slate-950/75 rounded-lg border border-slate-800/80 mb-0.5 ${compact ? 'p-1' : 'p-1.5 sm:p-2'}`}>
-        <div className={`text-slate-200 font-medium text-center line-clamp-3 leading-tight ${compact ? 'text-[9px] sm:text-[10px]' : 'text-[11px] sm:text-xs'}`}>
+      <div className={`z-10 bg-slate-950/75 rounded-lg border mb-0.5 ${card.upgraded ? 'border-amber-500/40' : 'border-slate-800/80'} ${compact ? 'p-1' : 'p-1.5 sm:p-2'}`}>
+        <div className={`font-medium text-center line-clamp-3 leading-tight ${card.upgraded ? 'text-amber-100' : 'text-slate-200'} ${compact ? 'text-[9px] sm:text-[10px]' : 'text-[11px] sm:text-xs'}`}>
           {card.description}
         </div>
       </div>

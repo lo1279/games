@@ -1,0 +1,1032 @@
+/* 三国志·战略版 (Three Kingdoms SLG) - 核心古风界面与动效样式 */
+
+:root {
+  --bg-dark: #0f1115;
+  --bg-card: #181b20;
+  --bg-card-hover: #22262d;
+  --border-gold: #c59b27;
+  --border-dark: #374151;
+  --text-gold: #fbbf24;
+  --text-light: #f3f4f6;
+  --text-muted: #9ca3af;
+  --camp-shu: #10b981;
+  --camp-wei: #3b82f6;
+  --camp-wu: #ef4444;
+  --camp-qun: #a855f7;
+  --header-height: 60px;
+  --bottom-nav-height: 64px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部资源总览条 (HUD) */
+.res-hud {
+  height: var(--header-height);
+  background: linear-gradient(180deg, #1e222a 0%, #12151b 100%);
+  border-bottom: 2px solid #2d3340;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.brand-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.res-items {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.res-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #374151;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.res-badge span.val {
+  font-weight: 700;
+  color: #fff;
+}
+
+.res-badge.gold { border-color: #d97706; background: rgba(217, 119, 6, 0.15); }
+.res-badge.gold span.val { color: #fde047; }
+.res-badge.orders { border-color: #3b82f6; }
+
+/* 主工作视窗容器 */
+.slg-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+}
+
+.slg-tab-page {
+  position: absolute;
+  inset: 0;
+  display: none;
+  overflow-y: auto;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 30%, #1a1e27 0%, #0c0e12 100%);
+}
+
+.slg-tab-page.active {
+  display: block;
+}
+
+/* 底部标签导航栏 */
+.bottom-nav {
+  height: var(--bottom-nav-height);
+  background: #11141a;
+  border-top: 1px solid #2a2f3a;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+}
+
+.nav-tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.nav-tab-btn .icon {
+  font-size: 18px;
+}
+
+.nav-tab-btn.active {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  font-weight: bold;
+}
+
+/* ================= 沙盘大地图样式 ================= */
+.map-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.map-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.map-grid-wrap {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #090a0d;
+  border: 1px solid #262c37;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.world-map-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 72px);
+  grid-template-rows: repeat(9, 72px);
+  gap: 6px;
+}
+
+.map-tile {
+  background: #191d24;
+  border: 1px solid #333d4e;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.map-tile:hover {
+  transform: scale(1.06);
+  z-index: 10;
+  border-color: #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+.map-tile.player-owned {
+  border-color: #10b981;
+  box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.25);
+  background: #13241c;
+}
+
+.map-tile.main-city {
+  border: 2px solid #fbbf24;
+  background: radial-gradient(circle, #3d2b07 0%, #1a160c 100%);
+}
+
+.map-tile .tile-icon {
+  font-size: 20px;
+}
+
+.map-tile .tile-name {
+  font-size: 10px;
+  color: var(--text-light);
+  margin-top: 2px;
+  text-align: center;
+}
+
+.map-tile .tile-level {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.map-tile .tile-flag {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #10b981;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ================= 武将卡牌 (Card) 样式 ================= */
+.general-card {
+  width: 170px;
+  background: linear-gradient(145deg, #232832 0%, #13171e 100%);
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.general-card:hover {
+  transform: translateY(-4px);
+}
+
+.general-card.star-5 {
+  border-color: #d97706;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
+}
+
+.general-card.full-red {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.5), inset 0 0 8px rgba(239, 68, 68, 0.25) !important;
+}
+
+.star-red {
+  color: #ef4444 !important;
+  font-weight: 900;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+.star-gold {
+  color: #f59e0b;
+}
+
+.general-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.general-card .camp-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.general-card .cost-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.general-card .avatar-box {
+  width: 100%;
+  height: 85px;
+  background: #0f1217;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.general-card .hero-name {
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.hero-level-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid #d97706;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.hero-exp-box {
+  width: 100%;
+  margin: 3px 0 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hero-exp-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+.hero-exp-track {
+  width: 100%;
+  height: 4px;
+  background: #1f2937;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hero-exp-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.general-card .stars-row {
+  text-align: center;
+  color: #f59e0b;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.general-card .apt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  background: rgba(0,0,0,0.3);
+  padding: 4px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.apt-tag.S { color: #fbbf24; font-weight: bold; }
+.apt-tag.A { color: #3b82f6; font-weight: bold; }
+.apt-tag.B { color: #10b981; }
+.apt-tag.C { color: #9ca3af; }
+
+.general-card .stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 6px;
+  font-size: 10px;
+  color: #d1d5db;
+  margin-bottom: 6px;
+}
+
+.general-card .tactic-desc {
+  font-size: 10px;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+/* ================= 城建内政页面样式 ================= */
+.city-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.building-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.building-card .b-icon {
+  font-size: 36px;
+  background: #11141a;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.building-card .b-info {
+  flex: 1;
+}
+
+.building-card .b-title {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+}
+
+.building-card .b-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 6px 0;
+}
+
+.building-card .b-effect {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.building-card .upgrade-btn {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.building-card .upgrade-btn:hover {
+  filter: brightness(1.15);
+}
+
+.building-card .upgrade-btn:disabled {
+  background: #4b5563;
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* ================= 招募卡池页面样式 ================= */
+.gacha-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+}
+
+.gacha-banners {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.gacha-banner {
+  width: 340px;
+  background: radial-gradient(circle at top, #2d1d07 0%, #15110d 100%);
+  border: 2px solid #b45309;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+.gacha-banner.copper {
+  background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+  border-color: #475569;
+}
+
+.gacha-banner h3 {
+  color: #fde047;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.gacha-banner.copper h3 {
+  color: #94a3b8;
+}
+
+.gacha-banner .pool-rates {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.gacha-btn-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.gacha-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 8px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+}
+
+.gacha-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* ================= 战报弹窗与推演回放 ================= */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  width: 94%;
+  max-width: 860px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.85);
+}
+
+.modal-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid #2d3340;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 战报全息阵容对决看板 */
+.battle-lineup-container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
+.lineup-team-card {
+  background: #11141a;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #2d3340;
+}
+
+.lineup-team-card.player {
+  border-top: 3px solid #10b981;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, #11141a 100%);
+}
+
+.lineup-team-card.enemy {
+  border-top: 3px solid #ef4444;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, #11141a 100%);
+}
+
+.lineup-team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 6px;
+}
+
+.lineup-hero-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lineup-hero-item {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid #2d3340;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lineup-hero-item.leader {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.lineup-hero-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lineup-hero-tactics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.lineup-tac-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #d1d5db;
+}
+
+.lineup-tac-badge.innate {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #d97706;
+  color: #fde047;
+}
+
+.lineup-tac-badge.s-rank {
+  border-color: #a855f7;
+  color: #d8b4fe;
+}
+
+.battle-vs-badge {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.modal-tab-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #2d3340;
+  padding-bottom: 8px;
+}
+
+.modal-tab-btn {
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #9ca3af;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-tab-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.battle-log-item {
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.tag-player {
+  color: #34d399;
+  font-weight: bold;
+  background: rgba(52, 211, 153, 0.15);
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-right: 2px;
+}
+
+.tag-enemy {
+  color: #f87171;
+  font-weight: bold;
+  background: rgba(248, 113, 113, 0.15);
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-right: 2px;
+}
+
+.battle-log-item.header {
+  background: #2a2007;
+  color: #fbbf24;
+  font-weight: bold;
+  border-radius: 4px;
+  margin: 6px 0;
+}
+
+.battle-log-item.round-start {
+  color: #60a5fa;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.battle-log-item.skill { color: #fbbf24; }
+.battle-log-item.action { color: #e5e7eb; }
+.battle-log-item.heal { color: #34d399; }
+.battle-log-item.debuff { color: #f87171; }
+.battle-log-item.victory { color: #34d399; font-weight: bold; font-size: 14px; background: rgba(52, 211, 153, 0.1); }
+.battle-log-item.defeat { color: #ef4444; font-weight: bold; font-size: 14px; background: rgba(239, 68, 68, 0.1); }
+
+/* 招募出金动画浮层 */
+.gacha-showcase-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 300;
+}
+
+.gacha-cards-display {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+/* ================= 战役剧本与演武试炼样式 ================= */
+.campaign-card {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.campaign-card:hover {
+  transform: translateY(-2px);
+  border-color: #fbbf24;
+}
+
+.campaign-card.cleared {
+  border-color: #059669;
+}
+
+.campaign-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.campaign-icon {
+  font-size: 38px;
+  width: 64px;
+  height: 64px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.campaign-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.campaign-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.campaign-stars {
+  color: #fbbf24;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.campaign-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.campaign-hint {
+  font-size: 11px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.campaign-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 130px;
+}
+
+.enemy-heroes-preview {
+  display: flex;
+  gap: 4px;
+}
+
+.enemy-hero-tag {
+  background: #11141a;
+  border: 1px solid #374151;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #e5e7eb;
+}
+
+.btn-start-battle {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-start-battle:hover {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
+
+.trial-card {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.trial-card.current {
+  border-color: #38bdf8;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+  background: radial-gradient(circle at left, rgba(56, 189, 248, 0.1) 0%, #181b22 100%);
+}
+
+.trial-card.cleared {
+  border-color: #059669;
+  opacity: 0.85;
+}
+
+/* ================= 战法研习升级卡片样式 ================= */
+.tactic-upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.tactic-upgrade-card {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tactic-upgrade-card:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.15);
+  transform: translateY(-2px);
+}
+
+.tactic-upgrade-card.max-level {
+  border-color: #f59e0b;
+  background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.12) 0%, #181b22 80%);
+}
+
+.tactic-type-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+.tactic-type-command { background: #1e3a8a; color: #93c5fd; }
+.tactic-type-passive { background: #4c1d95; color: #d8b4fe; }
+.tactic-type-active { background: #991b1b; color: #fca5a5; }
+.tactic-type-assault { background: #92400e; color: #fde68a; }
+
+.tactic-level-track {
+  width: 100%;
+  height: 6px;
+  background: #374151;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.tactic-level-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.tactic-upgrade-card.max-level .tactic-level-progress {
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+/* ================= 未解锁战法卡片与传承按钮样式 ================= */
+.tactic-upgrade-card.locked {
+  border: 1px dashed #4b5563;
+  background: #111318;
+  opacity: 0.85;
+}
+
+.tactic-upgrade-card.locked:hover {
+  border-color: #8b5cf6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.2);
+}
+
+.btn-inherit-tactic {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: #fff;
+  border: 1px solid #8b5cf6;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-inherit-tactic:hover {
+  filter: brightness(1.2);
+  transform: scale(1.02);
+}
+

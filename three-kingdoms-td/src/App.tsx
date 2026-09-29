@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GameEngine, MasterSkillsCooldown } from './core/GameEngine';
 import { STAGES } from './config/stages';
 import { StageConfig, PlacedTower } from './types/game';
+import { HEROES } from './config/heroes';
 import { TopBar } from './components/TopBar';
 import { TowerShop } from './components/TowerShop';
 import { TowerPanel } from './components/TowerPanel';
 import { BottomControls } from './components/BottomControls';
 import { GameOverModal } from './components/GameOverModal';
 import { sound } from './core/SoundEffects';
+import { Compass, X, Zap } from 'lucide-react';
 
 export const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -423,8 +425,66 @@ export const App: React.FC = () => {
               }}
             />
 
-            {/* 选中防御塔详情面板 */}
-            {selectedTower && (
+            {/* 阵位调遣状态悬浮提示栏（调遣时不遮挡战场任何阵位） */}
+            {relocatingTower && (() => {
+              const relocatingHero = HEROES.find((h) => h.id === relocatingTower.heroId);
+              return (
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-stone-900/95 border-2 border-emerald-500/80 rounded-xl px-4 py-2 shadow-2xl flex items-center gap-3 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2">
+                    <Compass size={18} className="text-emerald-400 animate-spin" style={{ animationDuration: '4s' }} />
+                    <span className="text-xs sm:text-sm font-bold text-amber-200">
+                      调遣令：请点击战场任意合法平地移驻【{relocatingHero?.name || '名将'}】
+                    </span>
+                    <span className="text-[11px] text-emerald-400/90 font-medium hidden sm:inline">
+                      (-25 军饷)
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (engineRef.current) {
+                        engineRef.current.cancelRelocateTower();
+                      }
+                    }}
+                    className="p-1 px-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white rounded-lg text-xs font-semibold border border-stone-600/80 transition flex items-center gap-1 btn-press"
+                  >
+                    <X size={13} />
+                    <span>取消</span>
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* 战法瞄准定点施法悬浮提示栏（瞄准时不遮挡战场任何区域与敌军） */}
+            {aimingSkillTower && (() => {
+              const aimingHero = HEROES.find((h) => h.id === aimingSkillTower.heroId);
+              return (
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-stone-900/95 border-2 border-amber-500/90 rounded-xl px-4 py-2 shadow-2xl flex items-center gap-3 backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2">
+                    <Zap size={18} className="text-amber-400 animate-pulse fill-amber-400" />
+                    <span className="text-xs sm:text-sm font-bold text-amber-200">
+                      战法指派：请点击战场指定落点释放【{aimingHero?.skillName || '战法'}】
+                    </span>
+                    <span className="text-[11px] text-amber-400/90 font-medium hidden sm:inline">
+                      (右键或点击取消)
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (engineRef.current) {
+                        engineRef.current.cancelAimingSkill();
+                      }
+                    }}
+                    className="p-1 px-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white rounded-lg text-xs font-semibold border border-stone-600/80 transition flex items-center gap-1 btn-press"
+                  >
+                    <X size={13} />
+                    <span>取消</span>
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* 选中防御塔详情面板（调遣与战法瞄准期间自动隐去，彻底杜绝遮挡） */}
+            {selectedTower && !relocatingTower && !aimingSkillTower && (
               <TowerPanel
                 tower={selectedTower}
                 gold={gold}
@@ -433,7 +493,7 @@ export const App: React.FC = () => {
                 onCastSkill={(t) => engineRef.current?.startAimingSkill(t)}
                 onRelocate={(t) => engineRef.current?.startRelocateTower(t)}
                 isAiming={aimingSkillTower?.id === selectedTower?.id}
-                isRelocating={relocatingTower?.id === selectedTower?.id}
+                isRelocating={false}
                 onClose={() => {
                   if (engineRef.current) {
                     engineRef.current.cancelAimingSkill();

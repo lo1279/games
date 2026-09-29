@@ -98,6 +98,91 @@ export const ALL_CARDS: Card[] = [
     icon: 'Heart',
     effect: { heal: 12, draw: 1 },
   },
+  // --- 杨戬专武与神术扩展 ---
+  {
+    id: 'hx_third_eye',
+    name: '天眼破障',
+    mythology: 'huaxia',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    description: '洞悉敌人破绽。施加 3 层【破甲】与 2 层【虚弱】，并抽 1 张牌。',
+    flavorText: '额间神目睁开，洞穿三界幻妄与弱点！',
+    icon: 'Eye',
+    effect: { vulnerable: 3, weak: 2, draw: 1 },
+  },
+  {
+    id: 'hx_spear_slash',
+    name: '三尖两刃斩',
+    mythology: 'huaxia',
+    type: 'attack',
+    rarity: 'starter',
+    cost: 1,
+    description: '造成 8 点破空斩击伤害。',
+    flavorText: '三尖两刃神锋，神魔皆颤。',
+    icon: 'Sword',
+    effect: { damage: 8 },
+  },
+  {
+    id: 'hx_hound_bite',
+    name: '哮天扑咬',
+    mythology: 'huaxia',
+    type: 'attack',
+    rarity: 'rare',
+    cost: 1,
+    description: '造成 9 点撕咬伤害，并撕裂目标施加 2 层【破甲】。',
+    flavorText: '哮天犬动若疾电，扑咬直锁咽喉！',
+    icon: 'Flame',
+    effect: { damage: 9, vulnerable: 2 },
+  },
+  {
+    id: 'hx_eagle_hunt',
+    name: '银弹金弓',
+    mythology: 'huaxia',
+    type: 'attack',
+    rarity: 'epic',
+    cost: 2,
+    description: '神箭穿云，造成 18 点狙杀伤害。若目标处于【破甲】状态，额外造成 10 点暴击。',
+    flavorText: '金弓挽如满月，银弹射落九天星。',
+    icon: 'Zap',
+    effect: { damage: 18, vulnerable: 1 },
+  },
+  {
+    id: 'hx_seventy_two',
+    name: '七十二变 · 绝尘',
+    mythology: 'huaxia',
+    type: 'skill',
+    rarity: 'epic',
+    cost: 1,
+    description: '化形避险。获得 14 点护盾，下张打出的攻击牌消耗减少 1 点神力。',
+    flavorText: '地煞七十二玄机，神鬼莫测。',
+    icon: 'Sparkles',
+    effect: { shield: 14, energy: 1 },
+  },
+  {
+    id: 'hx_earth_cleave',
+    name: '劈山救母',
+    mythology: 'huaxia',
+    type: 'attack',
+    rarity: 'legendary',
+    cost: 3,
+    description: '造成 32 点开山裂石伤害，并对全场敌人施加 3 层【破甲】。',
+    flavorText: '一斧劈开桃山雪，孝感九霄动乾坤！',
+    icon: 'Swords',
+    effect: { damage: 32, vulnerable: 3, aoe: true },
+  },
+  {
+    id: 'hx_eight_trigram',
+    name: '八卦离火阵',
+    mythology: 'huaxia',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 2,
+    description: '引八卦离火，对敌方全体施加 6 层【灼烧】。',
+    flavorText: '乾坤坎离，离火焚妖。',
+    icon: 'Flame',
+    effect: { burn: 6, aoe: true },
+  },
 
   // ================= 希腊神话 (Greek) =================
   {
@@ -183,6 +268,91 @@ export const ALL_CARDS: Card[] = [
     flavorText: '十二试炼所铸造的半神伟力。',
     icon: 'Flame',
     effect: { damage: 28 },
+  },
+  // --- 哈迪斯冥界卡牌扩展 ---
+  {
+    id: 'gr_bident_strike',
+    name: '冥皇双叉戟',
+    mythology: 'greek',
+    type: 'attack',
+    rarity: 'starter',
+    cost: 1,
+    description: '造成 7 点暗蚀伤害，并从敌人身上汲取 3 点生命。',
+    flavorText: '刺入灵魂深处的双角阴刃，无声汲取生命。',
+    icon: 'Sword',
+    effect: { damage: 7, heal: 3 },
+  },
+  {
+    id: 'gr_styx_shroud',
+    name: '冥河冥火壁',
+    mythology: 'greek',
+    type: 'skill',
+    rarity: 'starter',
+    cost: 1,
+    description: '获得 8 点护盾，并施加给攻击者 2 层【灼烧】。',
+    flavorText: '斯提克斯河的死者怨火环绕周身。',
+    icon: 'Shield',
+    effect: { shield: 8, burn: 2 },
+  },
+  {
+    id: 'gr_underworld_grasp',
+    name: '幽冥缚魂',
+    mythology: 'greek',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    description: '受到 3 点自损伤害，获得 2 点神力，并施加目标 2 层【虚弱】与【破甲】。',
+    flavorText: '献祭一丝凡尘生气，唤醒地底锁链。',
+    icon: 'Skull',
+    effect: { recoil: 3, energy: 2, weak: 2, vulnerable: 2 },
+  },
+  {
+    id: 'gr_cerberus_howl',
+    name: '地狱三头犬咆哮',
+    mythology: 'greek',
+    type: 'attack',
+    rarity: 'epic',
+    cost: 2,
+    description: '造成 16 点地狱撕裂伤害，并让全场敌人陷入 2 层【破甲】与 2 层【虚弱】。',
+    flavorText: '刻耳柏洛斯的三颗头颅同时发出战栗怒吼！',
+    icon: 'Skull',
+    effect: { damage: 16, vulnerable: 2, weak: 2, aoe: true },
+  },
+  {
+    id: 'gr_styx_resurrection',
+    name: '冥河涅槃',
+    mythology: 'greek',
+    type: 'skill',
+    rarity: 'epic',
+    cost: 2,
+    description: '受到 6 点自伤，获得 22 点坚韧护盾并提升 2 点【力量】。',
+    flavorText: '浸泡于冥河之中，凡人之躯被死力千锤百炼。',
+    icon: 'Shield',
+    effect: { recoil: 6, shield: 22, strength: 2 },
+  },
+  {
+    id: 'gr_helm_darkness',
+    name: '隐形头盔 · 库内埃',
+    mythology: 'greek',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    description: '隐匿于幽冥阴影。获得 12 点护盾，抽 2 张牌。',
+    flavorText: '独眼巨人赠予哈迪斯的神器，戴上便隐匿于三界之外。',
+    icon: 'Sparkles',
+    effect: { shield: 12, draw: 2 },
+  },
+  {
+    id: 'gr_tartarus_collapse',
+    name: '塔耳塔洛斯深渊降临',
+    mythology: 'greek',
+    type: 'attack',
+    rarity: 'legendary',
+    cost: 3,
+    description: '打开无尽深渊！对全场敌人造成 26 点死蚀伤害，吸取造成伤害的 50% 转化为生命值！',
+    flavorText: '诸神亦不敢触碰的终极囚牢，吞噬一切光明。',
+    icon: 'Skull',
+    effect: { damage: 26, aoe: true, heal: 10 },
   },
 
   // ================= 北欧神话 (Norse) =================
@@ -270,6 +440,67 @@ export const ALL_CARDS: Card[] = [
     icon: 'Skull',
     effect: { damage: 24, aoe: true, shock: 4 },
   },
+  // --- 北欧体系深度扩展 ---
+  {
+    id: 'no_valkyrie_wings',
+    name: '女武神庇护',
+    mythology: 'norse',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 1,
+    description: '获得 10 点护盾，如果自身处于【虚弱】或【易伤】，立刻净化并抽 2 张牌。',
+    flavorText: '瓦尔基里展翅，引领死战英魂。',
+    icon: 'Shield',
+    effect: { shield: 10, draw: 2 },
+  },
+  {
+    id: 'no_chain_lightning',
+    name: '锁链闪电',
+    mythology: 'norse',
+    type: 'attack',
+    rarity: 'rare',
+    cost: 1,
+    description: '对敌方单体造成 7 点电击伤害，并施加 2 层【感电】。若敌方已有感电，再次连续打击 1 次。',
+    flavorText: '跳跃于刀刃之间的暴虐雷弧。',
+    icon: 'Zap',
+    effect: { damage: 7, shock: 2, repeat: 1 },
+  },
+  {
+    id: 'no_frost_breath',
+    name: '约顿海姆霜息',
+    mythology: 'norse',
+    type: 'skill',
+    rarity: 'common',
+    cost: 1,
+    description: '冰封全场。施加全体敌人 2 层【虚弱】，自身获得 8 点护盾。',
+    flavorText: '万年玄冰凝结空气，冻结一切杀意。',
+    icon: 'Waves',
+    effect: { shield: 8, weak: 2, aoe: true },
+  },
+  {
+    id: 'no_blood_rage',
+    name: '死线血怒',
+    mythology: 'norse',
+    type: 'attack',
+    rarity: 'epic',
+    cost: 2,
+    description: '造成 14 点伤害。若当前生命值低于 50%，额外造成 14 点爆发伤害并恢复 5 点生命。',
+    flavorText: '伤痕是阿萨神族最荣耀的战勋。',
+    icon: 'Flame',
+    effect: { damage: 14, heal: 5 },
+  },
+  {
+    id: 'no_odin_raven',
+    name: '奥丁双鸦',
+    mythology: 'norse',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 0,
+    description: '福金与雾尼飞翔。抽 2 张牌，下张攻击牌伤害增加 3 点。',
+    flavorText: '思想与记忆，巡视九界每一个角落。',
+    icon: 'Eye',
+    effect: { draw: 2, strength: 1 },
+  },
 
   // ================= 中立 / 跨神话古卷 =================
   {
@@ -303,13 +534,106 @@ export const ALL_CARDS: Card[] = [
     type: 'attack',
     rarity: 'rare',
     cost: 1,
-    description: '造成 10 点伤害，如果目标拥有护盾，额外造成 6 点伤害。',
+    description: '造成 10 点伤害，并施加 1 层【破甲】。',
     flavorText: '击碎虚空，无坚不摧。',
     icon: 'Zap',
-    effect: { damage: 10 },
+    effect: { damage: 10, vulnerable: 1 },
+  },
+  {
+    id: 'nt_holy_barrier',
+    name: '原初庇护所',
+    mythology: 'neutral',
+    type: 'skill',
+    rarity: 'rare',
+    cost: 2,
+    description: '获得 16 点护盾，并抽 1 张牌。',
+    flavorText: '万物初开时的不灭壁垒。',
+    icon: 'Shield',
+    effect: { shield: 16, draw: 1 },
+  },
+  {
+    id: 'nt_power_surge',
+    name: '神格觉醒',
+    mythology: 'neutral',
+    type: 'skill',
+    rarity: 'epic',
+    cost: 1,
+    description: '获得 2 点【力量】，抽 1 张牌。',
+    flavorText: '神力涌动，威临八荒。',
+    icon: 'Flame',
+    effect: { strength: 2, draw: 1 },
+  },
+  {
+    id: 'nt_meteor_strike',
+    name: '天外流星',
+    mythology: 'neutral',
+    type: 'attack',
+    rarity: 'legendary',
+    cost: 3,
+    description: '召唤天外星核坠落，对敌方全体造成 22 点毁灭轰击，附加 2 层【灼烧】与 2 层【破甲】。',
+    flavorText: '撕裂苍穹的陨落之火，燃尽一切阻碍。',
+    icon: 'Flame',
+    effect: { damage: 22, aoe: true, burn: 2, vulnerable: 2 },
   },
 ];
 
 export const CARD_MAP = new Map<string, Card>(
   ALL_CARDS.map(c => [c.id, c])
 );
+
+/**
+ * 强化卡牌逻辑
+ * 将卡牌的基础数值进行质的飞跃，名字追加 '+'，并在描述中标注强化提升
+ */
+export function upgradeCard(card: Card): Card {
+  if (card.upgraded) return card;
+
+  const upgradedEffect = { ...card.effect };
+
+  if (upgradedEffect.damage) {
+    // 伤害提升 35% ~ 50%
+    upgradedEffect.damage = Math.round(upgradedEffect.damage * 1.4) + 2;
+  }
+  if (upgradedEffect.shield) {
+    // 护盾提升 35% ~ 50%
+    upgradedEffect.shield = Math.round(upgradedEffect.shield * 1.4) + 3;
+  }
+  if (upgradedEffect.heal) {
+    upgradedEffect.heal = upgradedEffect.heal + 4;
+  }
+  if (upgradedEffect.vulnerable) {
+    upgradedEffect.vulnerable = upgradedEffect.vulnerable + 1;
+  }
+  if (upgradedEffect.weak) {
+    upgradedEffect.weak = upgradedEffect.weak + 1;
+  }
+  if (upgradedEffect.shock) {
+    upgradedEffect.shock = upgradedEffect.shock + 2;
+  }
+  if (upgradedEffect.burn) {
+    upgradedEffect.burn = upgradedEffect.burn + 2;
+  }
+  if (upgradedEffect.strength) {
+    upgradedEffect.strength = upgradedEffect.strength + 1;
+  }
+
+  // 重新计算描述
+  let newDesc = card.description;
+  if (card.effect.damage && upgradedEffect.damage) {
+    newDesc = newDesc.replace(new RegExp(`${card.effect.damage}\\s*点`), `${upgradedEffect.damage}点`);
+  }
+  if (card.effect.shield && upgradedEffect.shield) {
+    newDesc = newDesc.replace(new RegExp(`${card.effect.shield}\\s*点`), `${upgradedEffect.shield}点`);
+  }
+  if (card.effect.heal && upgradedEffect.heal) {
+    newDesc = newDesc.replace(new RegExp(`${card.effect.heal}\\s*点`), `${upgradedEffect.heal}点`);
+  }
+
+  return {
+    ...card,
+    name: `${card.name}+`,
+    description: newDesc,
+    upgraded: true,
+    effect: upgradedEffect,
+  };
+}

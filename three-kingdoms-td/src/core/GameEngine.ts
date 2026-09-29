@@ -7,6 +7,8 @@ import {
   Particle,
   HeroConfig,
   VisualSkillEffect,
+  ArmorType,
+  DamageCategory,
 } from '../types/game';
 import { HEROES } from '../config/heroes';
 import { ENEMIES } from '../config/enemies';
@@ -426,9 +428,9 @@ export class GameEngine {
     this.callbacks.onGoldChange(this.gold);
 
     realTower.level++;
-    realTower.damage = Math.floor(hero.baseDamage * (1 + (realTower.level - 1) * 0.45));
-    realTower.range = Math.floor(hero.baseRange * (1 + (realTower.level - 1) * 0.12));
-    realTower.attackInterval = Math.max(0.35, hero.baseAttackInterval * (1 - (realTower.level - 1) * 0.08));
+    realTower.damage = Math.floor(hero.baseDamage * (1 + (realTower.level - 1) * 0.28));
+    realTower.range = Math.floor(hero.baseRange * (1 + (realTower.level - 1) * 0.1));
+    realTower.attackInterval = Math.max(0.4, hero.baseAttackInterval * (1 - (realTower.level - 1) * 0.05));
 
     // 升级生命值成长：每星 +35% 生命上限，并瞬间治疗 35% 生命
     const baseHp = hero.baseHp || 700;
@@ -579,12 +581,17 @@ export class GameEngine {
       this.addFloatingText(tower.x, tower.y - 20, `军饷不足! 调遣需 ${GameEngine.RELOCATE_COST} 军饷`, '#f87171', 16, true);
       return false;
     }
-    this.relocatingTower = tower;
+
+    // 关键修复：通过 id 锁定战场上的真实实体，防止传入的是 React 浅拷贝副本导致换位未持久化
+    const realTower = this.towers.find((t) => t.id === tower.id);
+    if (!realTower) return false;
+
+    this.relocatingTower = realTower;
     this.aimingSkillTower = null;
     this.placingHeroId = null;
-    this.callbacks.onRelocatingTowerChange?.(tower);
+    this.callbacks.onRelocatingTowerChange?.(realTower);
     sound.playUpgrade();
-    this.addFloatingText(tower.x, tower.y - 30, '调遣令：请点击合法平地移驻阵位', '#34d399', 18, true);
+    this.addFloatingText(realTower.x, realTower.y - 30, '调遣令：请点击合法平地移驻阵位', '#34d399', 18, true);
     return true;
   }
 
@@ -599,6 +606,14 @@ export class GameEngine {
   // 确认在网格 (col, row) 执行阵位调遣
   public confirmRelocateTower(col: number, row: number): boolean {
     if (!this.relocatingTower) return false;
+
+    // 关键修复：再次通过 id 锁定战场上的真实实体进行坐标持久化
+    const realTower = this.towers.find((t) => t.id === this.relocatingTower?.id);
+    if (!realTower) {
+      this.cancelRelocateTower();
+      return false;
+    }
+
     if (this.gold < GameEngine.RELOCATE_COST) {
       sound.playAlarm();
       this.cancelRelocateTower();
@@ -611,7 +626,7 @@ export class GameEngine {
       return false;
     }
 
-    const isOccupied = this.towers.some((t) => t.id !== this.relocatingTower?.id && t.col === col && t.row === row);
+    const isOccupied = this.towers.some((t) => t.id !== realTower.id && t.col === col && t.row === row);
     if (isOccupied) {
       sound.playAlarm();
       this.addFloatingText(col * 50 + 25, row * 50 + 25, '已有武将驻守!', '#f87171', 15);
@@ -622,31 +637,30 @@ export class GameEngine {
     this.gold -= GameEngine.RELOCATE_COST;
     this.callbacks.onGoldChange(this.gold);
 
-    const oldX = this.relocatingTower.x;
-    const oldY = this.relocatingTower.y;
+    const oldX = realTower.x;
+    const oldY = realTower.y;
     const newX = col * 50 + 25;
     const newY = row * 50 + 25;
 
     // 原地风影残像粒子
     this.spawnParticles(oldX, oldY, '#94a3b8', 20);
 
-    // 变更坐标
-    this.relocatingTower.col = col;
-    this.relocatingTower.row = row;
-    this.relocatingTower.x = newX;
-    this.relocatingTower.y = newY;
+    // 真实修改战场实体坐标
+    realTower.col = col;
+    realTower.row = row;
+    realTower.x = newX;
+    realTower.y = newY;
 
     // 新阵位移驻特效与音效
     this.spawnParticles(newX, newY, '#34d399', 25);
     sound.playUpgrade();
     sound.playDrum();
 
-    const hero = HEROES.find((h) => h.id === this.relocatingTower?.heroId);
+    const hero = HEROES.find((h) => h.id === realTower.heroId);
     this.addFloatingText(newX, newY - 25, `${hero?.name || '名将'} 调遣移驻完成! (-${GameEngine.RELOCATE_COST}军饷)`, '#34d399', 20, true);
 
-    const movedTower = this.relocatingTower;
     this.cancelRelocateTower();
-    this.selectTower(movedTower);
+    this.selectTower(realTower);
     return true;
   }
 
@@ -865,37 +879,207 @@ export class GameEngine {
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
 
-      // 眩晕判定
+      // 眩晕判定：若敌人处于蓄力吟唱中被眩晕，则强制打断其大招！
       if (enemy.stunTimer > 0) {
         enemy.stunTimer -= dt;
+        if (enemy.bossChannelingTimer && enemy.bossChannelingTimer > 0) {
+          enemy.bossChannelingTimer = 0;
+          enemy.bossChannelingSkill = undefined;
+          sound.playAlarm();
+          this.addFloatingText(enemy.x, enemy.y - 36, '【强控打断】大招吟唱被破！', '#38bdf8', 22, true);
+          this.spawnParticles(enemy.x, enemy.y, '#38bdf8', 25);
+        }
       } else {
-        // 张角 Boss 特性：黄天当立，清除减速
-        if (enemy.typeId === 'boss_zhangjiao' && enemy.slowTimer > 0) {
-          enemy.slowTimer = 0;
+        // --- 1. 天公将军·张角 Boss 机制（太平唤生 + 吟唱五雷正法） ---
+        if (enemy.typeId === 'boss_zhangjiao') {
+          // 清除减速
+          if (enemy.slowTimer > 0) enemy.slowTimer = 0;
+
+          // 吟唱中倒计时
+          if (enemy.bossChannelingTimer && enemy.bossChannelingTimer > 0) {
+            enemy.bossChannelingTimer -= dt;
+            if (Math.random() < 0.25) {
+              this.spawnParticles(enemy.x, enemy.y, '#c084fc', 3);
+            }
+            if (enemy.bossChannelingTimer <= 0) {
+              // 吟唱完成：五雷正法天罚直劈距离最近的名将！
+              sound.playThunder();
+              enemy.bossChannelingTimer = 0;
+              enemy.bossChannelingSkill = undefined;
+
+              let nearestAlly: PlacedTower | null = null;
+              let minAllyD = Infinity;
+              for (const t of this.towers) {
+                if (!t.isDown) {
+                  const d = Math.hypot(t.x - enemy.x, t.y - enemy.y);
+                  if (d < minAllyD) {
+                    minAllyD = d;
+                    nearestAlly = t;
+                  }
+                }
+              }
+              if (nearestAlly) {
+                this.spawnLightningEffect(enemy.x, enemy.y, nearestAlly.x, nearestAlly.y);
+                this.applyDamageToTower(nearestAlly, 320, enemy);
+                this.addFloatingText(nearestAlly.x, nearestAlly.y - 25, '五雷轰顶 -320!', '#c084fc', 20, true);
+              }
+            }
+          } else {
+            // 主动技能冷却计时
+            if (!enemy.bossCastTimer) enemy.bossCastTimer = 8.0;
+            enemy.bossCastTimer -= dt;
+            if (enemy.bossCastTimer <= 0) {
+              enemy.bossCastTimer = 9.5;
+              // 50% 概率触发【太平妖术·黄巾唤生】，50% 概率吟唱【五雷正法】
+              if (Math.random() < 0.5) {
+                // 唤生 3 名黄巾死士
+                sound.playDrum();
+                this.addFloatingText(enemy.x, enemy.y - 28, '【太平妖术】黄巾死士 听吾号令！', '#a855f7', 20, true);
+                for (let k = 0; k < 3; k++) {
+                  const offsetAngle = (k * Math.PI * 2) / 3;
+                  const sx = enemy.x + Math.cos(offsetAngle) * 35;
+                  const sy = enemy.y + Math.sin(offsetAngle) * 35;
+                  this.enemies.push({
+                    id: `yellow_minion_${Date.now()}_${k}`,
+                    typeId: 'rebel_thug',
+                    name: '黄巾死士',
+                    char: '巾',
+                    x: sx,
+                    y: sy,
+                    hp: 450,
+                    maxHp: 450,
+                    speed: 45,
+                    baseSpeed: 45,
+                    armor: 0.1,
+                    magicResist: 0.1,
+                    armorType: 'cloth',
+                    rewardGold: 10,
+                    color: '#ca8a04',
+                    size: 14,
+                    isBoss: false,
+                    waypointIndex: Math.min(enemy.waypointIndex, this.stage.path.length - 1),
+                    distanceTraveled: enemy.distanceTraveled,
+                    slowTimer: 0,
+                    stunTimer: 0,
+                    burnTimer: 0,
+                    burnDps: 0,
+                    isDead: false,
+                    reachedEnd: false,
+                    facingRight: enemy.facingRight,
+                  });
+                  this.spawnParticles(sx, sy, '#ca8a04', 12);
+                }
+              } else {
+                // 开启 2 秒【五雷正法】吟唱
+                enemy.bossChannelingTimer = 2.0;
+                enemy.bossChannelingSkill = 'zhangjiao_thunder';
+                sound.playThunder();
+                this.addFloatingText(enemy.x, enemy.y - 32, '【五雷正法】引雷吟唱中 (可用眩晕打断)!', '#facc15', 19, true);
+              }
+            }
+          }
         }
 
-        // 华雄 Boss 特性：半血暴走冲锋
-        if (enemy.typeId === 'boss_huaxiong' && enemy.hp < enemy.maxHp * 0.5 && !enemy.bossSkillTriggered) {
-          enemy.bossSkillTriggered = true;
-          enemy.baseSpeed *= 1.45;
-          sound.playDrum();
-          this.addFloatingText(enemy.x, enemy.y - 25, '【华雄·骁勇劈山】全军随我冲锋！', '#ef4444', 20, true);
-          this.spawnParticles(enemy.x, enemy.y, '#ef4444', 25);
+        // --- 2. 关西猛将·华雄 Boss 机制（半血狂暴冲锋 + 2500 铁壁血盾） ---
+        if (enemy.typeId === 'boss_huaxiong') {
+          if (enemy.hp < enemy.maxHp * 0.5 && !enemy.bossSkillTriggered) {
+            enemy.bossSkillTriggered = true;
+            enemy.baseSpeed *= 1.45;
+            enemy.bossShieldHp = 2500;
+            enemy.bossShieldMax = 2500;
+            sound.playDrum();
+            sound.playThunder();
+            this.addFloatingText(enemy.x, enemy.y - 32, '【华雄·陷阵铁壁】护盾激增+狂暴冲锋！', '#ef4444', 22, true);
+            this.spawnParticles(enemy.x, enemy.y, '#dc2626', 45);
+          }
         }
 
-        // 吕布 Boss 特性：濒危天下无双霸体
-        if (enemy.typeId === 'boss_lvbu' && enemy.hp < enemy.maxHp * 0.4 && !enemy.bossSkillTriggered) {
-          enemy.bossSkillTriggered = true;
-          enemy.stunTimer = 0;
-          enemy.slowTimer = 0;
-          enemy.armor = 0.7; // 巨额护甲
-          sound.playThunder();
-          this.addFloatingText(enemy.x, enemy.y - 30, '【吕布·天下无双】谁敢决一死战！', '#ef4444', 24, true);
-          this.spawnParticles(enemy.x, enemy.y, '#dc2626', 40);
+        // --- 3. 温侯·吕布 Boss 机制（双阶段：辕门穿云射 + 魔神蓄力灭世扫荡） ---
+        if (enemy.typeId === 'boss_lvbu') {
+          // 转阶段判定（血量跌破 50% 爆发魔神降世）
+          if (enemy.hp < enemy.maxHp * 0.5 && !enemy.bossSkillTriggered) {
+            enemy.bossSkillTriggered = true;
+            enemy.bossPhase = 2;
+            enemy.stunTimer = 0;
+            enemy.slowTimer = 0;
+            enemy.baseSpeed *= 1.3;
+            sound.playThunder();
+            sound.playDrum();
+            this.addFloatingText(enemy.x, enemy.y - 35, '【吕布·魔神降世】天下何人堪与我一战！', '#ef4444', 26, true);
+            this.spawnParticles(enemy.x, enemy.y, '#ef4444', 50);
+          }
+
+          // 处于大招蓄力中
+          if (enemy.bossChannelingTimer && enemy.bossChannelingTimer > 0) {
+            enemy.bossChannelingTimer -= dt;
+            if (Math.random() < 0.3) {
+              this.spawnParticles(enemy.x, enemy.y, '#ef4444', 4);
+            }
+            if (enemy.bossChannelingTimer <= 0) {
+              // 蓄力完成：对周围 190 码名将发动【鬼神灭世·魔戟横扫】
+              sound.playSlash();
+              sound.playExplosion();
+              enemy.bossChannelingTimer = 0;
+              enemy.bossChannelingSkill = undefined;
+              this.addFloatingText(enemy.x, enemy.y - 36, '【鬼神灭世·横扫八荒】!', '#dc2626', 28, true);
+
+              this.visualEffects.push({
+                id: `fx_lvbu_sweep_${Date.now()}`,
+                type: 'zhangfei_shock',
+                x: enemy.x,
+                y: enemy.y,
+                angle: 0,
+                radius: 190,
+                color: '#dc2626',
+                secondaryColor: '#f97316',
+                duration: 0.8,
+                elapsed: 0,
+              });
+
+              // 横扫范围内的我方所有名将，造成 420 巨额物理重创
+              this.towers.forEach((t) => {
+                if (!t.isDown && Math.hypot(t.x - enemy.x, t.y - enemy.y) <= 190) {
+                  this.applyDamageToTower(t, 420, enemy);
+                  this.spawnParticles(t.x, t.y, '#ef4444', 15);
+                }
+              });
+            }
+          } else {
+            // 主动技能循环
+            if (!enemy.bossCastTimer) enemy.bossCastTimer = 6.0;
+            enemy.bossCastTimer -= dt;
+            if (enemy.bossCastTimer <= 0) {
+              if (enemy.bossPhase === 2) {
+                // 二阶段：开启 2 秒【鬼神灭世】蓄力，显示范围红圈，给主公手操打断/调遣撤离窗口
+                enemy.bossCastTimer = 10.0;
+                enemy.bossChannelingTimer = 2.0;
+                enemy.bossChannelingSkill = 'lvbu_sweep';
+                sound.playDrum();
+                this.addFloatingText(enemy.x, enemy.y - 34, '【鬼神灭世】灭世蓄力中！(请打断或调遣撤离)', '#f87171', 20, true);
+              } else {
+                // 一阶段：每 7 秒【辕门穿云射】狙击全场输出最高的名将
+                enemy.bossCastTimer = 7.0;
+                let topDmgTower: PlacedTower | null = null;
+                let maxAtk = -1;
+                for (const t of this.towers) {
+                  if (!t.isDown && t.damage > maxAtk) {
+                    maxAtk = t.damage;
+                    topDmgTower = t;
+                  }
+                }
+                if (topDmgTower) {
+                  sound.playArrowShoot();
+                  this.spawnLightningEffect(enemy.x, enemy.y, topDmgTower.x, topDmgTower.y);
+                  this.applyDamageToTower(topDmgTower, 260, enemy);
+                  this.addFloatingText(topDmgTower.x, topDmgTower.y - 25, '辕门穿云射 -260!', '#f87171', 18, true);
+                }
+              }
+            }
+          }
         }
 
-        // 减速判定
-        let currentSpeed = enemy.baseSpeed;
+        // 减速判定 (吟唱蓄力期间 Boss 无法移动)
+        let currentSpeed = enemy.bossChannelingTimer && enemy.bossChannelingTimer > 0 ? 0 : enemy.baseSpeed;
         if (enemy.slowTimer > 0) {
           enemy.slowTimer -= dt;
           currentSpeed *= 0.5; // 减速50%
@@ -903,7 +1087,7 @@ export class GameEngine {
 
         // 沿路径前进
         const targetWaypoint = this.stage.path[enemy.waypointIndex];
-        if (targetWaypoint) {
+        if (targetWaypoint && currentSpeed > 0) {
           const dx = targetWaypoint.x - enemy.x;
           const dy = targetWaypoint.y - enemy.y;
           const dist = Math.hypot(dx, dy);
@@ -989,6 +1173,19 @@ export class GameEngine {
         }
       }
 
+      // 感电状态衰减
+      if (enemy.shockTimer && enemy.shockTimer > 0) {
+        enemy.shockTimer -= dt;
+        if (Math.random() < 0.1) {
+          this.spawnParticles(enemy.x, enemy.y, '#38bdf8', 1);
+        }
+      }
+
+      // 熔甲/破甲状态随时间自然愈合衰减
+      if (enemy.meltArmorReduction && enemy.meltArmorReduction > 0) {
+        enemy.meltArmorReduction = Math.max(0, enemy.meltArmorReduction - 0.08 * dt);
+      }
+
       // 检查阵亡
       if (enemy.hp <= 0 && !enemy.isDead) {
         enemy.isDead = true;
@@ -1033,6 +1230,15 @@ export class GameEngine {
           this.addFloatingText(tower.x, tower.y - 25, `【${hero.name}】休整完毕 重整旗鼓!`, '#22c55e', 18, true);
         }
         return; // 倒下期间无法攻击或释放大招
+      }
+
+      // 震荡力竭/眩晕判定
+      if (tower.stunTimer && tower.stunTimer > 0) {
+        tower.stunTimer -= dt;
+        if (Math.random() < 0.1) {
+          this.spawnParticles(tower.x, tower.y, '#eab308', 1);
+        }
+        return; // 眩晕期间无法出手攻击与释放战法
       }
 
       if (tower.buffTimer && tower.buffTimer > 0) {
@@ -1220,6 +1426,7 @@ export class GameEngine {
       baseSpeed: config.speed,
       armor: config.armor,
       magicResist: config.magicResist,
+      armorType: config.armorType || 'cloth',
       rewardGold: config.rewardGold,
       color: config.color,
       size: config.size,
@@ -1230,9 +1437,16 @@ export class GameEngine {
       stunTimer: 0,
       burnTimer: 0,
       burnDps: 0,
+      shockTimer: 0,
+      meltArmorReduction: 0,
       isDead: false,
       reachedEnd: false,
       facingRight: this.stage.path[1] ? this.stage.path[1].x >= startPos.x : true,
+      bossPhase: 1,
+      bossCastTimer: config.id === 'boss_zhangjiao' ? 6.0 : config.id === 'boss_lvbu' ? 5.0 : 8.0,
+      bossChannelingTimer: 0,
+      bossShieldHp: 0,
+      bossShieldMax: 0,
     };
 
     this.enemies.push(newEnemy);
@@ -1339,6 +1553,8 @@ export class GameEngine {
       sound.playThunder();
       const dmg = tower.damage * 3.2;
       if (target) {
+        // 青龙劈山裂甲：直接撕裂主目标 35% 护甲
+        target.meltArmorReduction = Math.max(target.meltArmorReduction || 0, 0.35);
         this.applyDamageToEnemy(target, dmg, 'physical', tower, true);
       }
       this.addFloatingText(tower.x, tower.y - 36, `【${hero.skillName}】青龙破千军!`, '#22c55e', 24, true);
@@ -1363,13 +1579,14 @@ export class GameEngine {
         elapsed: 0,
       });
 
-      // 贯穿前方 180 码范围内的所有敌人
+      // 贯穿前方 180 码范围内的所有敌人并附加破甲
       this.enemies.forEach((e) => {
         const d = Math.hypot(e.x - tower.x, e.y - tower.y);
         const a = Math.atan2(e.y - tower.y, e.x - tower.x);
         let diffA = Math.abs(a - tower.angle);
         while (diffA > Math.PI) diffA = Math.abs(diffA - Math.PI * 2);
         if (d <= 190 && diffA < 0.65) {
+          e.meltArmorReduction = Math.max(e.meltArmorReduction || 0, 0.35);
           this.applyDamageToEnemy(e, tower.damage * 1.8, 'physical', tower);
           this.spawnParticles(e.x, e.y, '#22c55e', 15);
         }
@@ -1424,6 +1641,8 @@ export class GameEngine {
 
       this.enemies.forEach((e) => {
         if (Math.hypot(e.x - castX, e.y - castY) <= 160) {
+          // 诸葛亮神雷附加 4 秒【感电】：受物理攻击 100% 暴击并触发连锁电弧！
+          e.shockTimer = 4.0;
           this.applyDamageToEnemy(e, tower.damage * 2.5, 'magic', tower);
           e.slowTimer = 4.0;
           this.spawnLightningEffect(tower.x, tower.y, e.x, e.y);
@@ -1453,6 +1672,8 @@ export class GameEngine {
 
       this.enemies.forEach((e) => {
         if (Math.hypot(e.x - castX, e.y - castY) <= 150) {
+          // 周瑜烈火焚甲：直接削减 50% 护甲，持续 6 秒
+          e.meltArmorReduction = Math.max(e.meltArmorReduction || 0, 0.5);
           this.applyDamageToEnemy(e, tower.damage * 2.2, 'magic', tower);
           e.burnTimer = 5.0;
           e.burnDps = 100;
@@ -1800,9 +2021,10 @@ export class GameEngine {
       15
     );
 
-    // 受击红光粒子
-    if (Math.random() < 0.4) {
-      this.spawnParticles(tower.x, tower.y, hasLiubeiNearby ? '#22c55e' : '#ef4444', 4);
+    // 关西猛将·华雄攻击震荡特性：重斧劈击使守将力竭眩晕 1.5 秒
+    if (attacker && attacker.typeId === 'boss_huaxiong') {
+      tower.stunTimer = Math.max(tower.stunTimer || 0, 1.5);
+      this.addFloatingText(tower.x, tower.y - 35, '震荡力竭 1.5s!', '#facc15', 14, true);
     }
 
     // 检查是否负伤倒下
@@ -1823,20 +2045,110 @@ export class GameEngine {
     }
   }
 
-  // 结算敌兵伤害
+  // 兵种类型克制倍率矩阵 (Damage Category vs Armor Type)
+  private getDamageMultiplier(
+    category: DamageCategory,
+    armorType: ArmorType
+  ): { multiplier: number; tag?: 'counter' | 'resisted' } {
+    if (category === 'true') {
+      return { multiplier: 1.0 };
+    }
+
+    if (category === 'pierce') {
+      // 穿刺（弓箭）：轻甲克星，对重装大盾严重刮痧！
+      if (armorType === 'heavy') return { multiplier: 0.35, tag: 'resisted' }; // 弓箭射大盾严重刮痧
+      if (armorType === 'light') return { multiplier: 1.45, tag: 'counter' }; // 弓箭射西凉突骑/流寇暴击
+      return { multiplier: 1.2, tag: 'counter' }; // 射布衣长枪兵/妖术士
+    }
+
+    if (category === 'slash') {
+      // 挥砍（近战刀枪）：均衡物理输出，对重装略受抵挡
+      if (armorType === 'heavy') return { multiplier: 0.75, tag: 'resisted' };
+      if (armorType === 'light') return { multiplier: 1.05 };
+      return { multiplier: 1.15 };
+    }
+
+    if (category === 'magic') {
+      // 魔法（雷火法术）：重装大盾克星（融铁破甲！），但被布衣道袍魔抗削弱
+      if (armorType === 'heavy') return { multiplier: 1.85, tag: 'counter' }; // 融甲碎盾极高克制！
+      if (armorType === 'light') return { multiplier: 0.95 };
+      return { multiplier: 0.6, tag: 'resisted' }; // 妖术师等高法抗道袍削弱
+    }
+
+    return { multiplier: 1.0 };
+  }
+
+  // 结算敌兵伤害（融合兵种相克矩阵、抗性衰减、诸葛亮感电与周瑜熔甲联动）
   private applyDamageToEnemy(
     enemy: EnemyEntity,
     rawDmg: number,
     type: 'physical' | 'magic',
     tower?: PlacedTower,
-    isCrit?: boolean
+    isCrit?: boolean,
+    specifiedCategory?: DamageCategory
   ): void {
-    let reduction = type === 'physical' ? enemy.armor : enemy.magicResist;
-    reduction = Math.min(0.8, Math.max(0, reduction)); // 最高减伤 80%
+    const hero = tower ? HEROES.find((h) => h.id === tower.heroId) : undefined;
+    const category: DamageCategory =
+      specifiedCategory || (type === 'magic' ? 'magic' : (hero?.damageCategory || 'slash'));
+    const armorType: ArmorType = enemy.armorType || 'cloth';
 
-    let finalDmg = Math.max(1, Math.floor(rawDmg * (1 - reduction)));
-    if (isCrit) {
+    // 1. 获取兵种克制相克倍率与状态标签
+    const { multiplier: typeMultiplier, tag } = this.getDamageMultiplier(category, armorType);
+
+    // 2. 计算防御抗性与周瑜火海熔甲削减
+    let reduction = 0;
+    if (category === 'slash' || category === 'pierce') {
+      const meltReduction = enemy.meltArmorReduction || 0;
+      const effectiveArmor = Math.max(0, enemy.armor * (1 - meltReduction));
+      reduction = effectiveArmor;
+    } else if (category === 'magic') {
+      reduction = enemy.magicResist;
+    }
+    reduction = Math.min(0.85, Math.max(0, reduction)); // 最高减伤 85%
+
+    // 3. 基础减免与克制加成
+    let finalDmg = Math.max(1, Math.floor(rawDmg * (1 - reduction) * typeMultiplier));
+
+    // 曹操被动光环【枭雄霸业】：若发起攻击的武将周围 180 码内有未休整的曹操，输出获得 20% 霸气增伤！
+    if (tower) {
+      const hasCaocaoNearby = this.towers.some((t) => {
+        if (t.heroId === 'caocao' && !t.isDown) {
+          return Math.hypot(t.x - tower.x, t.y - tower.y) <= 180;
+        }
+        return false;
+      });
+      if (hasCaocaoNearby) {
+        finalDmg = Math.floor(finalDmg * 1.2);
+      }
+    }
+
+    // 4. 诸葛亮【感电】战术连携：若敌人处于感电状态且受到物理攻击，必定暴击 (1.5倍) 并伴随电弧特效
+    let actualCrit = isCrit || false;
+    if ((category === 'pierce' || category === 'slash') && (enemy.shockTimer && enemy.shockTimer > 0)) {
+      actualCrit = true;
+      sound.playThunder();
+      this.spawnParticles(enemy.x, enemy.y, '#38bdf8', 6);
+    }
+
+    if (actualCrit) {
       finalDmg = Math.floor(finalDmg * 1.5);
+    }
+
+    // 5. Boss 铁壁护盾优先吸收抵扣机制
+    if (enemy.bossShieldHp && enemy.bossShieldHp > 0) {
+      if (enemy.bossShieldHp >= finalDmg) {
+        enemy.bossShieldHp -= finalDmg;
+        this.addFloatingText(enemy.x, enemy.y - 18, `铁壁护盾 -${finalDmg}`, '#fde047', 14, false);
+        this.spawnParticles(enemy.x, enemy.y, '#facc15', 5);
+        finalDmg = 0;
+      } else {
+        const absorbed = enemy.bossShieldHp;
+        finalDmg -= absorbed;
+        enemy.bossShieldHp = 0;
+        sound.playExplosion();
+        this.addFloatingText(enemy.x, enemy.y - 25, '【破盾】铁壁破碎！', '#f87171', 18, true);
+        this.spawnParticles(enemy.x, enemy.y, '#f59e0b', 20);
+      }
     }
 
     enemy.hp -= finalDmg;
@@ -1845,19 +2157,55 @@ export class GameEngine {
       tower.totalDamageDealt += finalDmg;
       if (enemy.hp <= 0) {
         tower.kills++;
+
+        // 曹操【唯才是举·军饷掠夺】：曹操击杀或受曹操光环庇护的武将击杀敌人时，额外掠夺 2 军饷
+        const hasCaocaoLoot = this.towers.some((t) => {
+          if (t.heroId === 'caocao' && !t.isDown) {
+            return Math.hypot(t.x - tower.x, t.y - tower.y) <= 180;
+          }
+          return false;
+        });
+        if (hasCaocaoLoot) {
+          const lootGold = 2;
+          this.gold += lootGold;
+          this.callbacks.onGoldChange(this.gold);
+          this.addFloatingText(enemy.x, enemy.y - 28, `枭雄掠夺 +${lootGold}`, '#fbbf24', 14, true);
+        }
       }
     }
 
-    // 飘字伤害
-    const textColor = isCrit ? '#facc15' : type === 'physical' ? '#ffffff' : '#38bdf8';
-    this.addFloatingText(
-      enemy.x + (Math.random() * 20 - 10),
-      enemy.y - 10,
-      isCrit ? `暴击 -${finalDmg}!` : `-${finalDmg}`,
-      textColor,
-      isCrit ? 20 : 14,
-      isCrit
-    );
+    // 5. 战斗飘字与克制视觉反馈
+    if (tag === 'counter') {
+      // 克制强击飘金色/紫红大字
+      this.addFloatingText(
+        enemy.x + (Math.random() * 20 - 10),
+        enemy.y - 12,
+        actualCrit ? `暴击·破甲 -${finalDmg}!` : `克制 -${finalDmg}!`,
+        category === 'magic' ? '#c084fc' : '#f59e0b',
+        actualCrit ? 20 : 16,
+        true
+      );
+    } else if (tag === 'resisted') {
+      // 受到抗性严重抵挡飘灰白小字
+      this.addFloatingText(
+        enemy.x + (Math.random() * 16 - 8),
+        enemy.y - 10,
+        `抵挡 -${finalDmg}`,
+        '#94a3b8',
+        13
+      );
+    } else {
+      // 常规伤害飘字
+      const textColor = actualCrit ? '#facc15' : type === 'physical' ? '#ffffff' : '#38bdf8';
+      this.addFloatingText(
+        enemy.x + (Math.random() * 20 - 10),
+        enemy.y - 10,
+        actualCrit ? `暴击 -${finalDmg}!` : `-${finalDmg}`,
+        textColor,
+        actualCrit ? 19 : 14,
+        actualCrit
+      );
+    }
   }
 
   // 生成粒子
@@ -2357,15 +2705,60 @@ export class GameEngine {
       ctx.fillStyle = enemy.isBoss ? '#ef4444' : hpPct > 0.4 ? '#22c55e' : '#f97316';
       ctx.fillRect(-barW / 2, barY, barW * hpPct, barH);
 
+      // Boss 铁壁护盾条 (金黄色置于血条上方)
+      if (enemy.bossShieldHp && enemy.bossShieldHp > 0 && enemy.bossShieldMax) {
+        const shieldPct = Math.min(1, enemy.bossShieldHp / enemy.bossShieldMax);
+        const shieldY = barY - 6;
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(-barW / 2, shieldY, barW, 4);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(-barW / 2, shieldY, barW * shieldPct, 4);
+      }
+
+      // Boss 大招蓄力/吟唱指示条与红色预警范围圈
+      if (enemy.bossChannelingTimer && enemy.bossChannelingTimer > 0) {
+        const castPct = 1 - enemy.bossChannelingTimer / 2.0;
+        const channelY = barY - 14;
+        ctx.fillStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillRect(-barW / 2, channelY, barW, 5);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(-barW / 2, channelY, barW * Math.min(1, Math.max(0, castPct)), 5);
+
+        // 提示字
+        ctx.font = 'bold 9px sans-serif';
+        ctx.fillStyle = '#fde047';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+          enemy.bossChannelingSkill === 'lvbu_sweep' ? '灭世扫荡 蓄力中!' : '五雷正法 吟唱中!',
+          0,
+          channelY - 3
+        );
+      }
+
       // Boss 名字标签提示
       if (enemy.isBoss) {
         ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#fef08a';
-        ctx.fillText(enemy.name, 0, barY - 4);
+        ctx.fillStyle = enemy.bossPhase === 2 ? '#ef4444' : '#fef08a';
+        ctx.fillText(enemy.bossPhase === 2 ? `【狂暴】${enemy.name}` : enemy.name, 0, barY - 4);
       }
 
       ctx.restore();
+
+      // 如果吕布处于【鬼神灭世】蓄力中，在地面绘制 190 码暗红半透明危险扫荡预警圈
+      if (enemy.typeId === 'boss_lvbu' && enemy.bossChannelingTimer && enemy.bossChannelingTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.12)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, 190, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
     });
   }
 

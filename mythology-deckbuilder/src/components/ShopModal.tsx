@@ -1,35 +1,47 @@
 import React, { useState } from 'react';
 import type { Card } from '../types/card';
 import type { Relic } from '../types/relic';
+import type { Potion } from '../types/potion';
 import { CardComponent } from './CardComponent';
-import { ShoppingBag, Coins, Trash2, X, Sparkles } from 'lucide-react';
+import { ShoppingBag, Coins, Trash2, X, Sparkles, Hammer } from 'lucide-react';
 import { sounds } from '../audio/soundSynth';
 
 interface ShopModalProps {
   cardsForSale: Card[];
   relicsForSale: Relic[];
+  potionsForSale: Potion[];
   playerGold: number;
   playerDeck: Card[];
+  potionsCount: number;
   onBuyCard: (card: Card, cost: number) => void;
   onBuyRelic: (relic: Relic, cost: number) => void;
+  onBuyPotion: (potion: Potion, cost: number) => void;
   onRemoveCard: (cardIndex: number, cost: number) => void;
+  onUpgradeCard: () => void;
   onClose: () => void;
 }
 
 export const ShopModal: React.FC<ShopModalProps> = ({
   cardsForSale,
   relicsForSale,
+  potionsForSale,
   playerGold,
   playerDeck,
+  potionsCount,
   onBuyCard,
   onBuyRelic,
+  onBuyPotion,
   onRemoveCard,
+  onUpgradeCard,
   onClose,
 }) => {
   const [isPurging, setIsPurging] = useState(false);
   const [purchasedCardIds, setPurchasedCardIds] = useState<string[]>([]);
   const [purchasedRelicIds, setPurchasedRelicIds] = useState<string[]>([]);
+  const [purchasedPotionIds, setPurchasedPotionIds] = useState<string[]>([]);
+
   const PURGE_COST = 50;
+  const UPGRADE_COST = 60;
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 safe-area-container select-none">
@@ -43,7 +55,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-xl font-black text-yellow-300">诸神黑市 · 万界商会</h2>
-              <p className="text-[10px] sm:text-xs text-slate-400">汇聚华夏、奥林匹斯与阿斯加德宝物</p>
+              <p className="text-[10px] sm:text-xs text-slate-400">汇聚华夏金丹、奥林匹斯圣物与阿斯加德神铁</p>
             </div>
           </div>
 
@@ -65,12 +77,12 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         </div>
 
         {/* 商店主体内容 */}
-        <div className="flex-1 overflow-y-auto py-3 space-y-5 pr-1 no-scrollbar">
+        <div className="flex-1 overflow-y-auto py-3 space-y-4 pr-1 no-scrollbar">
           
           {/* 在售神术卡牌 */}
           <div>
             <div className="text-[11px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> 神术拓片
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> 诸天神术拓片
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 justify-items-center">
               {cardsForSale.map((card) => {
@@ -117,7 +129,59 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
           </div>
 
-          {/* 在售神器 */}
+          {/* 在售战术神丹法宝 */}
+          {potionsForSale.length > 0 && (
+            <div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <span className="text-sm">🧪</span> 仙丹法宝专柜 (行囊: {potionsCount}/2)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {potionsForSale.map((potion) => {
+                  const isSoldOut = purchasedPotionIds.includes(potion.id);
+                  const isFull = potionsCount >= 2;
+                  const canAfford = playerGold >= potion.costGold && !isSoldOut && !isFull;
+                  return (
+                    <div
+                      key={potion.id}
+                      className={`p-2.5 bg-slate-950 border rounded-xl flex items-center justify-between gap-2 ${isSoldOut ? 'border-slate-800 opacity-50' : 'border-slate-800 hover:border-emerald-500/50'}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-2xl">{potion.icon}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-emerald-300 truncate">{potion.name}</div>
+                          <div className="text-[10px] text-slate-400 line-clamp-1">{potion.description}</div>
+                        </div>
+                      </div>
+                      <button
+                        disabled={isSoldOut || !canAfford}
+                        onClick={() => {
+                          if (canAfford) {
+                            sounds.playVictory();
+                            setPurchasedPotionIds(prev => [...prev, potion.id]);
+                            onBuyPotion(potion, potion.costGold);
+                          }
+                        }}
+                        className={`
+                          text-[10px] font-bold px-2.5 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-0.5 shrink-0
+                          ${isSoldOut
+                            ? 'bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed'
+                            : isFull
+                              ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                              : canAfford 
+                                ? 'bg-emerald-500 text-black border-emerald-400 hover:bg-emerald-400 cursor-pointer active:scale-95' 
+                                : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'}
+                        `}
+                      >
+                        {isSoldOut ? '已售罄' : isFull ? '行囊已满' : <><Coins className="w-3 h-3" /> {potion.costGold}</>}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 在售诸神圣物 */}
           {relicsForSale.length > 0 && (
             <div>
               <div className="text-[11px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
@@ -131,7 +195,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   return (
                     <div
                       key={relic.id}
-                      className={`p-2.5 bg-slate-950 border rounded-xl flex items-center justify-between gap-2 ${isSoldOut ? 'border-slate-800 opacity-50' : 'border-slate-800'}`}
+                      className={`p-2.5 bg-slate-950 border rounded-xl flex items-center justify-between gap-2 ${isSoldOut ? 'border-slate-800 opacity-50' : 'border-slate-800 hover:border-cyan-500/50'}`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold text-cyan-300 truncate">{relic.name}</div>
@@ -147,7 +211,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                           }
                         }}
                         className={`
-                          text-[10px] font-bold px-2.5 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-0.5 flex-shrink-0
+                          text-[10px] font-bold px-2.5 py-1.5 rounded-lg whitespace-nowrap border flex items-center gap-0.5 shrink-0
                           ${isSoldOut
                             ? 'bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed'
                             : canAfford 
@@ -164,33 +228,65 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
           )}
 
-          {/* 遗忘之池：精简卡牌 */}
-          <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-red-500/20 text-red-400 rounded-lg">
-                <Trash2 className="w-4 h-4" />
+          {/* 商会服务：锻造升级 & 冥河洗练 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* 锻造升级 */}
+            <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg">
+                  <Hammer className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-200">诸神铁砧 · 强化</div>
+                  <div className="text-[10px] text-slate-400">强化牌库中任意 1 张卡牌</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs font-bold text-slate-200">冥河洗练 · 删牌</div>
-                <div className="text-[10px] text-slate-400">永久移除一张不需要的基础卡牌</div>
-              </div>
+
+              <button
+                disabled={playerGold < UPGRADE_COST}
+                onClick={() => {
+                  sounds.playClick();
+                  onUpgradeCard();
+                }}
+                className={`
+                  px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold border flex items-center gap-1 cursor-pointer whitespace-nowrap
+                  ${playerGold >= UPGRADE_COST 
+                    ? 'bg-yellow-500 text-black border-yellow-400 active:scale-95 hover:bg-yellow-400' 
+                    : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'}
+                `}
+              >
+                <Coins className="w-3 h-3" /> {UPGRADE_COST} 强化
+              </button>
             </div>
 
-            <button
-              disabled={playerGold < PURGE_COST}
-              onClick={() => {
-                sounds.playClick();
-                setIsPurging(true);
-              }}
-              className={`
-                px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold border flex items-center gap-1 cursor-pointer whitespace-nowrap
-                ${playerGold >= PURGE_COST 
-                  ? 'bg-rose-600 text-white border-rose-500 active:scale-95' 
-                  : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'}
-              `}
-            >
-              <Coins className="w-3 h-3" /> {PURGE_COST} 删牌
-            </button>
+            {/* 遗忘之池：精简卡牌 */}
+            <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-red-500/20 text-red-400 rounded-lg">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-200">冥河洗练 · 删牌</div>
+                  <div className="text-[10px] text-slate-400">永久移除一张不需要的基础卡</div>
+                </div>
+              </div>
+
+              <button
+                disabled={playerGold < PURGE_COST}
+                onClick={() => {
+                  sounds.playClick();
+                  setIsPurging(true);
+                }}
+                className={`
+                  px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold border flex items-center gap-1 cursor-pointer whitespace-nowrap
+                  ${playerGold >= PURGE_COST 
+                    ? 'bg-rose-600 text-white border-rose-500 active:scale-95 hover:bg-rose-500' 
+                    : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'}
+                `}
+              >
+                <Coins className="w-3 h-3" /> {PURGE_COST} 删牌
+              </button>
+            </div>
           </div>
         </div>
 
