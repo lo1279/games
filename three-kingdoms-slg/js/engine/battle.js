@@ -667,6 +667,24 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         log(r, txt, type, { actor, ...meta });
       };
 
+      // 🌟 三战原版特色：行动前武将当前 Buff 状态清查与通报
+      const activeBuffDescriptions = [];
+      if (actor.buffs.firstStrike) activeBuffDescriptions.push('【先攻】抢占先机');
+      if (actor.buffs.insight) activeBuffDescriptions.push('【洞察】免受控制');
+      if (actor.buffs.continuousAttack) activeBuffDescriptions.push('【连击】双击');
+      if (actor.buffs.trueStrike) activeBuffDescriptions.push('【必中】破壁');
+      if (actor.buffs.tacticalCritRate > 0) activeBuffDescriptions.push('【奇谋暴击】加持');
+      if (actor.buffs.shieldLayers > 0) activeBuffDescriptions.push(`【抵御】坚壁(${actor.buffs.shieldLayers}次)`);
+
+      // 负面状态提示
+      if (actor.buffs.silenced > 0) activeBuffDescriptions.push('【计穷】封禁主动战法');
+      if (actor.buffs.disarmed > 0) activeBuffDescriptions.push('【缴械】无法普攻');
+      if (actor.buffs.weakness > 0) activeBuffDescriptions.push('【虚弱】无法造成伤害');
+
+      if (activeBuffDescriptions.length > 0) {
+        log(round, `🚩【${actor.label}】行动开始，当前身负状态：${activeBuffDescriptions.join('、')}！`, 'status', { actor });
+      }
+
       // 1. 发动主动战法
       executeActiveTactics(round, actor, team, livingOpps, actorLog, pMoraleMod, pArmAdv, eArmAdv);
       if (checkLeaderDeath(round)) break battleLoop;

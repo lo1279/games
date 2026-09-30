@@ -3223,6 +3223,27 @@ class GameApp {
       // 匹配形如：恢复 680 点兵力 / 恢复自身 500 点兵力 / 治愈 350 点兵力 / 驱散负面并恢复 450 点兵力
       txt = txt.replace(/(恢复(?:自身|友军|群体|兵力)?|治愈|急救)\s*(\d+)\s*(点兵力|点伤兵|点气血)/g, '$1 <span class="battle-num-heal">+$2</span> $3');
 
+      // 5. 🎯 三战原版战报核心：对关键 Buff 状态添加专属彩色徽章标签
+      // 正面增益 Buff
+      txt = txt.replace(/【洞察】/g, '<span class="buff-badge buff-insight">洞察</span>');
+      txt = txt.replace(/【先攻】/g, '<span class="buff-badge buff-first-strike">先攻</span>');
+      txt = txt.replace(/【必中】/g, '<span class="buff-badge buff-true-strike">必中</span>');
+      txt = txt.replace(/【连击】/g, '<span class="buff-badge buff-continuous">连击</span>');
+      txt = txt.replace(/【抵御】/g, '<span class="buff-badge buff-shield">抵御</span>');
+      txt = txt.replace(/【(?:金丹)?规避】/g, '<span class="buff-badge buff-evasion">规避</span>');
+      txt = txt.replace(/【会心(?:暴击)?】/g, '<span class="buff-badge buff-crit">会心暴击</span>');
+      txt = txt.replace(/【奇谋(?:暴击)?】/g, '<span class="buff-badge buff-tactical-crit">奇谋暴击</span>');
+
+      // 负面减益 Debuff
+      txt = txt.replace(/【震慑】/g, '<span class="buff-badge debuff-stun">震慑</span>');
+      txt = txt.replace(/【计穷】/g, '<span class="buff-badge debuff-silence">计穷</span>');
+      txt = txt.replace(/【缴械】/g, '<span class="buff-badge debuff-disarm">缴械</span>');
+      txt = txt.replace(/【虚弱】/g, '<span class="buff-badge debuff-weakness">虚弱</span>');
+      txt = txt.replace(/【混乱】/g, '<span class="buff-badge debuff-confused">混乱</span>');
+      txt = txt.replace(/【灼烧】/g, '<span class="buff-badge debuff-burn">灼烧</span>');
+      txt = txt.replace(/【水攻】/g, '<span class="buff-badge debuff-water">水攻</span>');
+      txt = txt.replace(/【禁疗】/g, '<span class="buff-badge debuff-cannot-heal">禁疗</span>');
+
       return `<div class="battle-log-item ${l.type}">${txt}</div>`;
     }).join('');
 
