@@ -350,10 +350,10 @@
           </div>
           <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
             <div style="font-size:11px; color:#9ca3af;">👑 核心神将产出</div>
-            <div style="font-size:18px; font-weight:800; color:#e11d48; margin-top:2px;" id="gachaTotalCoreCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
+            <div style="font-size:18px; font-weight:800; color:#ef4444; margin-top:2px;" id="gachaTotalCoreCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
           </div>
           <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
-            <div style="font-size:11px; color:#9ca3af;">🎯 5星硬保底追踪</div>
+            <div style="font-size:11px; color:#9ca3af;">🎯 5星保底追踪</div>
             <div style="font-size:18px; font-weight:800; color:#34d399; margin-top:2px;"><span id="gachaPityCount">0</span> <span style="font-size:11px; color:#9ca3af;">/ 30 抽</span></div>
           </div>
         </div>
@@ -361,13 +361,16 @@
         <div class="gacha-banners">
           <!-- 名将卡池 (金铢) -->
           <div class="gacha-banner">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <h3 style="margin:0;">👑 名将招募 · 群英逐鹿</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+              <h3 style="margin:0; font-size:18px;">👑 名将招募 · 群英逐鹿</h3>
+              <button class="upgrade-btn" id="btnPreviewFamousPool" style="background:rgba(251,191,36,0.15); border:1px solid #fbbf24; color:#fbbf24; font-size:11px; padding:3px 10px; border-radius:6px; font-weight:bold; cursor:pointer;">
+                🔍 预览武将
+              </button>
             </div>
             <div class="pool-rates" style="line-height:1.6; margin-top:8px;">
               • <b>综合概率</b>：5★名将 <b>5.6%</b> · 4★良将 <b>36.0%</b> · 3★裨将 <b>58.4%</b><br>
-              • <b>核心卡机制</b>：5星出货中，诸葛/刘备/曹操/关羽/司马懿/陆逊等<b>大核心神将权重仅 12%</b> (极低概率)，普橙占 88%！<br>
-              • <b>保底承诺</b>：连续 29 抽未出 5 星，第 30 抽<b>必出 5 星橙将</b>；每 5 抽必出紫卡或橙卡！
+              • <b>核心卡机制</b>：5星出货中，大核心神将（如诸葛亮、刘备、曹操、孙权、吕布等）权重为 12%，普通5星权重为 88%！<br>
+              • <b>保底承诺</b>：连续 29 抽未出 5 星，第 30 抽<b>必出 5 星名将</b>；每 5 抽必出紫卡或橙卡！
             </div>
             <div class="gacha-btn-group">
               <button class="gacha-btn" id="btnGachaFamousSingle">招募 1 次<br><small>198 金铢</small></button>
@@ -478,6 +481,54 @@
       </div>
       <div class="modal-body" id="sandboxModalBody" style="max-height: 70vh; overflow-y: auto;">
         <!-- 动态填充可选全武将列表或全战法列表 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 👑 名将卡池武将全景预览全息 Modal -->
+  <div class="modal-mask" id="gachaPoolPreviewModal" style="display: none;">
+    <div class="modal-content" style="max-width: 900px; width: 95%; max-height: 90vh;">
+      <div class="modal-header" style="flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #374151;">
+        <div>
+          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span>👑 名将招募 · 武将全景池预览</span>
+            <span id="previewPoolTotalBadge" style="font-size: 11px; background: #d97706; color: #fff; padding: 1px 8px; border-radius: 4px; font-weight: normal;">共 60 位名将</span>
+          </div>
+          <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">
+            5★名将出率 5.6% · 4★良将出率 36.0% · 30 抽必出 5★ 大保底
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="modal-close-btn" id="btnGachaPoolPreviewClose">✕</button>
+        </div>
+      </div>
+
+      <!-- 快捷筛选控制栏 -->
+      <div style="padding: 10px 20px; background: rgba(0,0,0,0.3); border-bottom: 1px solid #2d3340; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <!-- 阵营筛选 -->
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span style="font-size: 12px; color: #9ca3af;">阵营:</span>
+          <button class="nav-tab-btn active btn-pool-filter-camp" data-camp="all" style="padding: 2px 10px; font-size: 11px;">全部</button>
+          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="wei" style="padding: 2px 10px; font-size: 11px; color: #60a5fa;">魏国</button>
+          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="shu" style="padding: 2px 10px; font-size: 11px; color: #34d399;">蜀汉</button>
+          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="wu" style="padding: 2px 10px; font-size: 11px; color: #f87171;">东吴</button>
+          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="qun" style="padding: 2px 10px; font-size: 11px; color: #c084fc;">群雄</button>
+        </div>
+
+        <!-- 品质筛选 -->
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span style="font-size: 12px; color: #9ca3af;">品质:</span>
+          <button class="nav-tab-btn active btn-pool-filter-star" data-star="all" style="padding: 2px 10px; font-size: 11px;">全部</button>
+          <button class="nav-tab-btn btn-pool-filter-star" data-star="5" style="padding: 2px 10px; font-size: 11px; color: #fbbf24;">5★神将</button>
+          <button class="nav-tab-btn btn-pool-filter-star" data-star="4" style="padding: 2px 10px; font-size: 11px; color: #c084fc;">4★良将</button>
+        </div>
+      </div>
+
+      <!-- 动态渲染卡牌展示区 -->
+      <div class="modal-body" id="gachaPoolPreviewBody" style="max-height: 65vh; overflow-y: auto; padding: 16px 20px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;" id="gachaPoolPreviewGrid">
+          <!-- 动态渲染武将预览卡片 -->
+        </div>
       </div>
     </div>
   </div>

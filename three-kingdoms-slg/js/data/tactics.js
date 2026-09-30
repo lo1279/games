@@ -363,6 +363,17 @@ export const TACTICS_DATA = [
     desc: '战斗前2回合使我军全体获得60%【规避】几率(完全避开伤害)；第3~5回合持续使全体获得休整恢复兵力！'
   },
   {
+    id: 'tac_xing_yun_bu_yu',
+    name: '兴云布雨',
+    type: 'command',
+    rate: 100,
+    target: 'enemy_all',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 0.72,
+    desc: '【于吉专属自带】战斗第2回合起，使敌军全体陷入【水攻】状态，每回合受到持续谋略伤害(伤害率72%)，并使其受到的谋略伤害提升15%，持续全场！'
+  },
+  {
     id: 'tac_jiu_chi_rou_lin',
     name: '酒池肉林',
     type: 'passive',
@@ -371,6 +382,166 @@ export const TACTICS_DATA = [
     quality: 'S',
     damageType: 'physical',
     desc: '自身获得50%倒戈吸血；第5回合起每回合对敌我全体造成毁灭性兵刃轰击(伤害率120%)！'
+  },
+
+  // ================= 新增五星橙将专属战法 =================
+  {
+    id: 'tac_qi_bing_jian_dao',
+    name: '奇兵间道',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【魏延自带】自身发动需要准备的战法时，有75%概率跳过1回合准备直接释放！爆发战术天花板。',
+    skipPrepChance: 0.75
+  },
+  {
+    id: 'tac_yi_dan_xiong_xin',
+    name: '义胆雄心',
+    type: 'passive',
+    rate: 100,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'mixed',
+    desc: '【姜维自带】战斗中奇数回合对敌军单体造成兵刃伤害(184%)并降低其64点统率；偶数回合造成谋略伤害(184%)并降低其64点智力！'
+  },
+  {
+    id: 'tac_chu_zi_bu_huo',
+    name: '处兹不惑',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 1.15,
+    desc: '【徐庶自带】对敌军群体(2人)分别判定：有70%概率陷入灼烧、中毒、溃逃状态持续2回合(每回合各造成115%伤害)！'
+  },
+  {
+    id: 'tac_jiang_men_hu_nv',
+    name: '将门虎女',
+    type: 'active',
+    rate: 60,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 1.28,
+    desc: '【关银屏自带】对敌军群体2人造成兵刃伤害(128%)并施加【虎嗔】状态；目标受到3次伤害即刻引爆并陷入【震慑】1回合！'
+  },
+  {
+    id: 'tac_lin_zhan_xian_deng',
+    name: '临战先登',
+    type: 'active',
+    rate: 100,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 1.35,
+    desc: '【乐进自带】100%发动！对敌军群体2人造成狂暴兵刃斩击(伤害率135%)，随后自身进入虚弱状态1回合(无法造成普攻伤害)。'
+  },
+  {
+    id: 'tac_da_ji_shi',
+    name: '大戟士',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'physical',
+    armReq: 'spear',
+    desc: '【张郃专属·枪兵进阶】我军全体进行普通攻击时，有35%几率对敌军单体追加一次猛烈兵刃突刺(伤害率122%)！'
+  },
+  {
+    id: 'tac_gu_ruo_jin_tang',
+    name: '固若金汤',
+    type: 'active',
+    rate: 45,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【曹仁自带】嘲讽敌军全体迫使其普通攻击自身，同时自身统率暴涨150点并获得【洞察】(免疫所有控制)，持续2回合！'
+  },
+  {
+    id: 'tac_jiang_xing_qi_ji',
+    name: '将行其疾',
+    type: 'assault',
+    rate: 60,
+    target: 'attack_target',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 1.80,
+    desc: '【夏侯渊自带】普通攻击后，对目标造成一次极速兵刃袭击(伤害率180%)；若命中敌方主将，则额外使其陷入【计穷】2回合！'
+  },
+  {
+    id: 'tac_rou_shen_tie_bi',
+    name: '肉身铁壁',
+    type: 'passive',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【周泰自带】替我军全体承担40%所受伤害；只要周泰兵力高于30%，使全队造成的伤害提升30%！'
+  },
+  {
+    id: 'tac_gong_yao_ji',
+    name: '弓腰姬',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'physical',
+    desc: '【孙尚香自带】普通攻击前，对敌军单体发动兵刃重击(122%)；自身每拥有一层增益状态，兵刃伤害额外提高20%并提升武力！'
+  },
+  {
+    id: 'tac_guo_shi_zhi_feng',
+    name: '国士之风',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_2',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【凌统自带】战斗前3回合使自身及随机友军获得【先攻】与【必中】(完全无视敌方规避)，且造成的伤害提升28%！'
+  },
+  {
+    id: 'tac_yong_lie_chi_zhong',
+    name: '勇烈持重',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【程普自带】受到伤害时，有35%几率立即净化自身所有负面状态，并使敌军随机单体陷入【震慑】(无法行动)1回合！'
+  },
+  {
+    id: 'tac_shen_ji_mo_ce',
+    name: '神机莫测',
+    type: 'active',
+    rate: 65,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 1.75,
+    desc: '【贾诩自带】使敌军单体陷入【混乱】2回合；对已混乱的目标额外造成175%极刑谋略重创，全场乱武！'
+  },
+  {
+    id: 'tac_fu_ming_zi_li',
+    name: '符命自立',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【袁术自带】前2回合自身主动战法与突击战法发动几率提高25%，会心与奇谋几率提高25%！爆发毁天灭地。'
+  },
+  {
+    id: 'tac_huo_shen_ning_shang',
+    name: '火神宁墒',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'heal',
+    healRate: 1.58,
+    desc: '【祝融夫人自带】战斗中自身免疫灼烧；第3~5回合每回合普通攻击后，为我军全体恢复巨量兵力(治疗率158%)！'
   },
 
   // ================= 通用可装配传承战法 =================
@@ -454,6 +625,36 @@ export const TACTICS_DATA = [
     damageType: 'physical',
     damageRate: 1.96,
     desc: '【董卓专属传承】普通攻击后，对目标造成一次狂暴兵刃斩击(伤害率196%)，并使其陷入【混乱】持续1回合！'
+  },
+  {
+    id: 'tac_tai_ping_dao_fa',
+    name: '太平道法',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【张角/于吉传承】获得28%奇谋几率(谋略伤害造成200%暴击)；并使自身自带主动战法发动率提高12%！'
+  },
+  {
+    id: 'tac_teng_jia_bing',
+    name: '藤甲兵',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【兀突骨/群雄传承·盾兵专属】我军全体受到兵刃伤害降低40%(受统率影响)；但处于灼烧状态时，每回合受到大量火攻伤害！'
+  },
+  {
+    id: 'tac_feng_shi_zhen',
+    name: '锋矢阵',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【典韦传承·阵法】战斗中，使我军主将造成伤害提升30%，受到伤害提升20%；副将造成伤害降低15%，受到伤害降低25%！'
   },
   {
     id: 'tac_yi_li_ju_shou',
@@ -644,6 +845,175 @@ export const TACTICS_DATA = [
     damageRate: 0.72,
     desc: '准备1回合，使敌军全体陷入沙暴状态持续2回合(每回合造成谋略伤害72%)，并使自身获得1次抵御(免疫1次伤害)。',
     sandstorm: true
+  },
+  {
+    id: 'tac_luo_feng',
+    name: '落凤',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_single',
+    quality: 'A',
+    damageType: 'physical',
+    damageRate: 2.50,
+    desc: '对随机敌军单体造成猛烈兵刃打击(伤害率250%)，并使其陷入计穷状态(无法发动主动战法)持续1回合！A级输出强控天花板。',
+    debuff: { type: 'silence', duration: 1 }
+  },
+  {
+    id: 'tac_zong_bing_jie_lue',
+    name: '纵兵劫掠',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_single',
+    quality: 'A',
+    damageType: 'physical',
+    damageRate: 1.72,
+    desc: '对敌军单体造成兵刃攻击(伤害率172%)，并使其陷入震慑状态(无法行动)持续1回合！控制流神技。',
+    debuff: { type: 'stun', duration: 1 }
+  },
+  {
+    id: 'tac_bi_shi_ji_xu',
+    name: '避实击虚',
+    type: 'active',
+    rate: 40,
+    target: 'enemy_weakest_command',
+    quality: 'A',
+    damageType: 'physical',
+    damageRate: 1.85,
+    desc: '对统率最低的敌军单体发动精准兵刃打击(伤害率185%)！点杀破防神技。'
+  },
+  {
+    id: 'tac_qing_yong_fei_yan',
+    name: '轻勇飞燕',
+    type: 'active',
+    rate: 40,
+    target: 'random_hits',
+    quality: 'A',
+    damageType: 'physical',
+    damageRate: 0.84,
+    randomHits: [2, 4],
+    desc: '对敌军随机单体发动2~4次迅猛兵刃打击(每次伤害率84%)，多段爆发输出极高！'
+  },
+  {
+    id: 'tac_qiang_gong',
+    name: '强攻',
+    type: 'active',
+    rate: 45,
+    target: 'self',
+    quality: 'A',
+    damageType: 'buff',
+    desc: '使自身进入连击状态(每回合进行2次普通攻击)，持续1回合！突击武将核心发动机。'
+  },
+  {
+    id: 'tac_wan_gong_yin_yu',
+    name: '弯弓饮羽',
+    type: 'assault',
+    rate: 40,
+    target: 'attack_target',
+    quality: 'A',
+    damageType: 'debuff',
+    statDebuff: 150,
+    desc: '普通攻击后，使目标统率降低150点持续2回合，并使其陷入计穷状态(无法发动主动战法)持续1回合！'
+  },
+  {
+    id: 'tac_zuo_shou_gu_cheng',
+    name: '坐守孤城',
+    type: 'active',
+    rate: 45,
+    target: 'friendly_2',
+    quality: 'A',
+    damageType: 'heal',
+    healRate: 1.16,
+    desc: '恢复我军群体(2人)兵力(治疗率116%，受智力影响)。A级泛用最强群体治疗战法！'
+  },
+  {
+    id: 'tac_liao_shi_ru_shen',
+    name: '料事如神',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_2',
+    quality: 'A',
+    damageType: 'tactical',
+    damageRate: 1.06,
+    desc: '对敌军群体(2人)造成谋略伤害(伤害率106%，受智力影响)，并使其造成的伤害降低16%持续2回合。'
+  },
+  {
+    id: 'tac_ji_lue_zong_heng',
+    name: '机略纵横',
+    type: 'active',
+    rate: 45,
+    target: 'enemy_2',
+    quality: 'A',
+    damageType: 'tactical',
+    requiresPrep: true,
+    damageRate: 0.58,
+    desc: '准备1回合，使敌军群体(2人)陷入灼烧与中毒状态持续2回合(每回合造成灼烧与中毒伤害各58%，受智力影响)。'
+  },
+  {
+    id: 'tac_qian_li_chi_yuan',
+    name: '千里驰援',
+    type: 'active',
+    rate: 40,
+    target: 'self',
+    quality: 'A',
+    damageType: 'buff',
+    desc: '提高自身40点统率，并为友军全体承担所有普通攻击(援护状态)，持续1回合！'
+  },
+  {
+    id: 'tac_bai_mei',
+    name: '白眉',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'A',
+    damageType: 'buff',
+    desc: '战斗中使自身所有主动战法的发动几率提高12%！主动战法爆发流核心被动。',
+    activeRateBonus: 12
+  },
+  {
+    id: 'tac_bao_lian_si_fang',
+    name: '暴敛四方',
+    type: 'active',
+    rate: 45,
+    target: 'enemy_2',
+    quality: 'A',
+    damageType: 'physical',
+    damageRate: 1.02,
+    desc: '对敌军群体(2人)造成兵刃攻击(伤害率102%)；若目标处于震慑状态，则额外使其陷入禁疗持续2回合。'
+  },
+  {
+    id: 'tac_zhen_ya_huang_jin',
+    name: '镇压黄巾',
+    type: 'command',
+    rate: 100,
+    target: 'enemy_all',
+    quality: 'A',
+    damageType: 'tactical',
+    damageRate: 0.88,
+    triggerRounds: [2, 3],
+    desc: '【朱儁专属】战斗第2、3回合使敌军全体陷入溃逃状态(每回合造成88%无视防御谋略真伤)，且自身免疫叛逃！'
+  },
+  {
+    id: 'tac_tian_jiang_fu_yu',
+    name: '天降覆雨',
+    type: 'active',
+    rate: 40,
+    target: 'enemy_2',
+    quality: 'A',
+    damageType: 'physical',
+    requiresPrep: true,
+    damageRate: 1.10,
+    desc: '【蒋钦专属】准备1回合，对敌军群体(2人)造成兵刃打击(110%)，并附带灼烧状态持续1回合(造成66%谋略伤害)。'
+  },
+  {
+    id: 'tac_cuo_zhi_nu_xi',
+    name: '挫志怒袭',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_2',
+    quality: 'A',
+    damageType: 'debuff',
+    requiresPrep: true,
+    desc: '【曹彰专属】准备1回合，使敌军群体(2人)陷入虚弱状态(无法造成任何伤害)持续1回合；若目标已处于虚弱则造成猛烈兵刃反噬！'
   },
 
   // ================= 官方正统名将传承战法 (100%严苛还原) =================
@@ -857,6 +1227,9 @@ export const TACTIC_INHERIT_SOURCES = {
   tac_po_zhen_cui_jian: { names: ['孙策', '庞统'], tacticName: '破阵摧坚' },
   tac_shi_bie_san_ri: { names: ['吕蒙'], tacticName: '士别三日' },
   tac_bei_she_gui_che: { names: ['左慈'], tacticName: '杯蛇鬼车' },
+  tac_tai_ping_dao_fa: { names: ['张角', '于吉'], tacticName: '太平道法' },
+  tac_teng_jia_bing: { names: ['兀突骨'], tacticName: '藤甲兵' },
+  tac_feng_shi_zhen: { names: ['典韦'], tacticName: '锋矢阵' },
   tac_huang_tian_tai_ping: { names: ['张角'], tacticName: '黄天泰平' },
   tac_bao_li_wu_ren: { names: ['董卓'], tacticName: '暴戾无仁' },
   tac_yi_li_ju_shou: { names: ['典韦'], tacticName: '一力拒守' },
@@ -869,9 +1242,23 @@ export const TACTIC_INHERIT_SOURCES = {
   tac_suo_xiang_pi_mi: { names: ['许褚', '马超'], tacticName: '所向披靡' },
   tac_sheng_qi_ling_di: { names: ['颜良', '曹丕'], tacticName: '盛气凌敌' },
   tac_bai_ma_yi_cong: { names: ['公孙瓒'], tacticName: '白马义从' },
-  tac_zi_yu: { names: ['潘凤', '廖化', '董袭'], tacticName: '自愈' },
-  tac_shou_qi_dao_luo: { names: ['曹休', '文丑'], tacticName: '手起刀落' },
-  tac_fen_fa: { names: ['关平', '朱儁'], tacticName: '奋发' }
+  tac_zi_yu: { names: ['廖化', '董袭'], tacticName: '自愈' },
+  tac_shou_qi_dao_luo: { names: ['文聘', '曹休'], tacticName: '手起刀落' },
+  tac_fen_fa: { names: ['关平'], tacticName: '奋发' },
+  tac_luo_feng: { names: ['张任'], tacticName: '落凤' },
+  tac_zong_bing_jie_lue: { names: ['周仓'], tacticName: '纵兵劫掠' },
+  tac_bi_shi_ji_xu: { names: ['徐盛', '臧霸'], tacticName: '避实击虚' },
+  tac_qing_yong_fei_yan: { names: ['文丑'], tacticName: '轻勇飞燕' },
+  tac_qiang_gong: { names: ['简雍', '纪灵'], tacticName: '强攻' },
+  tac_wan_gong_yin_yu: { names: ['沙摩柯'], tacticName: '弯弓饮羽' },
+  tac_zuo_shou_gu_cheng: { names: ['审配'], tacticName: '坐守孤城' },
+  tac_liao_shi_ru_shen: { names: ['刘晔'], tacticName: '料事如神' },
+  tac_ji_lue_zong_heng: { names: ['黄权'], tacticName: '机略纵横' },
+  tac_qian_li_chi_yuan: { names: ['朱桓'], tacticName: '千里驰援' },
+  tac_bai_mei: { names: ['潘凤', '白眉'], tacticName: '白眉' },
+  tac_bao_lian_si_fang: { names: ['郭汜'], tacticName: '暴敛四方' },
+  tac_tian_jiang_fu_yu: { names: ['蒋钦'], tacticName: '天降覆雨' },
+  tac_cuo_zhi_nu_xi: { names: ['曹彰'], tacticName: '挫志怒袭' }
 };
 
 // 武将名字快速索引对应传承战法 (100% 严苛对齐官方)
@@ -889,6 +1276,12 @@ export const HERO_INHERIT_MAP = {
   '关平': 'tac_fen_fa',
   '刘禅': 'tac_yu_di_ping_zhang',
   '廖化': 'tac_zi_yu',
+  '周仓': 'tac_zong_bing_jie_lue',
+  '沙摩柯': 'tac_wan_gong_yin_yu',
+  '魏延': 'tac_po_zhen_cui_jian',
+  '姜维': 'tac_ba_men_jin_suo',
+  '徐庶': 'tac_chen_sha_jue_shui',
+  '关银屏': 'tac_heng_sao_qian_jun',
 
   // 魏国
   '曹操': 'tac_meng_zhong_shi_chen',
@@ -901,6 +1294,13 @@ export const HERO_INHERIT_MAP = {
   '许褚': 'tac_suo_xiang_pi_mi',
   '郭淮': 'tac_yu_di_ping_zhang',
   '曹休': 'tac_shou_qi_dao_luo',
+  '曹彰': 'tac_cuo_zhi_nu_xi',
+  '文聘': 'tac_shou_qi_dao_luo',
+  '臧霸': 'tac_bi_shi_ji_xu',
+  '乐进': 'tac_feng_fa',
+  '张郃': 'tac_da_ji_shi',
+  '曹仁': 'tac_ba_men_jin_suo',
+  '夏侯渊': 'tac_wan_jian_qi_fa',
 
   // 吴国
   '周瑜': 'tac_feng_zhu_huo_shi',
@@ -913,18 +1313,32 @@ export const HERO_INHERIT_MAP = {
   '鲁肃': 'tac_bai_lian_cheng_gang',
   '韩当': 'tac_zuo_you_kai_gong',
   '孙静': 'tac_yu_di_ping_zhang',
+  '蒋钦': 'tac_tian_jiang_fu_yu',
+  '徐盛': 'tac_bi_shi_ji_xu',
+  '朱桓': 'tac_qian_li_chi_yuan',
+  '周泰': 'tac_rou_shen_tie_bi',
+  '孙尚香': 'tac_jie_meng',
+  '凌统': 'tac_yong_zhe_de_qian',
+  '程普': 'tac_yu_di_ping_zhang',
 
   // 群雄
   '吕布': 'tac_yi_qi_dang_qian',
   '貂蝉': 'tac_qing_guo_qing_cheng',
   '华佗': 'tac_gua_gu_liao_du',
-  '张角': 'tac_huang_tian_tai_ping',
+  '张角': 'tac_tai_ping_dao_fa',
+  '于吉': 'tac_tai_ping_dao_fa',
   '袁绍': 'tac_he_jun_ju_zhong',
   '左慈': 'tac_bei_she_gui_che',
   '董卓': 'tac_bao_li_wu_ren',
+  '典韦': 'tac_feng_shi_zhen',
   '张宝': 'tac_yao_shu',
-  '潘凤': 'tac_zi_yu',
-  '朱儁': 'tac_fen_fa'
+  '潘凤': 'tac_bai_mei',
+  '朱儁': 'tac_luo_feng',
+  '张任': 'tac_luo_feng',
+  '贾诩': 'tac_wei_zhen_hua_xia',
+  '袁术': 'tac_po_zhen_cui_jian',
+  '祝融夫人': 'tac_bing_lin_cheng_xia',
+  '公孙瓒': 'tac_bai_ma_yi_cong'
 };
 
 export function getHeroInheritTacticId(hero) {

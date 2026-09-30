@@ -24,16 +24,18 @@ export const CORE_FIVE_STAR_IDS = new Set([
   'gen_guan_yu',     // 关羽 (武圣)
   'gen_zhao_yun',    // 赵云 (一身是胆)
   'gen_zhang_fei',   // 张飞 (五虎核)
-  'gen_pang_tong',   // 庞统 (连环计)
   'gen_cao_cao',     // 曹操 (三皇·魏武帝)
   'gen_si_ma_yi',    // 司马懿 (太尉盾核)
   'gen_zhang_liao',  // 张辽 (爆头骑核)
   'gen_sun_quan',    // 孙权 (三皇·孙十万)
   'gen_lu_xun',      // 陆逊 (嘟嘟都督核)
   'gen_zhou_yu',     // 周瑜 (神火核)
-  'gen_tai_shi_ci',  // 太史慈 (神射核)
   'gen_lv_bu',       // 吕布 (天下无双)
-  'gen_zuo_ci'       // 左慈 (三仙规避核)
+  'gen_zuo_ci',      // 左慈 (三仙规避核)
+  'gen_jiang_wei',   // 姜维 (麒麟弓核)
+  'gen_wei_yan',     // 魏延 (瞬发核)
+  'gen_zhou_tai',    // 周泰 (吴骑/虎臣核)
+  'gen_jia_xu'       // 贾诩 (魏法骑/五谋臣核)
 ]);
 
 /**
@@ -119,12 +121,12 @@ export function pullGeneral(poolType = 'famous', pityFiveCounter = 0, pityFourCo
 
 function createThreeStarGeneral() {
   const threeStarNames = [
-    { name: '潘凤', camp: 'qun', title: '无双上将', avatar: '🪓' },
+    { name: '宋宪', camp: 'qun', title: '吕布健将', avatar: '🏹' },
+    { name: '成廉', camp: 'qun', title: '八健将之一', avatar: '🗡️' },
+    { name: '卞喜', camp: 'qun', title: '流星飞锤', avatar: '🔨' },
     { name: '刘禅', camp: 'shu', title: '安乐公', avatar: '🐥' },
     { name: '曹休', camp: 'wei', title: '千里驹', avatar: '🐎' },
-    { name: '孙静', camp: 'wu', title: '江东宿卫', avatar: '🛡️' },
-    { name: '朱儁', camp: 'qun', title: '右中郎将', avatar: '🏹' },
-    { name: '廖化', camp: 'shu', title: '先锋无敌', avatar: '🗡️' }
+    { name: '孙静', camp: 'wu', title: '江东宿卫', avatar: '🛡️' }
   ];
   const t = threeStarNames[Math.floor(Math.random() * threeStarNames.length)];
   return {

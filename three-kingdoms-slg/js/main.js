@@ -11,6 +11,7 @@ import { sound } from './engine/audio.js';
 import { loadGameState, saveGameState, resetGameState } from './engine/storage.js';
 import { MAP_CONFIG, LAND_TIERS, RESOURCE_TYPES, isTileAdjacentToPlayer, calculateMarchMorale, createLandGuardTroop } from './engine/map.js';
 import { BUILDINGS_CONFIG, hasEnoughResources, deductResources } from './engine/city.js';
+import { checkActiveBonds, getBondsForHero } from './data/bonds.js';
 
 const TACTICS_MAP = new Map(TACTICS_DATA.map(t => [t.id, t]));
 const GENERALS_MAP = new Map(GENERALS_DATA.map(g => [g.id, g]));
@@ -85,6 +86,12 @@ class GameApp {
     this.sandboxCustomModal = document.getElementById('sandboxCustomModal');
     this.sandboxModalTitle = document.getElementById('sandboxModalTitle');
     this.sandboxModalBody = document.getElementById('sandboxModalBody');
+
+    // 👑 名将卡池全景预览模态框
+    this.gachaPoolPreviewModal = document.getElementById('gachaPoolPreviewModal');
+    this.gachaPoolPreviewGrid = document.getElementById('gachaPoolPreviewGrid');
+    this.previewPoolTotalBadge = document.getElementById('previewPoolTotalBadge');
+    this.poolPreviewFilter = { camp: 'all', star: 'all' };
   }
 
   bindEvents() {
@@ -195,6 +202,44 @@ class GameApp {
     document.getElementById('btnGachaFamousFive').addEventListener('click', () => this.doGacha('famous', 5));
     document.getElementById('btnGachaCopperSingle').addEventListener('click', () => this.doGacha('copper', 1));
     document.getElementById('btnGachaCopperTen').addEventListener('click', () => this.doGacha('copper', 10));
+
+    // 👑 名将卡池全景预览弹窗入口
+    const btnPreviewFamous = document.getElementById('btnPreviewFamousPool');
+    if (btnPreviewFamous) {
+      btnPreviewFamous.addEventListener('click', () => {
+        sound.playDrum();
+        this.openGachaPoolPreview();
+      });
+    }
+
+    const btnClosePreview = document.getElementById('btnGachaPoolPreviewClose');
+    if (btnClosePreview && this.gachaPoolPreviewModal) {
+      btnClosePreview.addEventListener('click', () => {
+        this.gachaPoolPreviewModal.style.display = 'none';
+      });
+    }
+
+    // 预览弹窗阵营筛选
+    document.querySelectorAll('.btn-pool-filter-camp').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-pool-filter-camp').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.poolPreviewFilter.camp = btn.getAttribute('data-camp');
+        sound.playDrum();
+        this.renderGachaPoolPreviewCards();
+      });
+    });
+
+    // 预览弹窗品质筛选
+    document.querySelectorAll('.btn-pool-filter-star').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-pool-filter-star').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.poolPreviewFilter.star = btn.getAttribute('data-star');
+        sound.playDrum();
+        this.renderGachaPoolPreviewCards();
+      });
+    });
 
     // 无限金铢特权按钮绑定
     const badgeGold = document.getElementById('badgeGold');
@@ -1379,7 +1424,7 @@ class GameApp {
         const isCore = CORE_FIVE_STAR_IDS.has(g.id);
 
         return `
-          <div class="general-card-item" data-gid="${g.id}" style="background:#151821; border:1px solid ${g.star === 5 ? (isCore ? '#e11d48' : '#d97706') : '#374151'}; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s ease;">
+          <div class="general-card-item" data-gid="${g.id}" style="background:#151821; border:1px solid ${g.star === 5 ? '#d97706' : '#374151'}; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s ease;">
             <div style="display:flex; align-items:center; gap:10px;">
               <span style="font-size:32px;">${g.avatar}</span>
               <div>
@@ -1387,7 +1432,6 @@ class GameApp {
                   <span>${g.name}</span>
                   <span style="font-size:10px; background:${camp.color}; padding:1px 5px; border-radius:3px;">${camp.name}</span>
                   <span style="font-size:11px; color:#fbbf24;">${'★'.repeat(g.star)}</span>
-                  ${isCore ? '<span style="font-size:10px; background:rgba(225,29,72,0.2); border:1px solid #e11d48; color:#fb7185; padding:0 4px; border-radius:3px;">大核心</span>' : ''}
                 </div>
                 <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
                   自带战法: <b style="color:#fde047;">${bTactic?.name || '自带战法'}</b> · 统御: Cost ${g.cost}
@@ -1608,6 +1652,16 @@ class GameApp {
       ? `<span style="color:#10b981; font-weight:bold; font-size:12px; background:rgba(16,185,129,0.1); border:1px solid #10b981; padding:2px 8px; border-radius:4px;">🏰 激活【${CAMPS[camps[0]].name}国家队】阵营加成！全员核心属性提升 10%！</span>`
       : `<span style="color:#9ca3af; font-size:12px;">提示：上阵 3 位同阵营武将可激活 10% 全属性国家队加成</span>`;
 
+    // 🌟 武将缘分羁绊检查 (桃园结义、五虎上将、西蜀之智、乱世三仙等)
+    const heroNames = troop.heroes.map(h => h.name);
+    const activeBonds = checkActiveBonds(heroNames);
+    const bondsHtml = activeBonds.length > 0 ? activeBonds.map(b => `
+      <div style="color:#fde047; font-weight:bold; font-size:12px; background:linear-gradient(135deg, rgba(217,119,6,0.2) 0%, rgba(180,83,9,0.1) 100%); border:1px solid #d97706; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 0 8px rgba(217,119,6,0.3);">
+        <span>✨ 激活天命缘分【${b.name}】</span>
+        <span style="font-size:11px; color:#d1d5db; font-weight:normal;">(${b.desc})</span>
+      </div>
+    `).join('') : '';
+
     // 3位武将槽位
     const heroesHtml = [0, 1, 2].map(slotIdx => {
       const hero = troop.heroes[slotIdx];
@@ -1667,12 +1721,13 @@ class GameApp {
 
     el.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <span style="font-size:17px; font-weight:bold; color:#fbbf24;">${troop.name}</span>
           ${campBonusHtml}
         </div>
         <div style="display:flex; gap:6px;">${armsHtml}</div>
       </div>
+      ${bondsHtml ? `<div style="margin-bottom:14px; display:flex; flex-direction:column; gap:6px;">${bondsHtml}</div>` : ''}
       <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
         ${heroesHtml}
       </div>
@@ -1870,6 +1925,27 @@ class GameApp {
               </div>
             </div>
           </div>
+
+          <!-- 武将天命缘分羁绊展示 -->
+          ${(() => {
+            const heroBonds = getBondsForHero(realHero.name);
+            if (heroBonds.length === 0) return '';
+            const bondsListHtml = heroBonds.map(b => `
+              <div style="background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:6px; padding:6px 10px; margin-top:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:#fde047; font-weight:bold; font-size:12px;">✨【${b.name}】</span>
+                  <span style="font-size:10px; color:#cbd5e1;">缘分同僚: ${b.heroNames.join('、')}</span>
+                </div>
+                <div style="font-size:11px; color:#d1d5db; margin-top:2px; line-height:1.4;">${b.desc}</div>
+              </div>
+            `).join('');
+            return `
+              <div class="hero-detail-section">
+                <div class="hero-detail-title">👑 天命武将缘分</div>
+                ${bondsListHtml}
+              </div>
+            `;
+          })()}
 
           <!-- 生平列传 -->
           ${realHero.bio ? `
@@ -2799,14 +2875,11 @@ class GameApp {
     }
 
     // 判定本次抽卡最高品质（出金 / 出紫）
-    const hasCoreStar = pulledCards.some(c => c.isCore);
     const hasFiveStar = pulledCards.some(c => c.star >= 5);
     const hasFourStar = pulledCards.some(c => c.star === 4);
 
     // 播放专属音效与视听反馈
-    if (hasCoreStar) {
-      sound.playVictoryHorn();
-    } else if (hasFiveStar) {
+    if (hasFiveStar) {
       sound.playGachaGold();
     } else if (hasFourStar) {
       sound.playGachaPurple();
@@ -2861,7 +2934,7 @@ class GameApp {
             <div class="avatar-box" style="font-size:46px;">${c.avatar}</div>
             <div class="hero-name" style="font-size:15px; margin:4px 0;">${c.name}</div>
             <div class="stars-row" style="${starClass} font-size:14px; letter-spacing:2px; margin-bottom:4px;">${starStr}</div>
-            ${isCore ? '<div class="gacha-gold-badge" style="background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); border:1px solid #f43f5e; box-shadow:0 0 8px #f43f5e;">👑 绝世核心</div>' : (isFive ? '<div class="gacha-gold-badge">5★神将</div>' : '')}
+            ${isFive ? '<div class="gacha-gold-badge">5★神将</div>' : ''}
             ${isFour ? '<div class="gacha-purple-badge">4★良将</div>' : ''}
           </div>
         </div>
@@ -2875,17 +2948,10 @@ class GameApp {
 
         // 翻到半途（300ms）触发金光/紫光音效与环境光增强
         setTimeout(() => {
-          if (isCore) {
-            sound.playVictoryHorn();
-            this.gachaShowcase.classList.add('has-gold');
-            if (this.gachaShowcaseTitle) {
-              this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
-              this.gachaShowcaseTitle.innerHTML = '👑 乾坤震动 · 恭迎绝世核心神将！';
-            }
-          } else if (isFive) {
+          if (isFive) {
             sound.playGachaGold();
             this.gachaShowcase.classList.add('has-gold');
-            if (this.gachaShowcaseTitle && !this.gachaShowcaseTitle.innerHTML.includes('绝世核心')) {
+            if (this.gachaShowcaseTitle) {
               this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
               this.gachaShowcaseTitle.innerHTML = '🌟 华光万道 · 恭迎五星神将！';
             }
@@ -2914,6 +2980,127 @@ class GameApp {
       setTimeout(() => {
         doFlip();
       }, 550 + i * 280);
+    });
+  }
+
+  // ================= 4.1 名将招募全景武将池预览 =================
+  openGachaPoolPreview() {
+    if (!this.gachaPoolPreviewModal) return;
+    this.gachaPoolPreviewModal.style.display = 'flex';
+    this.renderGachaPoolPreviewCards();
+  }
+
+  renderGachaPoolPreviewCards() {
+    if (!this.gachaPoolPreviewGrid) return;
+    this.gachaPoolPreviewGrid.innerHTML = '';
+
+    // 名将招募池包含所有 5 星名将与 4 星良将
+    const famousPoolHeroes = GENERALS_DATA.filter(g => g.star === 5 || g.star === 4);
+
+    // 更新顶部总数统计徽章
+    const fiveCount = famousPoolHeroes.filter(g => g.star === 5).length;
+    const fourCount = famousPoolHeroes.filter(g => g.star === 4).length;
+    if (this.previewPoolTotalBadge) {
+      this.previewPoolTotalBadge.innerHTML = `可抽取：5★神将 ${fiveCount}位 · 4★良将 ${fourCount}位`;
+    }
+
+    // 多维过滤
+    const filtered = famousPoolHeroes.filter(hero => {
+      // 阵营筛选
+      if (this.poolPreviewFilter.camp !== 'all' && hero.camp !== this.poolPreviewFilter.camp) {
+        return false;
+      }
+      // 品质筛选
+      if (this.poolPreviewFilter.star === '5') {
+        if (hero.star !== 5) return false;
+      } else if (this.poolPreviewFilter.star === '4') {
+        if (hero.star !== 4) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      this.gachaPoolPreviewGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: #9ca3af; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+          <div style="font-size: 14px; font-weight: bold; color: #e5e7eb;">未找到符合筛选条件的名将</div>
+        </div>
+      `;
+      return;
+    }
+
+    // 排序：5星优先按 Cost 与星级排序 -> 4星
+    const sorted = [...filtered].sort((a, b) => {
+      if (a.star !== b.star) return b.star - a.star;
+      if (b.cost !== a.cost) return b.cost - a.cost;
+      return a.name.localeCompare(b.name, 'zh-Hans-CN');
+    });
+
+    sorted.forEach(hero => {
+      const isFive = (hero.star === 5);
+      const camp = CAMPS[hero.camp] || { name: '群', color: '#a855f7', badge: '群' };
+      const starStr = isFive ? '★★★★★' : '★★★★';
+      const starColor = isFive ? '#fbbf24' : '#c084fc';
+      const cardClass = isFive ? 'is-five' : 'is-four';
+
+      // 自带战法信息
+      const builtInTac = TACTICS_MAP.get(hero.builtInTacticId);
+      const tacName = builtInTac?.name || '自带绝技';
+      const tacTypeMap = { active: '主动', passive: '被动', command: '指挥', assault: '突击' };
+      const tacType = tacTypeMap[builtInTac?.type] || '战法';
+
+      // 兵种适性简要
+      const apts = hero.aptitude || {};
+      const sApts = Object.entries(apts).filter(([k, v]) => v === 'S').map(([k]) => {
+        const armNameMap = { cavalry: '骑S', shield: '盾S', bow: '弓S', spear: '枪S', siege: '器S' };
+        return armNameMap[k] || k;
+      }).join(' ');
+
+      const card = document.createElement('div');
+      card.className = `pool-preview-card ${cardClass}`;
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="background: ${camp.color}; color: #fff; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px;">
+            ${camp.badge} · ${camp.name}
+          </span>
+          <span style="font-size: 11px; font-weight: bold; color: #fbbf24;">Cost ${hero.cost}</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin: 4px 0;">
+          <div style="font-size: 34px; background: ${hero.avatarBg || '#1e293b'}; width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0;">
+            ${hero.avatar}
+          </div>
+          <div style="overflow: hidden;">
+            <div style="font-weight: bold; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 4px;">
+              <span>${hero.name}</span>
+            </div>
+            <div style="color: ${starColor}; font-size: 12px; letter-spacing: 1px; margin-top: 1px;">
+              ${starStr}
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: #9ca3af; display: flex; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 3px 6px; border-radius: 4px;">
+          <span>武:${hero.force} 智:${hero.intel}</span>
+          <span>统:${hero.command} 速:${hero.speed}</span>
+        </div>
+
+        <div style="font-size: 10px; color: #34d399; font-weight: bold; margin-top: 2px;">
+          适性: ${sApts || '综合均衡'}
+        </div>
+
+        <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px;">
+          <div style="color: #fbbf24; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+            <span>${tacName}</span>
+            <span style="font-size: 9px; padding: 0 4px; border-radius: 3px; background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3);">${tacType}</span>
+          </div>
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 2px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${builtInTac?.desc || hero.bio}">
+            ${builtInTac?.desc || hero.bio}
+          </div>
+        </div>
+      `;
+
+      this.gachaPoolPreviewGrid.appendChild(card);
     });
   }
 

@@ -1,32 +1,117 @@
-# React + TypeScript + Vite
+# ✨《人生模拟器 · 轮回录》(Life Simulator: Reincarnation) V3.0
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+> 一款高自由度、沉浸式、跨时代的现代人生与世家轮回模拟器。融合**局外功德神殿永久养成**、**商海资产大亨（基金/房产/独角兽创业）**、**红尘良缘婚育**、**TRPG 风格 D20 骰子物理掷点检定奇遇**与**家族世代无穷传承**。专为移动手机触控端与微信小程序极速适配！
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🌟 核心特色与系统玩法
 
-## React Compiler
+### 1. 🏛️【轮回神殿 · 局外功德永久养成体系】
+- **万世轮回，功德永续**：每局生命终老或飞升后，根据享年寿命、个人资产、高光成就与终局评级（SSS~B）结算功德币，数据永久持久化存储。
+- **三大宿命特权升级**：
+  - **天生灵根**：每世出生额外获得 +2 点自由分配点数（最高可达 30+ 初始分配点）；
+  - **宿命机缘**：扩充转生可选天赋上限（从 3 项扩展至 4~5 项）；
+  - **富贵命格**：投胎即含金钥匙，大幅提升初始家境财富与开局启动现金。
+- **神级天命秘录解锁**：解封「天道酬勤」（岁岁全属性自增）、「商业先知」（洞悉牛熊周期投资翻倍）、「真仙降世」（纯阳道体百分百渡劫）等逆天改命词条。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 2. 💼【商海弄潮 · 资产理财与独角兽创业大亨】
+- **宏观金融市场波动**：每年随推演自动刷新牛市（Bull）、熊市（Bear）与震荡市，沉浸体验投资大潮的波澜起伏。
+- **三阶投资标的**：
+  - **银行稳健定存**：年化 3.5%，安全保本，绝不亏损；
+  - **成长核心基金**：受大盘与角色智商加成，稳中求胜；
+  - **高风险加密风投/硬核科技股权**：剧烈波动（-60% ~ +200%），运气极度关键，一夜百倍或爆仓皆在股掌之间。
+- **不动产置业**：购置单身青年公寓、核心学区房、临江大平层或海湾庄园，不仅提升幸福感，每年自动产生稳健租金分红。
+- **自主创业开公司**：潮流餐饮、文娱MCN传媒或硬核科技实验室，招兵买马、天使轮、A轮直至敲钟上市，成为万人敬仰的商界领袖。
 
-## Expanding the Oxlint configuration
+### 3. ❤️【红尘良缘 · 结发成家与家族世代传承】
+- **四大专属羁绊伴侣**：
+  - **🌸 林婉儿**（青梅竹马）：相濡以沫，家庭温馨幸福，每年大幅提升家庭快乐与体质；
+  - **💼 苏慕云**（创投女王）：坐拥庞大资本商脉，每年提供绝密投资内幕，理财收益额外翻倍；
+  - **👑 白洛雪**（名门闺秀）：名门望族唯一掌上明珠，家族贵气庇护，气运与家族声望每年攀升；
+  - **❄️ 萧凝冰**（古武仙子）：隐世宗门亲传，传授吐纳心法，每年提供天地灵根与体质加成，渡劫护道。
+- **浪漫约会与求婚盛典**：耗资约会提升好感度（满分 100），好感 $\ge 60$ 即可筹办 10 万婚礼【求婚结发】。
+- **子嗣孕育与名望积累**：婚后可诞下最多 3 位子女，自由取名或宗室赐名，子嗣继承父母资质并随机遗传主角携带的 1 项核心天赋。
+- **二代继承家业**：生命落幕时解锁【家族世代传承通道】，可指派二代子嗣继承 30% 资产与专属天赋，直接开启第 2 代（以至数代）的新辉煌！
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+### 4. 🎲【天命无常 · D20 骰子掷点奇遇与飞升渡劫】
+- **经典 TRPG 物理检定规则**：
+  $$\text{总判定点} = \text{D20骰子基础点}(1\sim 20) + \text{属性补正} \quad \text{vs} \quad \text{目标 DC 难度}$$
+- **大成功（Natural 20）**：直接无视难度暴击通关，获得极品奖励与专属神级称号；
+- **大失败（Natural 1）**：引发意外反噬与凶险波折；
+- **丰富突发奇遇**：古玩街赌石捡漏、闹市险境见义勇为制服歹徒、终南山古修士洞府破阵、九九天劫天雷淬体羽化登仙！
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+---
+
+## 📱 移动端与微信小程序极速适配特性
+
+为确保在手机浏览器与微信小程序 WebView 下拥有媲美 Native 原生 App 的沉浸体验，已全面实现以下专项优化：
+
+1. **全面屏与底部安全区（Home Indicator）**：
+   - 底部操作栏与弹窗底栏统一注入 `env(safe-area-inset-bottom)` 与 `max(0.85rem, env(...))`，全面消除误触虚拟小白条；
+2. **移动端自适应底部抽屉（Bottom Sheet）**：
+   - 重大抉择、情缘家族、商海资产、轮回神殿与终局结算在移动端（`< 640px`）自动升级为底部抽屉形态，带顶部拖拽视觉指示把手与 `animate-drawer-up` 缓动升起动效；
+   - 弹性高度控制在 `max-h-[90dvh]` 黄金视窗内，单手大拇指轻松操控；
+3. **消除视口抖动与防橡皮筋拉扯**：
+   - 全局接入 `100dvh` 与 `-webkit-fill-available` 动态高度计算；
+   - 配置 `overscroll-behavior: none` 与 `-webkit-overflow-scrolling: touch`，杜绝微信下拉“由 xxx 提供”橡皮筋干扰；
+4. **防双击缩放与轻快触感**：
+   - 配置 `touch-action: manipulation` 与 `-webkit-tap-highlight-color: transparent`，按钮按压即时缩放反馈（`active:scale-95`），触控热区均达 44px+。
+
+---
+
+## 📁 核心架构与目录组织
+
+```text
+d:\ai项目\games\life-simulator\
+├── src/
+│   ├── types/
+│   │   └── game.ts                # 核心类型模型 (属性/天赋/资产/家族/D20挑战/神殿)
+│   ├── engine/
+│   │   ├── gameEngine.ts          # 核心推演引擎 (生命周期/年轮演进/属性修正/继承开局)
+│   │   ├── karmaEngine.ts         # 轮回神殿引擎 (功德结算/神殿加点/本地持久化)
+│   │   ├── marketEngine.ts        # 商业金融引擎 (牛熊周期/理财买卖/房产出租/公司上市)
+│   │   ├── familyEngine.ts        # 家族谱系引擎 (伴侣约会/求婚/生子/二代继承算法)
+│   │   └── adventureEngine.ts     # D20奇遇引擎 (骰子检定/DC判定/暴击与惩奖)
+│   ├── components/
+│   │   ├── TalentSelector.tsx     # 天赋抽选组件 (自适应网格/品阶高亮)
+│   │   ├── AttrAllocator.tsx      # 六维属性加点 (随机姓名/天赋加成/实时配额)
+│   │   ├── HeaderStats.tsx        # 顶部六维微卡片与称号滚动条
+│   │   ├── LifeTimeline.tsx       # 时间轴核心日志与底部悬浮控制台
+│   │   ├── DecisionModal.tsx      # 重大抉择自适应抽屉
+│   │   ├── FamilyModal.tsx        # 情缘家族与子嗣培育抽屉
+│   │   ├── BusinessModal.tsx      # 商海资产管理抽屉
+│   │   ├── KarmaModal.tsx         # 轮回神殿养成抽屉
+│   │   ├── DiceChallengeModal.tsx # D20 3D 旋转骰子掷点弹窗
+│   │   ├── GameOverModal.tsx      # 终局传记总览与世代传承通道
+│   │   └── AchievementDrawer.tsx  # 成就图鉴抽屉
+│   ├── App.tsx                    # 状态流转总装配与全屏架构
+│   └── index.css                  # 移动端适配层/全面屏安全区/动画
+├── dist/                          # 生产打包输出产物 (相对路径，可直接部署)
+├── package.json                   # 依赖与脚本定义
+└── vite.config.ts                 # Vite 构建配置 (base: './')
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 🚀 启动与部署指引
+
+### 1. 本地开发与调试
+```powershell
+cd "D:\ai项目\games\life-simulator"
+npm run dev
+```
+
+### 2. 项目编译与生产打包
+```powershell
+npm run build
+```
+执行后将自动完成 TypeScript 严格检查与 Vite 生产优化，构建产物位于 `dist/` 目录下。
+
+### 3. 游戏大厅集成畅玩
+本项目已全面收录至本地综合游戏大厅：
+- 直接双击运行 `D:\ai项目\games\launch_hall.bat` 即可在大厅剧场中畅玩或独立新标签页体验。
+
+### 4. 微信小程序部署
+由于本项目已完成 `base: './'` 相对路径化，并接入了标准的全屏与移动端安全区规范：
+- 可直接将 `dist/` 内容作为静态 H5 放入小程序 Web-view 容器；
+- 或使用微信原生第三方容器/微前端工具一键转译发布。
