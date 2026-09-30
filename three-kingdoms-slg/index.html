@@ -30,21 +30,21 @@
         <span>🪙 铜币:</span>
         <span class="val" id="resCopper" style="color:#6ee7b7; font-weight:bold;">0</span>
       </div>
-      <div class="res-badge" title="木材：用于主城建筑升级与军备制造">
+      <div class="res-badge" id="hudResWood" title="木材：城建储备物资" style="display:none;">
         <span>🌲 木材:</span>
-        <span class="val" id="resWood" style="color:#86efac;">0</span>
+        <span class="val" id="resWood">0</span>
       </div>
-      <div class="res-badge" title="铁矿：用于主城建筑升级与兵刃锻造">
+      <div class="res-badge" id="hudResIron" title="铁矿：城建储备物资" style="display:none;">
         <span>⛏️ 铁矿:</span>
-        <span class="val" id="resIron" style="color:#cbd5e1;">0</span>
+        <span class="val" id="resIron">0</span>
       </div>
-      <div class="res-badge" title="石料：核心城建资源，君王殿与要塞关键">
+      <div class="res-badge" id="hudResStone" title="石料：城建储备物资" style="display:none;">
         <span>🪨 石料:</span>
-        <span class="val" id="resStone" style="color:#fdba74;">0</span>
+        <span class="val" id="resStone">0</span>
       </div>
-      <div class="res-badge" title="粮食：三军粮饷，出征与征兵消耗">
+      <div class="res-badge" id="hudResGrain" title="粮食：城建储备物资" style="display:none;">
         <span>🌾 粮食:</span>
-        <span class="val" id="resGrain" style="color:#fde047;">0</span>
+        <span class="val" id="resGrain">0</span>
       </div>
       <div class="res-badge" title="历史战役获得的总星数">
         <span>⭐ 战役:</span>
@@ -69,27 +69,32 @@
   <!-- 视窗容器 -->
   <main class="slg-viewport">
     
-    <!-- 0. 沙盘大地图 (World Map & Expansion) -->
+    <!-- 0. 战棋沙盘 · 四大战略资源领地 (Wood/Iron/Stone/Grain Lands) -->
     <section class="slg-tab-page active" id="tabMap">
       <div class="map-container">
-        <div class="map-controls">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <h2 style="font-size:18px; color:#fbbf24;">🗺️ 中原沙盘 · 开荒拓土</h2>
-            <div style="font-size:12px; color:#9ca3af;">
-              占领领地持续产出 <b style="color:#86efac;">木</b> / <b style="color:#cbd5e1;">铁</b> / <b style="color:#fdba74;">石</b> / <b style="color:#fde047;">粮</b> 4大战略资源！
+        <!-- 顶部信息栏 -->
+        <div class="map-controls" style="flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h2 style="font-size:18px; color:#fbbf24; font-weight:800;">🗺️ 战棋沙盘 · 资源领地</h2>
+              <span style="font-size:11px; background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px; font-weight:bold;">
+                ⚡ 战棋直连 · 无需铺路连地
+              </span>
+            </div>
+            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">
+              掌控 <b style="color:#86efac;">苍翠林场</b>、<b style="color:#cbd5e1;">幽铁矿脉</b>、<b style="color:#fdba74;">崇山石场</b>、<b style="color:#fde047;">天府粮田</b> 4 大资源据点，自由选择 1~10 级土地挥师出征！
             </div>
           </div>
-          <div style="font-size:12px; display:flex; gap:12px; align-items:center;">
-            <span style="color:#10b981;">🟩 已占领地块</span>
-            <span style="color:#fbbf24;">👑 主都中枢 (4, 4)</span>
-            <span style="color:#9ca3af;">⬜ 需相邻连地出征</span>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button class="upgrade-btn" id="btnQuickFarmAll" style="background:linear-gradient(135deg, #059669 0%, #047857 100%); padding:6px 14px; font-size:12px; font-weight:bold;">
+              🌾 全境一键屯田 (+3h收益)
+            </button>
           </div>
         </div>
 
-        <div class="map-grid-wrap">
-          <div class="world-map-grid" id="worldMapGrid">
-            <!-- 9x9 动态生成 81 格沙盘地块 -->
-          </div>
+        <!-- 四大资源领地主卡片模块看板 (战棋版风格) -->
+        <div class="resource-lands-grid" id="resourceLandsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px;">
+          <!-- 动态渲染 4 大资源领地模块 (木/铁/石/粮) -->
         </div>
       </div>
     </section>
@@ -112,17 +117,22 @@
     
     <!-- 1. 征战天下 (Battle & Campaigns) -->
     <section class="slg-tab-page" id="tabBattle">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div style="display:flex; gap:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="nav-tab-btn active" id="subTabCampaigns" style="padding:6px 14px; border:1px solid #374151; font-size:13px;">
-            📜 三国历史经典战役
+            📜 经典战役
           </button>
           <button class="nav-tab-btn" id="subTabTrials" style="padding:6px 14px; border:1px solid #374151; font-size:13px;">
-            🏛️ 演武试炼通天阁
+            🏛️ 演武通天阁
+          </button>
+          <button class="nav-tab-btn" id="subTabSandbox" style="padding:6px 14px; border:1px solid #d97706; font-size:13px; color:#fbbf24; font-weight:bold;">
+            🎯 假想敌演习沙盒
           </button>
         </div>
-        <div style="font-size:12px; color:#9ca3af;">
-          💡 兵种相克：<b style="color:#fbbf24;">骑克盾 · 盾克弓 · 弓克枪 · 枪克骑</b>
+        <div style="font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span style="background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px; font-weight:bold;">📜 战役：真实练级突破</span>
+          <span style="background:rgba(56,189,248,0.15); border:1px solid #0284c7; color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:bold;">🏛️ 演武：满级满兵对决</span>
+          <span style="background:rgba(251,191,36,0.15); border:1px solid #d97706; color:#fbbf24; padding:2px 8px; border-radius:4px; font-weight:bold;">🎯 沙盒：全武将战法演习</span>
         </div>
       </div>
 
@@ -135,21 +145,73 @@
       <div id="trialsContainer" style="display: none; flex-direction: column; gap: 14px;">
         <!-- 动态生成试炼阶梯卡片 -->
       </div>
-    </section>
 
-    <!-- 2. 军团编制配置 (Troops) -->
-    <section class="slg-tab-page" id="tabTroops">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div>
-          <h2 style="font-size:18px; color:#fbbf24;">🛡️ 出征主力军团配置</h2>
-          <p style="font-size:12px; color:#9ca3af; margin-top:2px;">自由选拔3位名将上阵，任意切换兵种，每战默认 10,000 满兵出击！</p>
+      <!-- 🎯 假想敌自定义沙盒演习视图 -->
+      <div id="sandboxContainer" style="display: none; flex-direction: column; gap: 16px;">
+        <!-- 顶部导言 -->
+        <div style="background:#14171f; border:1px solid #374151; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="font-size:15px; font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+              <span>🎯 假想敌自定义沙盒演武场</span>
+              <span style="font-size:10px; background:#059669; color:#fff; padding:1px 6px; border-radius:3px;">全武将·全战法自由配置</span>
+            </div>
+            <div style="font-size:12px; color:#9ca3af; margin-top:3px;">
+              自由指定敌军 3 位武将与 6 门顶配战法，设定兵种克制，以战练兵，检验我军配队破敌威力！
+            </div>
+          </div>
+          <!-- 经典预设模板 -->
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:11px; color:#9ca3af;">经典假想敌:</span>
+            <button class="upgrade-btn btn-sandbox-preset" data-preset="shuguo" style="padding:4px 8px; font-size:11px; background:#065f46;">诸葛蜀枪</button>
+            <button class="upgrade-btn btn-sandbox-preset" data-preset="taowei" style="padding:4px 8px; font-size:11px; background:#1e3a8a;">太尉真盾</button>
+            <button class="upgrade-btn btn-sandbox-preset" data-preset="dudu" style="padding:4px 8px; font-size:11px; background:#991b1b;">都督神火弓</button>
+            <button class="upgrade-btn btn-sandbox-preset" data-preset="lvbu" style="padding:4px 8px; font-size:11px; background:#854d0e;">无双三势骑</button>
+          </div>
         </div>
-        <div style="font-size:12px; color:#34d399; background:rgba(52,211,153,0.1); border:1px solid #059669; padding:4px 10px; border-radius:6px;">
-          统御限制已解禁 (Cost 上限 21) · 随心组建全神将大核！
+
+        <!-- 阵容对垒工作台 (我方军团 VS 自定义敌军) -->
+        <div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:14px; align-items:stretch;">
+          <!-- 我方当前出征军团展示 -->
+          <div style="background:#11141a; border:1px solid #10b981; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px;" id="sandboxPlayerTroopPreview">
+            <!-- 动态渲染我方出战队伍 -->
+          </div>
+
+          <!-- 中间推演开战中枢 -->
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-width:120px;">
+            <div style="font-size:32px; font-weight:900; color:#fbbf24; text-shadow:0 0 15px rgba(251,191,36,0.6);">VS</div>
+            <button class="upgrade-btn" id="btnLaunchSandboxBattle" style="background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); font-weight:800; font-size:14px; padding:12px 18px; border-radius:8px; box-shadow:0 0 16px rgba(220,38,38,0.5); cursor:pointer;">
+              ⚔️ 开启演习对决
+            </button>
+            <span style="font-size:11px; color:#9ca3af; text-align:center;">8回合全真物理推演<br>沉淀详实战报</span>
+          </div>
+
+          <!-- 自定义敌方军团控制台 -->
+          <div style="background:#11141a; border:1px solid #ef4444; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px;" id="sandboxEnemyTroopPanel">
+            <!-- 动态渲染敌方假想敌配置与战法槽 -->
+          </div>
         </div>
       </div>
+    </section>
+
+    <!-- 2. 军团编制配置 (Troops 扩增为 5 支军团) -->
+    <section class="slg-tab-page" id="tabTroops">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2 style="font-size:18px; color:#fbbf24;">🛡️ 出征主力军团配置 (共5支军团)</h2>
+          <p style="font-size:12px; color:#9ca3af; margin-top:2px;">支持组建5支主力军团，自由选拔3位名将上阵，任意切换兵种出战！</p>
+        </div>
+        <div style="font-size:12px; color:#34d399; background:rgba(52,211,153,0.1); border:1px solid #059669; padding:4px 10px; border-radius:6px;">
+          统御限制已解禁 (Cost 上限 21) · 5 支军团随心共存！
+        </div>
+      </div>
+
+      <!-- 5 支军团切换导航 Tabs -->
+      <div id="troopTabsContainer" style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+        <!-- 动态渲染 5 支军团切换按钮 -->
+      </div>
+
       <div id="troopsContainer" style="display: flex; flex-direction: column; gap: 20px;">
-        <!-- 动态渲染主副将槽位与兵种切换 -->
+        <!-- 动态渲染当前选中的主副将槽位与兵种切换 -->
       </div>
     </section>
 
@@ -189,8 +251,11 @@
           <button class="upgrade-btn" id="btnQuickAutoPromote" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding:4px 10px; font-size:11px;">
             🌟 一键进阶
           </button>
-          <button class="upgrade-btn" id="btnQuickSellThreeStars" style="background:#4b5563; padding:4px 10px; font-size:11px;">
+          <button class="upgrade-btn" id="btnQuickSellThreeStars" style="background:#4b5563; padding:4px 10px; font-size:11px;" title="一键分解所有未上阵的 3 星偏将 (300铜币/位)">
             🪙 解甲3星
+          </button>
+          <button class="upgrade-btn" id="btnQuickSellFourStars" style="background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding:4px 10px; font-size:11px;" title="一键分解所有未上阵的 4 星良将 (1,000铜币/位)">
+            🪙 解甲4星
           </button>
         </div>
       </div>
@@ -213,6 +278,38 @@
             当前可用铜币: <span id="tacticViewCopperVal" style="color: #6ee7b7; font-weight: 900;">0</span>
           </div>
         </div>
+        <!-- 战法研习多维筛选工具条 (等级、类型、伤害性质) -->
+        <div id="tacticsFilterBar" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid #374151;">
+          <!-- 1. 战法等级筛选 -->
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">等级:</span>
+            <button class="nav-tab-btn active btn-filter-tac-level" data-tac-level="all" style="padding:2px 8px; font-size:11px;">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="max" style="padding:2px 8px; font-size:11px; color:#fbbf24;">Lv.10满级</button>
+            <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="learning" style="padding:2px 8px; font-size:11px; color:#38bdf8;">研习中(Lv.1~9)</button>
+            <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="locked" style="padding:2px 8px; font-size:11px; color:#9ca3af;">🔒未领悟</button>
+          </div>
+
+          <!-- 2. 战法类型筛选 -->
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">机制类型:</span>
+            <button class="nav-tab-btn active btn-filter-tac-type" data-tac-type="all" style="padding:2px 8px; font-size:11px;">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="command" style="padding:2px 8px; font-size:11px; color:#3b82f6;">指挥</button>
+            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="passive" style="padding:2px 8px; font-size:11px; color:#10b981;">被动</button>
+            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="active" style="padding:2px 8px; font-size:11px; color:#ef4444;">主动</button>
+            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="assault" style="padding:2px 8px; font-size:11px; color:#f59e0b;">突击</button>
+          </div>
+
+          <!-- 3. 伤害/作用性质筛选 -->
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">伤害性质:</span>
+            <button class="nav-tab-btn active btn-filter-tac-damage" data-tac-damage="all" style="padding:2px 8px; font-size:11px;">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="physical" style="padding:2px 8px; font-size:11px; color:#f87171;">⚔️兵刃伤害</button>
+            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="tactical" style="padding:2px 8px; font-size:11px; color:#60a5fa;">🔮谋略伤害</button>
+            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="heal" style="padding:2px 8px; font-size:11px; color:#34d399;">🩹急救治疗</button>
+            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="buff" style="padding:2px 8px; font-size:11px; color:#e879f9;">🛡️增益/减伤/控制</button>
+          </div>
+        </div>
+
         <div class="tactic-upgrade-grid" id="tacticsUpgradeContainer">
           <!-- 动态渲染战法研习卡片 -->
         </div>
@@ -241,11 +338,37 @@
           </button>
         </div>
 
+        <!-- 📊 招募历程与三战原版概率数据看板 -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; width: 100%; max-width: 704px;">
+          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:#9ca3af;">📜 历史累计招募</div>
+            <div style="font-size:18px; font-weight:800; color:#fbbf24; margin-top:2px;" id="gachaTotalCount">0 <span style="font-size:11px; color:#9ca3af;">次</span></div>
+          </div>
+          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:#9ca3af;">⭐ 已获 5 星名将</div>
+            <div style="font-size:18px; font-weight:800; color:#f59e0b; margin-top:2px;" id="gachaTotalFiveCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
+          </div>
+          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:#9ca3af;">👑 核心神将产出</div>
+            <div style="font-size:18px; font-weight:800; color:#e11d48; margin-top:2px;" id="gachaTotalCoreCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
+          </div>
+          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:#9ca3af;">🎯 5星硬保底追踪</div>
+            <div style="font-size:18px; font-weight:800; color:#34d399; margin-top:2px;"><span id="gachaPityCount">0</span> <span style="font-size:11px; color:#9ca3af;">/ 30 抽</span></div>
+          </div>
+        </div>
+
         <div class="gacha-banners">
           <!-- 名将卡池 (金铢) -->
           <div class="gacha-banner">
-            <h3>👑 名将招募 · 群英逐鹿</h3>
-            <div class="pool-rates">含32位官方五星神将 (出率5.6%) · 4星良将 (36.0%)<br>保底机制：<span id="gachaPityCount" style="color:#fbbf24; font-weight:bold;">0</span> / 30 抽必出五星名将 (每5抽必出紫卡)</div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0;">👑 名将招募 · 群英逐鹿</h3>
+            </div>
+            <div class="pool-rates" style="line-height:1.6; margin-top:8px;">
+              • <b>综合概率</b>：5★名将 <b>5.6%</b> · 4★良将 <b>36.0%</b> · 3★裨将 <b>58.4%</b><br>
+              • <b>核心卡机制</b>：5星出货中，诸葛/刘备/曹操/关羽/司马懿/陆逊等<b>大核心神将权重仅 12%</b> (极低概率)，普橙占 88%！<br>
+              • <b>保底承诺</b>：连续 29 抽未出 5 星，第 30 抽<b>必出 5 星橙将</b>；每 5 抽必出紫卡或橙卡！
+            </div>
             <div class="gacha-btn-group">
               <button class="gacha-btn" id="btnGachaFamousSingle">招募 1 次<br><small>198 金铢</small></button>
               <button class="gacha-btn" id="btnGachaFamousFive" style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);">招募 5 次<br><small>948 金铢</small></button>
@@ -284,7 +407,7 @@
       <span class="icon">🗺️</span>
       <span>沙盘</span>
     </button>
-    <button class="nav-tab-btn" data-tab="tabCity">
+    <button class="nav-tab-btn" data-tab="tabCity" style="display:none;" id="btnNavTabCity">
       <span class="icon">🏯</span>
       <span>主城</span>
     </button>
@@ -310,15 +433,15 @@
     </button>
   </nav>
 
-  <!-- 🗺️ 地块攻占 / 侦查 / 屯田全息 Modal -->
+  <!-- 🗺️ 资源领地开拓 / 1~10级难度选择 / 出征扫荡全息 Modal -->
   <div class="modal-mask" id="tileActionModal" style="display: none;">
-    <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-content" style="max-width: 680px; width: 92%;">
       <div class="modal-header">
-        <div class="modal-title" id="tileModalTitle">🗺️ 领地军情探查</div>
+        <div class="modal-title" id="tileModalTitle">🗺️ 战略领地开拓 · 难度选择</div>
         <button class="modal-close-btn" id="btnTileModalClose">✕</button>
       </div>
       <div class="modal-body" id="tileModalBody" style="display:flex; flex-direction:column; gap:14px;">
-        <!-- 动态填充地块信息、守军状态、行军士气预测与操作按钮 -->
+        <!-- 动态填充四大资源领地 1~10 级守军情报、难度梯队与出征按钮 -->
       </div>
     </div>
   </div>
@@ -344,6 +467,19 @@
       <span>📜</span>
       <span>遵命 · 收归麾下</span>
     </button>
+  </div>
+
+  <!-- 🎯 沙盒演习 · 全图鉴敌将/战法选择全息 Modal -->
+  <div class="modal-mask" id="sandboxCustomModal" style="display: none;">
+    <div class="modal-content" style="max-width: 650px; width: 92%;">
+      <div class="modal-header">
+        <div class="modal-title" id="sandboxModalTitle">🎯 选择假想敌配置</div>
+        <button class="modal-close-btn" id="btnSandboxModalClose">✕</button>
+      </div>
+      <div class="modal-body" id="sandboxModalBody" style="max-height: 70vh; overflow-y: auto;">
+        <!-- 动态填充可选全武将列表或全战法列表 -->
+      </div>
+    </div>
   </div>
 
   <!-- 核心逻辑调度入口 -->

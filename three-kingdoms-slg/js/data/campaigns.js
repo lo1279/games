@@ -29,7 +29,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 2500,
         aptitude: { cavalry: 'B', shield: 'A', bow: 'B', spear: 'S', siege: 'B' },
         builtInTacticId: 'tac_yao_shu',
-        equippedTactic1: 'tac_zi_yu'
+        equippedTactic1: 'tac_zi_yu',
+        equippedTactic2: 'tac_yu_di_ping_zhang'
       },
       {
         id: 'camp_bocai',
@@ -46,7 +47,26 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 2000,
         aptitude: { cavalry: 'B', shield: 'B', bow: 'B', spear: 'A', siege: 'C' },
         builtInTacticId: 'tac_fen_fa',
-        equippedTactic1: 'tac_shou_qi_dao_luo'
+        equippedTactic1: 'tac_shou_qi_dao_luo',
+        equippedTactic2: 'tac_zuo_you_kai_gong'
+      },
+      {
+        id: 'camp_zhangbao',
+        name: '张宝(地公将军)',
+        camp: 'qun',
+        star: 4,
+        avatar: '🌩️',
+        level: 9,
+        force: 62,
+        intel: 82,
+        command: 68,
+        speed: 55,
+        currentSoldiers: 2200,
+        maxSoldiers: 2200,
+        aptitude: { cavalry: 'B', shield: 'A', bow: 'A', spear: 'A', siege: 'B' },
+        builtInTacticId: 'tac_yao_shu',
+        equippedTactic1: 'tac_zi_yu',
+        equippedTactic2: 'tac_fen_fa'
       }
     ]
   },
@@ -76,7 +96,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'S', shield: 'B', bow: 'S', spear: 'A', siege: 'C' },
         builtInTacticId: 'tac_tian_xia_wu_shuang',
-        equippedTactic1: 'tac_yi_qi_dang_qian'
+        equippedTactic1: 'tac_yi_qi_dang_qian',
+        equippedTactic2: 'tac_bao_li_wu_ren'
       },
       {
         id: 'camp_zhangliao',
@@ -93,7 +114,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'S', shield: 'B', bow: 'B', spear: 'S', siege: 'C' },
         builtInTacticId: 'tac_xian_zhen_tu_xi',
-        equippedTactic1: 'tac_shou_qi_dao_luo'
+        equippedTactic1: 'tac_shou_qi_dao_luo',
+        equippedTactic2: 'tac_yong_zhe_de_qian'
       },
       {
         id: 'camp_diaochan',
@@ -110,7 +132,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'B', shield: 'B', bow: 'B', spear: 'B', siege: 'C' },
         builtInTacticId: 'tac_bi_yue',
-        equippedTactic1: 'tac_yu_di_ping_zhang'
+        equippedTactic1: 'tac_yu_di_ping_zhang',
+        equippedTactic2: 'tac_qing_guo_qing_cheng'
       }
     ]
   },
@@ -140,7 +163,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'A', shield: 'A', bow: 'S', spear: 'S', siege: 'A' },
         builtInTacticId: 'tac_luan_shi_jian_xiong',
-        equippedTactic1: 'tac_suo_xiang_pi_mi'
+        equippedTactic1: 'tac_suo_xiang_pi_mi',
+        equippedTactic2: 'tac_yu_di_ping_zhang'
       },
       {
         id: 'camp_yanliang',
@@ -157,7 +181,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'A', shield: 'A', bow: 'C', spear: 'S', siege: 'B' },
         builtInTacticId: 'tac_fen_fa',
-        equippedTactic1: 'tac_shou_qi_dao_luo'
+        equippedTactic1: 'tac_shou_qi_dao_luo',
+        equippedTactic2: 'tac_zi_yu'
       },
       {
         id: 'camp_wenchou',
@@ -174,7 +199,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'A', shield: 'B', bow: 'S', spear: 'S', siege: 'C' },
         builtInTacticId: 'tac_zuo_you_kai_gong',
-        equippedTactic1: 'tac_fen_fa'
+        equippedTactic1: 'tac_fen_fa',
+        equippedTactic2: 'tac_shou_qi_dao_luo'
       }
     ]
   },
@@ -204,7 +230,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'S', shield: 'S', bow: 'B', spear: 'B', siege: 'A' },
         builtInTacticId: 'tac_luan_shi_jian_xiong',
-        equippedTactic1: 'tac_ba_men_jin_suo'
+        equippedTactic1: 'tac_ba_men_jin_suo',
+        equippedTactic2: 'tac_yu_di_ping_zhang'
       },
       {
         id: 'camp_xiahoudun',
@@ -221,7 +248,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'S', shield: 'S', bow: 'B', spear: 'B', siege: 'C' },
         builtInTacticId: 'tac_gang_lie_bu_qu',
-        equippedTactic1: 'tac_zi_yu'
+        equippedTactic1: 'tac_zi_yu',
+        equippedTactic2: 'tac_jue_di_fan_ji'
       },
       {
         id: 'camp_simayi',
@@ -238,7 +266,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'A', shield: 'S', bow: 'A', spear: 'S', siege: 'S' },
         builtInTacticId: 'tac_ying_shi_lang_gu',
-        equippedTactic1: 'tac_yu_di_ping_zhang'
+        equippedTactic1: 'tac_yong_wu_tong_shen',
+        equippedTactic2: 'tac_yu_di_ping_zhang'
       }
     ]
   },
@@ -268,7 +297,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'B', shield: 'B', bow: 'S', spear: 'S', siege: 'A' },
         builtInTacticId: 'tac_huo_shao_lian_ying',
-        equippedTactic1: 'tac_suo_xiang_pi_mi'
+        equippedTactic1: 'tac_han_tian_chi_di',
+        equippedTactic2: 'tac_feng_zhu_huo_shi'
       },
       {
         id: 'camp_zhouyu',
@@ -285,7 +315,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'B', shield: 'B', bow: 'S', spear: 'A', siege: 'A' },
         builtInTacticId: 'tac_shen_huo_ji',
-        equippedTactic1: 'tac_ba_men_jin_suo'
+        equippedTactic1: 'tac_ba_men_jin_suo',
+        equippedTactic2: 'tac_feng_zhu_huo_shi'
       },
       {
         id: 'camp_taishici',
@@ -302,7 +333,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'S', shield: 'C', bow: 'S', spear: 'B', siege: 'C' },
         builtInTacticId: 'tac_shen_she',
-        equippedTactic1: 'tac_shou_qi_dao_luo'
+        equippedTactic1: 'tac_shou_qi_dao_luo',
+        equippedTactic2: 'tac_zhe_chong_yu_wu'
       }
     ]
   },
@@ -332,7 +364,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'S', shield: 'S', bow: 'S', spear: 'S', siege: 'S' },
         builtInTacticId: 'tac_luan_shi_jian_xiong',
-        equippedTactic1: 'tac_ba_men_jin_suo'
+        equippedTactic1: 'tac_ba_men_jin_suo',
+        equippedTactic2: 'tac_yu_di_ping_zhang'
       },
       {
         id: 'camp_final_lvbu',
@@ -349,7 +382,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'S', shield: 'S', bow: 'S', spear: 'S', siege: 'S' },
         builtInTacticId: 'tac_tian_xia_wu_shuang',
-        equippedTactic1: 'tac_yi_qi_dang_qian'
+        equippedTactic1: 'tac_yi_qi_dang_qian',
+        equippedTactic2: 'tac_bao_li_wu_ren'
       },
       {
         id: 'camp_huatuo',
@@ -366,7 +400,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 10000,
         aptitude: { cavalry: 'A', shield: 'S', bow: 'S', spear: 'A', siege: 'C' },
         builtInTacticId: 'tac_qing_nang_xiang_zhu',
-        equippedTactic1: 'tac_gua_gu_liao_du'
+        equippedTactic1: 'tac_gua_gu_liao_du',
+        equippedTactic2: 'tac_zi_yu'
       }
     ]
   }
@@ -381,8 +416,9 @@ export const TRIALS_DATA = [
     difficulty: '入门',
     hint: '敌军全员枪兵，派出弓兵可轻松碾压。',
     heroes: [
-      { name: '张宝', star: 4, camp: 'qun', avatar: '🌩️', level: 10, force: 60, intel: 82, command: 70, speed: 55, builtInTacticId: 'tac_yao_shu', equippedTactic1: null },
-      { name: '关平', star: 4, camp: 'shu', avatar: '🗡️', level: 10, force: 75, intel: 60, command: 70, speed: 50, builtInTacticId: 'tac_fen_fa', equippedTactic1: null }
+      { name: '张宝', star: 4, camp: 'qun', avatar: '🌩️', level: 50, force: 60, intel: 82, command: 70, speed: 55, builtInTacticId: 'tac_yao_shu', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_yu_di_ping_zhang' },
+      { name: '关平', star: 4, camp: 'shu', avatar: '🗡️', level: 50, force: 75, intel: 60, command: 70, speed: 50, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zuo_you_kai_gong' },
+      { name: '波才', star: 3, camp: 'qun', avatar: '🪓', level: 50, force: 70, intel: 50, command: 65, speed: 48, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zi_yu' }
     ]
   },
   {
@@ -393,8 +429,9 @@ export const TRIALS_DATA = [
     difficulty: '简单',
     hint: '敌军为坚盾阵型，带御敌屏障减伤，换骑兵出阵克制。',
     heroes: [
-      { name: '郭淮', star: 4, camp: 'wei', avatar: '🧱', level: 15, force: 75, intel: 75, command: 85, speed: 45, builtInTacticId: 'tac_yu_di_ping_zhang', equippedTactic1: 'tac_zi_yu' },
-      { name: '韩当', star: 4, camp: 'wu', avatar: '🎯', level: 15, force: 80, intel: 55, command: 75, speed: 60, builtInTacticId: 'tac_zuo_you_kai_gong', equippedTactic1: null }
+      { name: '郭淮', star: 4, camp: 'wei', avatar: '🧱', level: 50, force: 75, intel: 75, command: 85, speed: 45, builtInTacticId: 'tac_yu_di_ping_zhang', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_fen_fa' },
+      { name: '韩当', star: 4, camp: 'wu', avatar: '🎯', level: 50, force: 80, intel: 55, command: 75, speed: 60, builtInTacticId: 'tac_zuo_you_kai_gong', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_fen_fa' },
+      { name: '典韦', star: 5, camp: 'wei', avatar: '🛡️', level: 50, force: 95, intel: 35, command: 90, speed: 60, builtInTacticId: 'tac_yi_li_ju_shou', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_yu_di_ping_zhang' }
     ]
   },
   {
@@ -405,8 +442,9 @@ export const TRIALS_DATA = [
     difficulty: '进阶',
     hint: '张飞第2、4回合全体暴击，注意前排统率防御。',
     heroes: [
-      { name: '张飞', star: 5, camp: 'shu', avatar: '🐅', level: 25, force: 98, intel: 35, command: 94, speed: 85, builtInTacticId: 'tac_yan_ren_pao_xiao', equippedTactic1: 'tac_suo_xiang_pi_mi' },
-      { name: '关平', star: 4, camp: 'shu', avatar: '🗡️', level: 22, force: 82, intel: 65, command: 80, speed: 60, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo' }
+      { name: '张飞', star: 5, camp: 'shu', avatar: '🐅', level: 50, force: 98, intel: 35, command: 94, speed: 85, builtInTacticId: 'tac_yan_ren_pao_xiao', equippedTactic1: 'tac_suo_xiang_pi_mi', equippedTactic2: 'tac_chen_mu_heng_mao' },
+      { name: '关平', star: 4, camp: 'shu', avatar: '🗡️', level: 50, force: 82, intel: 65, command: 80, speed: 60, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zi_yu' },
+      { name: '廖化', star: 4, camp: 'shu', avatar: '🛡️', level: 50, force: 76, intel: 65, command: 82, speed: 52, builtInTacticId: 'tac_zi_yu', equippedTactic1: 'tac_yu_di_ping_zhang', equippedTactic2: 'tac_fen_fa' }
     ]
   },
   {
@@ -417,8 +455,9 @@ export const TRIALS_DATA = [
     difficulty: '困难',
     hint: '貂蝉分担伤害并附带混乱，优先安排高爆发物理伤害将其斩杀。',
     heroes: [
-      { name: '貂蝉', star: 5, camp: 'qun', avatar: '💃', level: 30, force: 30, intel: 85, command: 85, speed: 88, builtInTacticId: 'tac_bi_yue', equippedTactic1: 'tac_ba_men_jin_suo' },
-      { name: '太史慈', star: 5, camp: 'wu', avatar: '🏹', level: 30, force: 92, intel: 70, command: 90, speed: 70, builtInTacticId: 'tac_shen_she', equippedTactic1: 'tac_shou_qi_dao_luo' }
+      { name: '貂蝉', star: 5, camp: 'qun', avatar: '💃', level: 50, force: 30, intel: 85, command: 85, speed: 88, builtInTacticId: 'tac_bi_yue', equippedTactic1: 'tac_ba_men_jin_suo', equippedTactic2: 'tac_qing_guo_qing_cheng' },
+      { name: '太史慈', star: 5, camp: 'wu', avatar: '🏹', level: 50, force: 92, intel: 70, command: 90, speed: 70, builtInTacticId: 'tac_shen_she', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zhe_chong_yu_wu' },
+      { name: '吕布', star: 5, camp: 'qun', avatar: '戟', level: 50, force: 105, intel: 30, command: 95, speed: 95, builtInTacticId: 'tac_tian_xia_wu_shuang', equippedTactic1: 'tac_yi_qi_dang_qian', equippedTactic2: 'tac_bao_li_wu_ren' }
     ]
   },
   {
@@ -429,9 +468,9 @@ export const TRIALS_DATA = [
     difficulty: '极难',
     hint: '经典三战天花板阵容！刘备高额急救回血 + 关羽威震华夏群控 + 张飞破防。必须使用骑兵且佩戴强控战法！',
     heroes: [
-      { name: '刘备', star: 5, camp: 'shu', avatar: '👑', level: 38, force: 80, intel: 85, command: 90, speed: 60, builtInTacticId: 'tac_ren_de_zai_shi', equippedTactic1: 'tac_ba_men_jin_suo' },
-      { name: '关羽', star: 5, camp: 'shu', avatar: '🐉', level: 38, force: 98, intel: 80, command: 98, speed: 78, builtInTacticId: 'tac_wei_zhen_hua_xia', equippedTactic1: 'tac_suo_xiang_pi_mi' },
-      { name: '张飞', star: 5, camp: 'shu', avatar: '🐅', level: 38, force: 99, intel: 35, command: 95, speed: 86, builtInTacticId: 'tac_yan_ren_pao_xiao', equippedTactic1: 'tac_sheng_qi_ling_di' }
+      { name: '刘备', star: 5, camp: 'shu', avatar: '👑', level: 50, force: 80, intel: 85, command: 90, speed: 60, builtInTacticId: 'tac_ren_de_zai_shi', equippedTactic1: 'tac_ba_men_jin_suo', equippedTactic2: 'tac_gua_gu_liao_du' },
+      { name: '关羽', star: 5, camp: 'shu', avatar: '🐉', level: 50, force: 98, intel: 80, command: 98, speed: 78, builtInTacticId: 'tac_wei_zhen_hua_xia', equippedTactic1: 'tac_suo_xiang_pi_mi', equippedTactic2: 'tac_heng_sao_qian_jun' },
+      { name: '张飞', star: 5, camp: 'shu', avatar: '🐅', level: 50, force: 99, intel: 35, command: 95, speed: 86, builtInTacticId: 'tac_yan_ren_pao_xiao', equippedTactic1: 'tac_sheng_qi_ling_di', equippedTactic2: 'tac_chen_mu_heng_mao' }
     ]
   },
   {
@@ -442,9 +481,9 @@ export const TRIALS_DATA = [
     difficulty: '王者',
     hint: '曹操全队增伤 + 夏侯惇狂暴反伤 + 张辽锁头主将！必须注意主将血量，推荐使用枪兵反制。',
     heroes: [
-      { name: '曹操', star: 5, camp: 'wei', avatar: '🦅', level: 42, force: 75, intel: 92, command: 100, speed: 72, builtInTacticId: 'tac_luan_shi_jian_xiong', equippedTactic1: 'tac_yu_di_ping_zhang' },
-      { name: '张辽', star: 5, camp: 'wei', avatar: '⚔️', level: 42, force: 94, intel: 78, command: 95, speed: 92, builtInTacticId: 'tac_xian_zhen_tu_xi', equippedTactic1: 'tac_yi_qi_dang_qian' },
-      { name: '夏侯惇', star: 5, camp: 'wei', avatar: '🛡️', level: 42, force: 92, intel: 68, command: 92, speed: 68, builtInTacticId: 'tac_gang_lie_bu_qu', equippedTactic1: 'tac_zi_yu' }
+      { name: '曹操', star: 5, camp: 'wei', avatar: '🦅', level: 50, force: 75, intel: 92, command: 100, speed: 72, builtInTacticId: 'tac_luan_shi_jian_xiong', equippedTactic1: 'tac_yu_di_ping_zhang', equippedTactic2: 'tac_ba_men_jin_suo' },
+      { name: '张辽', star: 5, camp: 'wei', avatar: '⚔️', level: 50, force: 94, intel: 78, command: 95, speed: 92, builtInTacticId: 'tac_xian_zhen_tu_xi', equippedTactic1: 'tac_yi_qi_dang_qian', equippedTactic2: 'tac_yong_zhe_de_qian' },
+      { name: '夏侯惇', star: 5, camp: 'wei', avatar: '🛡️', level: 50, force: 92, intel: 68, command: 92, speed: 68, builtInTacticId: 'tac_gang_lie_bu_qu', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_jue_di_fan_ji' }
     ]
   },
   {
@@ -455,9 +494,9 @@ export const TRIALS_DATA = [
     difficulty: '登峰造极',
     hint: '诸葛亮神机妙算打断所有主动战法并造成高额谋略反击！建议少带主动战法，多带指挥与被动突击体系！',
     heroes: [
-      { name: '诸葛亮', star: 5, camp: 'shu', avatar: '🪶', level: 48, force: 40, intel: 105, command: 100, speed: 75, builtInTacticId: 'tac_shen_ji_miao_suan', equippedTactic1: 'tac_ba_men_jin_suo' },
-      { name: '赵云', star: 5, camp: 'shu', avatar: '⚡', level: 48, force: 100, intel: 80, command: 100, speed: 85, builtInTacticId: 'tac_yi_shen_shi_dan', equippedTactic1: 'tac_suo_xiang_pi_mi' },
-      { name: '关羽', star: 5, camp: 'shu', avatar: '🐉', level: 48, force: 100, intel: 82, command: 98, speed: 80, builtInTacticId: 'tac_wei_zhen_hua_xia', equippedTactic1: 'tac_gua_gu_liao_du' }
+      { name: '诸葛亮', star: 5, camp: 'shu', avatar: '🪶', level: 50, force: 40, intel: 105, command: 100, speed: 75, builtInTacticId: 'tac_shen_ji_miao_suan', equippedTactic1: 'tac_ba_men_jin_suo', equippedTactic2: 'tac_she_zhan_qun_ru' },
+      { name: '赵云', star: 5, camp: 'shu', avatar: '⚡', level: 50, force: 100, intel: 80, command: 100, speed: 85, builtInTacticId: 'tac_yi_shen_shi_dan', equippedTactic1: 'tac_suo_xiang_pi_mi', equippedTactic2: 'tac_heng_sao_qian_jun' },
+      { name: '关羽', star: 5, camp: 'shu', avatar: '🐉', level: 50, force: 100, intel: 82, command: 98, speed: 80, builtInTacticId: 'tac_wei_zhen_hua_xia', equippedTactic1: 'tac_gua_gu_liao_du', equippedTactic2: 'tac_po_zhen_cui_jian' }
     ]
   }
 ];

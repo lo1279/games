@@ -6,7 +6,7 @@ import { CAMPS, ARMS, GENERAL_APTITUDE_MODIFIERS, GENERALS_DATA, addGeneralExp, 
 import { TACTICS_DATA, TACTIC_UPGRADE_COSTS, MAX_TACTIC_LEVEL, getTacticEffectiveProps, TACTIC_INHERIT_SOURCES, getHeroInheritTacticId } from './data/tactics.js';
 import { CAMPAIGNS_DATA, TRIALS_DATA } from './data/campaigns.js';
 import { simulateBattle } from './engine/battle.js';
-import { GACHA_CONFIG, pullGeneral } from './engine/gacha.js';
+import { GACHA_CONFIG, pullGeneral, CORE_FIVE_STAR_IDS } from './engine/gacha.js';
 import { sound } from './engine/audio.js';
 import { loadGameState, saveGameState, resetGameState } from './engine/storage.js';
 import { MAP_CONFIG, LAND_TIERS, RESOURCE_TYPES, isTileAdjacentToPlayer, calculateMarchMorale, createLandGuardTroop } from './engine/map.js';
@@ -22,6 +22,7 @@ class GameApp {
     this.battleSubTab = 'campaigns'; // 'campaigns' | 'trials'
     this.generalSubTab = 'generals'; // 'generals' | 'tactics'
     this.generalFilter = { camp: 'all', star: 'all' }; // 武将多维筛选状态
+    this.tacticFilter = { level: 'all', type: 'all', damageType: 'all' }; // 战法多维筛选状态 (等级、机制类型、伤害性质)
     this.initDOM();
     this.bindEvents();
     this.renderAll();
@@ -45,6 +46,8 @@ class GameApp {
     this.tabPages = document.querySelectorAll('.slg-tab-page');
     this.navBtns = document.querySelectorAll('.nav-tab-btn[data-tab]');
     this.worldMapGrid = document.getElementById('worldMapGrid');
+    this.resourceLandsGrid = document.getElementById('resourceLandsGrid');
+    this.btnQuickFarmAll = document.getElementById('btnQuickFarmAll');
     this.cityBuildingsGrid = document.getElementById('cityBuildingsGrid');
     this.cityStatsBanner = document.getElementById('cityStatsBanner');
     this.campaignsContainer = document.getElementById('campaignsContainer');
@@ -75,6 +78,13 @@ class GameApp {
     this.gachaShowcase = document.getElementById('gachaShowcase');
     this.gachaShowcaseTitle = document.getElementById('gachaShowcaseTitle');
     this.gachaCardsContainer = document.getElementById('gachaCardsContainer');
+
+    // 🎯 假想敌自定义沙盒演习容器与模态框
+    this.sandboxContainer = document.getElementById('sandboxContainer');
+    this.subTabSandbox = document.getElementById('subTabSandbox');
+    this.sandboxCustomModal = document.getElementById('sandboxCustomModal');
+    this.sandboxModalTitle = document.getElementById('sandboxModalTitle');
+    this.sandboxModalBody = document.getElementById('sandboxModalBody');
   }
 
   bindEvents() {
@@ -87,28 +97,52 @@ class GameApp {
       });
     });
 
-    // 征战子选项卡切换 (历史战役 vs 演武试炼)
+    // 征战子选项卡切换 (历史战役 vs 演武试炼 vs 假想敌沙盒)
     const subTabCamp = document.getElementById('subTabCampaigns');
     const subTabTrial = document.getElementById('subTabTrials');
-    if (subTabCamp && subTabTrial) {
-      subTabCamp.addEventListener('click', () => {
-        subTabCamp.classList.add('active');
-        subTabTrial.classList.remove('active');
-        this.campaignsContainer.style.display = 'flex';
-        this.trialsContainer.style.display = 'none';
-        this.battleSubTab = 'campaigns';
-        sound.playDrum();
-      });
+    const subTabSand = document.getElementById('subTabSandbox');
 
-      subTabTrial.addEventListener('click', () => {
-        subTabTrial.classList.add('active');
-        subTabCamp.classList.remove('active');
-        this.campaignsContainer.style.display = 'none';
-        this.trialsContainer.style.display = 'flex';
-        this.battleSubTab = 'trials';
-        sound.playDrum();
+    const updateBattleSubTabs = (activeTab) => {
+      this.battleSubTab = activeTab;
+      if (subTabCamp) subTabCamp.classList.toggle('active', activeTab === 'campaigns');
+      if (subTabTrial) subTabTrial.classList.toggle('active', activeTab === 'trials');
+      if (subTabSand) subTabSand.classList.toggle('active', activeTab === 'sandbox');
+
+      if (this.campaignsContainer) this.campaignsContainer.style.display = (activeTab === 'campaigns' ? 'flex' : 'none');
+      if (this.trialsContainer) this.trialsContainer.style.display = (activeTab === 'trials' ? 'flex' : 'none');
+      if (this.sandboxContainer) this.sandboxContainer.style.display = (activeTab === 'sandbox' ? 'flex' : 'none');
+
+      if (activeTab === 'campaigns') this.renderCampaigns();
+      else if (activeTab === 'trials') this.renderTrials();
+      else if (activeTab === 'sandbox') this.renderSandbox();
+      sound.playDrum();
+    };
+
+    if (subTabCamp) subTabCamp.addEventListener('click', () => updateBattleSubTabs('campaigns'));
+    if (subTabTrial) subTabTrial.addEventListener('click', () => updateBattleSubTabs('trials'));
+    if (subTabSand) subTabSand.addEventListener('click', () => updateBattleSubTabs('sandbox'));
+
+    // 沙盒假想敌关闭模态框
+    const btnSandboxModalClose = document.getElementById('btnSandboxModalClose');
+    if (btnSandboxModalClose) {
+      btnSandboxModalClose.addEventListener('click', () => {
+        if (this.sandboxCustomModal) this.sandboxCustomModal.style.display = 'none';
       });
     }
+
+    // 沙盒演习开战按钮
+    const btnLaunchSandbox = document.getElementById('btnLaunchSandboxBattle');
+    if (btnLaunchSandbox) {
+      btnLaunchSandbox.addEventListener('click', () => this.launchSandboxBattle());
+    }
+
+    // 沙盒假想敌预设阵容按钮
+    document.querySelectorAll('.btn-sandbox-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const presetKey = btn.getAttribute('data-preset');
+        this.applySandboxPreset(presetKey);
+      });
+    });
 
     // 武将与战法研习二级导航切换
     if (this.btnSubTabGenerals && this.btnSubTabTactics) {
@@ -211,6 +245,40 @@ class GameApp {
       });
     });
 
+    // ========== 战法研习多维筛选事件绑定 ==========
+    // 1. 战法等级筛选
+    document.querySelectorAll('.btn-filter-tac-level').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-filter-tac-level').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.tacticFilter.level = btn.getAttribute('data-tac-level');
+        sound.playDrum();
+        this.renderTacticsUpgrade();
+      });
+    });
+
+    // 2. 战法类型筛选
+    document.querySelectorAll('.btn-filter-tac-type').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-filter-tac-type').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.tacticFilter.type = btn.getAttribute('data-tac-type');
+        sound.playDrum();
+        this.renderTacticsUpgrade();
+      });
+    });
+
+    // 3. 伤害/作用性质筛选
+    document.querySelectorAll('.btn-filter-tac-damage').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-filter-tac-damage').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.tacticFilter.damageType = btn.getAttribute('data-tac-damage');
+        sound.playDrum();
+        this.renderTacticsUpgrade();
+      });
+    });
+
     // 🌟 一键同名升星进阶
     const btnAutoPromote = document.getElementById('btnQuickAutoPromote');
     if (btnAutoPromote) {
@@ -222,12 +290,23 @@ class GameApp {
     if (btnSellThree) {
       btnSellThree.addEventListener('click', () => this.quickSellThreeStars());
     }
+
+    // 🪙 一键解甲全部4星将
+    const btnSellFour = document.getElementById('btnQuickSellFourStars');
+    if (btnSellFour) {
+      btnSellFour.addEventListener('click', () => this.quickSellFourStars());
+    }
     // 地块操作弹窗关闭
     const btnTileModalClose = document.getElementById('btnTileModalClose');
     if (btnTileModalClose) {
       btnTileModalClose.addEventListener('click', () => {
         if (this.tileActionModal) this.tileActionModal.style.display = 'none';
       });
+    }
+
+    // 全境一键屯田
+    if (this.btnQuickFarmAll) {
+      this.btnQuickFarmAll.addEventListener('click', () => this.quickFarmAllLands());
     }
   }
 
@@ -238,8 +317,13 @@ class GameApp {
     if (tabId === 'tabMap') this.renderWorldMap();
     if (tabId === 'tabCity') this.renderCityBuildings();
     if (tabId === 'tabBattle') {
-      this.renderCampaigns();
-      this.renderTrials();
+      if (this.battleSubTab === 'sandbox') {
+        this.renderSandbox();
+      } else if (this.battleSubTab === 'trials') {
+        this.renderTrials();
+      } else {
+        this.renderCampaigns();
+      }
     }
     if (tabId === 'tabTroops') this.renderTroops();
     if (tabId === 'tabGenerals') {
@@ -258,6 +342,7 @@ class GameApp {
     this.renderCityBuildings();
     this.renderCampaigns();
     this.renderTrials();
+    this.renderSandbox();
     this.renderTroops();
     this.renderGenerals();
     this.renderTacticsUpgrade();
@@ -292,6 +377,14 @@ class GameApp {
     this.domRes.ownedCount.textContent = this.state.ownedGenerals.length;
     this.gachaPityCount.textContent = this.state.gachaPity || 0;
 
+    // 招募统计数据刷新
+    const elTotal = document.getElementById('gachaTotalCount');
+    if (elTotal) elTotal.innerHTML = `${(this.state.totalGachaCount || 0).toLocaleString()} <span style="font-size:11px; color:#9ca3af;">次</span>`;
+    const elFive = document.getElementById('gachaTotalFiveCount');
+    if (elFive) elFive.innerHTML = `${(this.state.totalFiveStarCount || 0).toLocaleString()} <span style="font-size:11px; color:#9ca3af;">位</span>`;
+    const elCore = document.getElementById('gachaTotalCoreCount');
+    if (elCore) elCore.innerHTML = `${(this.state.totalCoreCount || 0).toLocaleString()} <span style="font-size:11px; color:#9ca3af;">位</span>`;
+
     // 城建状态横幅
     if (this.cityStatsBanner) {
       const palaceLvl = this.state.buildings?.palace || 1;
@@ -300,207 +393,252 @@ class GameApp {
     }
   }
 
-  // ================= 0. 沙盘大地图系统 (9x9 连地铺路、出征攻占、侦查与屯田) =================
+  // ================= 0. 战棋版沙盘系统 (四大战略资源领地模块 · 1~10级自由出征无需连地) =================
   renderWorldMap() {
-    if (!this.worldMapGrid) return;
-    this.worldMapGrid.innerHTML = '';
+    if (!this.resourceLandsGrid && !this.worldMapGrid) return;
 
-    const tiles = this.state.mapTiles || [];
+    // 确保数据结构完整
+    if (!this.state.resourceLands) {
+      this.state.resourceLands = {
+        wood: { maxOccupiedLevel: 1 },
+        iron: { maxOccupiedLevel: 1 },
+        stone: { maxOccupiedLevel: 1 },
+        grain: { maxOccupiedLevel: 1 }
+      };
+    }
 
-    tiles.forEach(tile => {
-      const tileEl = document.createElement('div');
-      tileEl.className = 'map-tile';
-      if (tile.occupiedByPlayer) tileEl.classList.add('player-owned');
-      if (tile.isMainCity) tileEl.classList.add('main-city');
+    // 若有战棋版领地容器，优先渲染四大模块卡片
+    if (this.resourceLandsGrid) {
+      this.resourceLandsGrid.innerHTML = '';
+      const resKeys = ['wood', 'iron', 'stone', 'grain'];
 
-      const resMeta = RESOURCE_TYPES[tile.resType] || { name: '荒地', icon: '🌾' };
+      resKeys.forEach(resKey => {
+        const meta = RESOURCE_TYPES[resKey] || { name: '战略要地', resName: '资源', icon: '🚩', color: '#fbbf24', border: '#d97706', bgGrad: 'rgba(0,0,0,0.5)' };
+        const landData = this.state.resourceLands[resKey] || { maxOccupiedLevel: 0 };
+        const maxLv = landData.maxOccupiedLevel || 0;
 
-      let innerHtml = '';
-      if (tile.isMainCity) {
-        innerHtml = `
-          <div class="tile-icon" style="font-size:26px;">🏯</div>
-          <div class="tile-name" style="color:#fbbf24; font-weight:bold;">主都(4,4)</div>
-          <div class="tile-flag" style="background:#d97706;">王都</div>
+        // 计算当前小时累计产出
+        let currentProdPerHour = 0;
+        for (let l = 1; l <= maxLv; l++) {
+          currentProdPerHour += (LAND_TIERS[l]?.prodPerHour || 150);
+        }
+        if (currentProdPerHour === 0) currentProdPerHour = LAND_TIERS[1]?.prodPerHour || 150;
+
+        const nextLv = Math.min(10, maxLv + 1);
+        const nextCfg = LAND_TIERS[nextLv];
+
+        const card = document.createElement('div');
+        card.className = 'resource-land-card';
+        card.style.background = meta.bgGrad;
+        card.style.borderColor = meta.border;
+
+        card.innerHTML = `
+          <!-- 头部信息 -->
+          <div class="resource-land-header">
+            <div class="resource-land-title-wrap">
+              <div class="resource-land-icon" style="box-shadow: 0 0 15px ${meta.color}40;">${meta.icon}</div>
+              <div>
+                <div class="resource-land-name">${meta.name}</div>
+                <div class="resource-land-sub">主要战略资源：<b style="color:${meta.color};">${meta.resName}</b></div>
+              </div>
+            </div>
+            <div>
+              <span class="resource-land-badge" style="background:${maxLv >= 10 ? 'rgba(251,191,36,0.2)' : 'rgba(16,185,129,0.2)'}; border:1px solid ${maxLv >= 10 ? '#f59e0b' : '#059669'}; color:${maxLv >= 10 ? '#fbbf24' : '#6ee7b7'};">
+                ${maxLv >= 10 ? '👑 已通关 10 级领地' : (maxLv > 0 ? `🛡️ 已开拓 Lv.${maxLv} 级` : '⚪ 尚未开拓')}
+              </span>
+            </div>
+          </div>
+
+          <!-- 产能看板与敌情预期 -->
+          <div class="resource-land-stats-box">
+            <div>
+              <div style="font-size:11px; color:#9ca3af;">当前领地产能</div>
+              <div style="font-size:16px; font-weight:800; color:#6ee7b7; margin-top:2px;">
+                +${currentProdPerHour.toLocaleString()} <span style="font-size:11px; color:#9ca3af;">/小时</span>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11px; color:#9ca3af;">下一阶攻坚目标</div>
+              <div style="font-size:13px; font-weight:bold; color:${maxLv >= 10 ? '#9ca3af' : '#fbbf24'}; margin-top:2px;">
+                ${maxLv >= 10 ? '已达顶峰 10 级' : `Lv.${nextLv} 守将 (${nextCfg?.soldiers.toLocaleString()} 兵)`}
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部快捷操作组 -->
+          <div class="resource-land-actions">
+            <button class="upgrade-btn btn-farm-single" style="flex:1; background:rgba(255,255,255,0.08); border:1px solid #4b5563; font-size:12px; padding:8px 6px;">
+              🌾 快速屯田 (+3h)
+            </button>
+            <button class="upgrade-btn btn-select-level" style="flex:1.4; background:linear-gradient(135deg, #d97706 0%, #b45309 100%); font-weight:bold; font-size:13px; padding:8px 10px; box-shadow:0 2px 8px rgba(217,119,6,0.4);">
+              ⚔️ 选地出征 (1~10级)
+            </button>
+          </div>
         `;
-      } else {
-        const tierCfg = LAND_TIERS[tile.level] || LAND_TIERS[1];
-        innerHtml = `
-          <div class="tile-level">Lv.${tile.level}</div>
-          <div class="tile-icon">${resMeta.icon}</div>
-          <div class="tile-name">${resMeta.name}</div>
-          ${tile.occupiedByPlayer ? '<div class="tile-flag">占领</div>' : ''}
-        `;
-      }
 
-      tileEl.innerHTML = innerHtml;
-      tileEl.addEventListener('click', () => {
-        sound.playDrum();
-        this.openTileActionModal(tile);
+        // 绑定单项屯田
+        card.querySelector('.btn-farm-single').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.quickFarmLand(resKey);
+        });
+
+        // 绑定打开1~10级选择弹窗
+        card.querySelector('.btn-select-level').addEventListener('click', () => {
+          sound.playDrum();
+          this.openResourceLandModal(resKey);
+        });
+
+        // 点击卡片整体也可以打开
+        card.addEventListener('click', () => {
+          sound.playDrum();
+          this.openResourceLandModal(resKey);
+        });
+
+        this.resourceLandsGrid.appendChild(card);
       });
+    }
+  }
 
-      this.worldMapGrid.appendChild(tileEl);
+  // 打开四大资源领地 1~10 级选择与出征全息 Modal
+  openResourceLandModal(resKey) {
+    if (!this.tileActionModal) return;
+
+    const meta = RESOURCE_TYPES[resKey] || { name: '战略领地', resName: '资源', icon: '🚩', color: '#fbbf24' };
+    const landData = this.state.resourceLands[resKey] || { maxOccupiedLevel: 0 };
+    const maxLv = landData.maxOccupiedLevel || 0;
+
+    this.tileModalTitle.innerHTML = `${meta.icon} ${meta.name} · 1~10 级领地开拓`;
+
+    // 组装 1~10 级阶梯列表
+    let tierItemsHtml = '';
+    for (let lv = 1; lv <= 10; lv++) {
+      const cfg = LAND_TIERS[lv] || LAND_TIERS[1];
+      const guardTroop = createLandGuardTroop(lv, resKey);
+      const leadHero = guardTroop.heroes[0];
+      const armMeta = ARMS[guardTroop.arm] || { name: guardTroop.arm, icon: '⚔️' };
+      const isOccupied = (lv <= maxLv);
+      const isNextTarget = (lv === maxLv + 1);
+
+      // 兵种克制提示：骑克盾、盾克弓、弓克枪、枪克骑
+      let restTip = '';
+      if (guardTroop.arm === 'cavalry') restTip = '克制盾兵 · 惧怕枪兵';
+      else if (guardTroop.arm === 'shield') restTip = '克制弓兵 · 惧怕骑兵';
+      else if (guardTroop.arm === 'bow') restTip = '克制枪兵 · 惧怕盾兵';
+      else if (guardTroop.arm === 'spear') restTip = '克制骑兵 · 惧怕弓兵';
+
+      tierItemsHtml += `
+        <div class="land-tier-item ${isOccupied ? 'occupied' : (isNextTarget ? 'current-target' : '')}" style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; background:#161922; border:1px solid ${isNextTarget ? '#f59e0b' : '#2d3340'}; border-radius:8px;">
+          <!-- 守军基本信息与兵种 -->
+          <div style="display:flex; align-items:center; gap:12px; flex:1;">
+            <div style="font-size:28px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+              ${leadHero.avatar}
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-weight:800; font-size:14px; color:#fff;">Lv.${lv} ${cfg.name}</span>
+                <span style="font-size:10px; background:rgba(56,189,248,0.15); border:1px solid #0284c7; color:#38bdf8; padding:1px 6px; border-radius:4px;">
+                  ${armMeta.icon} ${armMeta.name}
+                </span>
+                ${isOccupied ? '<span style="font-size:10px; background:rgba(16,185,129,0.2); color:#6ee7b7; padding:1px 5px; border-radius:3px; font-weight:bold;">已占领</span>' : ''}
+                ${isNextTarget ? '<span style="font-size:10px; background:rgba(251,191,36,0.2); color:#fbbf24; padding:1px 5px; border-radius:3px; font-weight:bold;">首要开拓</span>' : ''}
+              </div>
+              <div style="font-size:11px; color:#9ca3af; margin-top:3px; display:flex; gap:10px;">
+                <span>守将: <b style="color:#e2e8f0;">${leadHero.name}</b> (3人队伍)</span>
+                <span>守备兵力: <b style="color:#f87171;">${cfg.soldiers.toLocaleString()}</b></span>
+                <span style="color:#6ee7b7;">+${cfg.prodPerHour}/h</span>
+              </div>
+              <div style="font-size:10px; color:#a1a1aa; margin-top:2px;">
+                克制关系: ${restTip}
+              </div>
+            </div>
+          </div>
+
+          <!-- 操作按钮区 (无需连地，直接出征) -->
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="upgrade-btn btn-scout-tier" data-tier="${lv}" style="background:#374151; font-size:11px; padding:6px 10px;">
+              🔍 虚实
+            </button>
+            ${isOccupied ? `
+              <button class="upgrade-btn btn-farm-tier" data-tier="${lv}" style="background:linear-gradient(135deg, #059669 0%, #047857 100%); font-size:12px; padding:6px 12px; font-weight:bold;">
+                🌾 扫荡
+              </button>
+            ` : `
+              <button class="upgrade-btn btn-attack-tier" data-tier="${lv}" style="background:${isNextTarget ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'}; font-size:12px; padding:6px 14px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+                ⚔️ 出征
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    this.tileModalBody.innerHTML = `
+      <!-- 顶部领地总览 -->
+      <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span style="font-size:13px; font-weight:bold; color:#fff;">【战棋出征模式】</span>
+          <span style="font-size:12px; color:#9ca3af; margin-left:6px;">无需连地铺路，全图任意选定 1~10 级土地自由挥师出征！</span>
+        </div>
+        <div style="font-size:12px; color:#fbbf24; font-weight:bold;">
+          当前最高开拓：Lv.${maxLv} / 10 级
+        </div>
+      </div>
+
+      <!-- 1~10 级阶梯列表 -->
+      <div class="land-tier-list" style="display:flex; flex-direction:column; gap:10px; max-height:60vh; overflow-y:auto; padding-right:4px;">
+        ${tierItemsHtml}
+      </div>
+    `;
+
+    this.tileActionModal.style.display = 'flex';
+
+    // 绑定各级【出征攻占】
+    this.tileModalBody.querySelectorAll('.btn-attack-tier').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lv = parseInt(btn.getAttribute('data-tier'), 10);
+        this.tileActionModal.style.display = 'none';
+        this.launchLandAttack(resKey, lv);
+      });
+    });
+
+    // 绑定各级【扫荡】
+    this.tileModalBody.querySelectorAll('.btn-farm-tier').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lv = parseInt(btn.getAttribute('data-tier'), 10);
+        this.tileActionModal.style.display = 'none';
+        this.sweepLandTier(resKey, lv);
+      });
+    });
+
+    // 绑定各级【侦查虚实】
+    this.tileModalBody.querySelectorAll('.btn-scout-tier').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lv = parseInt(btn.getAttribute('data-tier'), 10);
+        const guardTroop = createLandGuardTroop(lv, resKey);
+        const lead = guardTroop.heroes[0];
+        const sub1 = guardTroop.heroes[1];
+        const sub2 = guardTroop.heroes[2];
+        const armMeta = ARMS[guardTroop.arm] || { name: guardTroop.arm };
+        sound.playDrum();
+        alert(`🔍【斥候军报 · Lv.${lv} 守备探查】\n` +
+          `• 兵种部曲：${armMeta.name} (总兵力 ${LAND_TIERS[lv]?.soldiers.toLocaleString()})\n` +
+          `• 主将：${lead.name} (Lv.${lead.level}, 兵力 ${lead.currentSoldiers})\n` +
+          `• 左卫：${sub1.name} (Lv.${sub1.level}, 兵力 ${sub1.currentSoldiers})\n` +
+          `• 右翼：${sub2.name} (Lv.${sub2.level}, 兵力 ${sub2.currentSoldiers})\n\n` +
+          `💡 兵种克制提示：骑克盾、盾克弓、弓克枪、枪克骑！调整编队兵种可享 15% 伤害增幅！`);
+      });
     });
   }
 
-  // 打开地块全息操作弹窗
-  openTileActionModal(tile) {
-    if (!this.tileActionModal) return;
-
-    const isAdjacent = isTileAdjacentToPlayer(tile, this.state.mapTiles);
-    const resMeta = RESOURCE_TYPES[tile.resType] || { name: '荒地', icon: '🌾' };
-    const tierCfg = LAND_TIERS[tile.level] || LAND_TIERS[1];
-    const marchInfo = calculateMarchMorale(MAP_CONFIG.mainCityPos, { x: tile.x, y: tile.y });
-    const guardTroop = createLandGuardTroop(tile);
-    const guardLeader = guardTroop.heroes[0];
-    const guardArm = ARMS[guardTroop.arm] || { name: guardTroop.arm, icon: '⚔️' };
-
-    this.tileModalTitle.innerHTML = tile.isMainCity 
-      ? '🏯 洛阳王都 · 皇城中枢' 
-      : `${resMeta.icon} ${LAND_TIERS[tile.level]?.name || '领地'} (${tile.x}, ${tile.y})`;
-
-    let contentHtml = '';
-
-    if (tile.isMainCity) {
-      contentHtml = `
-        <div style="background:rgba(251,191,36,0.1); border:1px solid #d97706; padding:12px; border-radius:8px;">
-          <div style="font-weight:bold; color:#fbbf24; font-size:15px; margin-bottom:4px;">👑 您的中央王都行省</div>
-          <div style="font-size:12px; color:#cbd5e1; line-height:1.5;">
-            主城坐镇中原核心坐标 (4, 4)，掌控全境开荒铺路命脉。所有对外出征均从主都发兵！<br>
-            可前往【主城】标签升级君王殿与兵营建筑。
-          </div>
-        </div>
-      `;
-    } else {
-      const isPlayerOwned = tile.occupiedByPlayer;
-
-      contentHtml = `
-        <!-- 地块产出与状态信息 -->
-        <div style="background:#11141a; border:1px solid #374151; padding:12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div style="font-size:14px; font-weight:bold; color:#fff;">
-              ${tile.name} · <span style="color:#fbbf24;">Lv.${tile.level}级地</span>
-            </div>
-            <div style="font-size:12px; color:#9ca3af; margin-top:2px;">
-              每小时产出: <b style="color:#6ee7b7;">+${tierCfg.prodPerHour}</b> ${resMeta.name} (${resMeta.icon})
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:12px; color:${isPlayerOwned ? '#34d399' : '#f87171'}; font-weight:bold;">
-              ${isPlayerOwned ? '🟩 我方领地' : (isAdjacent ? '⚡ 可直接出征' : '🔒 需相邻连地')}
-            </div>
-            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
-              距主都: ${marchInfo.dist} 格 (士气: ${marchInfo.morale})
-            </div>
-          </div>
-        </div>
-
-        <!-- 守军军情侦查看板 -->
-        <div style="background:#181b22; border:1px solid #374151; border-radius:8px; padding:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:bold; font-size:13px; color:#f87171;">⚔️ 守军防御驻守情报</span>
-            <span style="font-size:11px; color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid #d97706; padding:1px 6px; border-radius:4px;">
-              ${tile.scouted ? '👁️ 已探明虚实' : '🌫️ 粗略探知'}
-            </span>
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:8px 12px; border-radius:6px;">
-            <div>
-              <div style="font-size:13px; color:#fff; font-weight:bold;">
-                守军首领: ${tile.scouted ? guardLeader.name : '未知守备 (侦查可现)'}
-              </div>
-              <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
-                驻守兵种: <b style="color:#38bdf8;">${guardArm.icon} ${guardArm.name}</b> · 守备总兵力: <b style="color:#f87171;">${tierCfg.soldiers.toLocaleString()}</b>
-              </div>
-            </div>
-            <div style="font-size:24px;">
-              ${guardLeader.avatar}
-            </div>
-          </div>
-        </div>
-
-        <!-- 操作按钮组 -->
-        <div style="display:flex; gap:10px; margin-top:6px;">
-          ${!isPlayerOwned ? `
-            <button class="upgrade-btn" id="btnModalAttackTile" style="flex:1; background:linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding:8px; font-weight:bold; font-size:13px; ${!isAdjacent ? 'opacity:0.5;' : ''}">
-              ⚔️ 发兵出征攻占
-            </button>
-            <button class="upgrade-btn" id="btnModalScoutTile" style="flex:1; background:#2563eb; padding:8px; font-size:13px;">
-              🔍 派斥候侦查
-            </button>
-          ` : `
-            <button class="upgrade-btn" id="btnModalFarmTile" style="flex:1; background:linear-gradient(135deg, #059669 0%, #047857 100%); padding:8px; font-size:13px;">
-              🌾 屯田大丰收 (获3小时产出)
-            </button>
-            <button class="upgrade-btn" id="btnModalAbandonTile" style="flex:1; background:#4b5563; padding:8px; font-size:13px;">
-              🏳️ 放弃该领地
-            </button>
-          `}
-        </div>
-      `;
-    }
-
-    this.tileModalBody.innerHTML = contentHtml;
-    this.tileActionModal.style.display = 'flex';
-
-    // 绑定出征攻打
-    const btnAttack = document.getElementById('btnModalAttackTile');
-    if (btnAttack) {
-      btnAttack.addEventListener('click', () => {
-        if (!isAdjacent) {
-          alert('⚠️【铺路限制】SLG 核心规则：只能攻打与我方已占领地块（或主都）上下左右直接相邻的地块！');
-          return;
-        }
-        this.tileActionModal.style.display = 'none';
-        this.launchTileAttack(tile);
-      });
-    }
-
-    // 绑定侦查
-    const btnScout = document.getElementById('btnModalScoutTile');
-    if (btnScout) {
-      btnScout.addEventListener('click', () => {
-        tile.scouted = true;
-        sound.playDrum();
-        alert(`🔍【斥候军报】探得情报：守将【${guardLeader.name}】，统领【${guardArm.name}】，兵力 ${tierCfg.soldiers}！请根据骑克盾、盾克弓、弓克枪、枪克骑调整兵种克制出战！`);
-        this.openTileActionModal(tile);
-        this.save();
-      });
-    }
-
-    // 绑定屯田
-    const btnFarm = document.getElementById('btnModalFarmTile');
-    if (btnFarm) {
-      btnFarm.addEventListener('click', () => {
-        const harvest = tierCfg.prodPerHour * 3;
-        const resKey = tile.resType;
-        this.state.resources[resKey] = (this.state.resources[resKey] || 0) + harvest;
-        sound.playVictoryHorn();
-        alert(`🌾【屯田大丰收】主公下令军士开垦屯田，瞬间收获 3 小时储备！获得 ${resMeta.name} +${harvest.toLocaleString()}！`);
-        this.tileActionModal.style.display = 'none';
-        this.renderHUD();
-        this.save();
-      });
-    }
-
-    // 绑定放弃领地
-    const btnAbandon = document.getElementById('btnModalAbandonTile');
-    if (btnAbandon) {
-      btnAbandon.addEventListener('click', () => {
-        if (confirm(`确定要放弃该块 ${tile.name} 吗？放弃后不再享受该地资源产出。`)) {
-          tile.occupiedByPlayer = false;
-          tile.scouted = false;
-          sound.playDrum();
-          this.tileActionModal.style.display = 'none';
-          this.renderWorldMap();
-          this.renderHUD();
-          this.save();
-        }
-      });
-    }
+  // 获取当前选中的主力出征军团 (5支军团任意切换出战)
+  getCurrentTroop() {
+    const idx = Math.max(0, Math.min(4, this.state.currentTroopIndex || 0));
+    return this.state.troops[idx] || this.state.troops[0];
   }
 
-  // 发起沙盘攻占出征推演
-  launchTileAttack(tile) {
-    const playerTroop = this.state.troops[0];
+  // 战棋版自由出征打地推演 (彻底无需连地)
+  launchLandAttack(resKey, level) {
+    const playerTroop = this.getCurrentTroop();
     if (!playerTroop || playerTroop.heroes.length === 0) {
       alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
       return;
@@ -508,33 +646,36 @@ class GameApp {
 
     sound.playDrum();
 
-    // 守军与行军士气
-    const guardTroop = createLandGuardTroop(tile);
-    const marchInfo = calculateMarchMorale(MAP_CONFIG.mainCityPos, { x: tile.x, y: tile.y });
+    const meta = RESOURCE_TYPES[resKey] || { name: '战略领地', resName: '资源' };
+    const tierCfg = LAND_TIERS[level] || LAND_TIERS[1];
+    const guardTroop = createLandGuardTroop(level, resKey);
 
-    // 执行 8 回合沙盘战斗推演 (代入行军士气与战法等级)
+    // 战棋版直接 100 士气全胜出征推演 (代入战法等级)
     const result = simulateBattle(playerTroop, guardTroop, {
-      playerMorale: marchInfo.morale,
+      playerMorale: 100,
       tacticLevels: this.state.tacticLevels || {}
     });
 
     const isWin = (result.summary.winner === 'player');
+    const landData = this.state.resourceLands[resKey] || { maxOccupiedLevel: 0 };
+    const oldMaxLv = landData.maxOccupiedLevel || 0;
 
     if (isWin) {
       sound.playVictoryHorn();
-      tile.occupiedByPlayer = true;
-      tile.scouted = true;
 
-      // 攻占成功奖励
-      const tierCfg = LAND_TIERS[tile.level] || LAND_TIERS[1];
-      const copperReward = tile.level * 800;
+      // 若战胜了更高等级，突破晋升开拓进度
+      if (level > oldMaxLv) {
+        this.state.resourceLands[resKey].maxOccupiedLevel = level;
+      }
+
+      // 攻占丰厚奖励
+      const copperReward = level * 1000;
       this.state.resources.copper = (this.state.resources.copper || 0) + copperReward;
 
-      // 🌟 参战武将获得战斗历练经验 (依据土地等级与守军兵力计算)
-      const baseExp = Math.round(tierCfg.soldiers * 0.8);
+      // 参战武将获得战斗历练经验 (依据土地等级与守军兵力计算)
+      const baseExp = Math.round(tierCfg.soldiers * 0.85);
       const levelUpMessages = [];
       playerTroop.heroes.forEach(h => {
-        // 同步更新 ownedGenerals 中的真实对象
         const realHero = this.state.ownedGenerals.find(g => g.id === h.id) || h;
         const res = addGeneralExp(realHero, baseExp);
         h.level = realHero.level;
@@ -545,17 +686,21 @@ class GameApp {
       });
 
       const levelUpStr = levelUpMessages.length > 0 ? `\n\n🌟 武将突破升级：\n${levelUpMessages.join('\n')}` : '';
-      alert(`🎉【攻占大捷】恭贺主公！我军顺利攻克 ${tile.name} (Lv.${tile.level})！插上主公王旗！\n获得铜币 🪙 +${copperReward.toLocaleString()} · 参战武将历练经验 +${baseExp.toLocaleString()}${levelUpStr}`);
+      const promoteStr = (level > oldMaxLv) ? `\n👑 【${meta.name}】最高开拓等级晋升至 Lv.${level}！全境产能大幅提升！` : '';
+
+      alert(`🎉【攻占大捷】恭贺主公！我军顺利攻克 ${meta.name} · Lv.${level} ${tierCfg.name}！\n` +
+        `获得铜币 🪙 +${copperReward.toLocaleString()} · 参战武将历练经验 +${baseExp.toLocaleString()}` +
+        `${promoteStr}${levelUpStr}`);
     } else {
       sound.playSwordClash();
-      alert(`⚠️【出征失利】我军未能击溃守备敌军，领地攻占失败！请检查兵种克制或研习战法提升实力！`);
+      alert(`⚠️【出征失利】我军未能击溃 Lv.${level} 守备部曲，领地攻占失败！建议探查守军兵种，调整兵种克制或研习战法！`);
     }
 
     // 战报沉淀
     const reportItem = {
       id: `rep_${Date.now()}`,
       time: new Date().toLocaleTimeString(),
-      tileName: `沙盘攻占 · ${tile.name}(${tile.x},${tile.y})`,
+      tileName: `战棋沙盘 · ${meta.name}(Lv.${level})`,
       isVictory: isWin,
       summary: result.summary,
       logs: result.logs
@@ -567,6 +712,93 @@ class GameApp {
     this.renderHUD();
     this.renderWorldMap();
     this.openBattleDetailModal(reportItem);
+  }
+
+  // 扫荡已占领土地 (获得经验与屯田丰收)
+  sweepLandTier(resKey, level) {
+    const playerTroop = this.getCurrentTroop();
+    if (!playerTroop || playerTroop.heroes.length === 0) {
+      alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
+      return;
+    }
+
+    sound.playDrum();
+    const meta = RESOURCE_TYPES[resKey] || { name: '战略领地', resName: '资源' };
+    const tierCfg = LAND_TIERS[level] || LAND_TIERS[1];
+
+    // 扫荡直接收获 3 小时该地块产出
+    const harvest = tierCfg.prodPerHour * 3;
+    this.state.resources[resKey] = (this.state.resources[resKey] || 0) + harvest;
+
+    // 武将获得历练经验
+    const baseExp = Math.round(tierCfg.soldiers * 0.5);
+    const levelUpMessages = [];
+    playerTroop.heroes.forEach(h => {
+      const realHero = this.state.ownedGenerals.find(g => g.id === h.id) || h;
+      const res = addGeneralExp(realHero, baseExp);
+      h.level = realHero.level;
+      h.exp = realHero.exp;
+      if (res.leveledUp) {
+        levelUpMessages.push(`【${realHero.name}】晋升至 Lv.${res.newLevel}！`);
+      }
+    });
+
+    sound.playVictoryHorn();
+    const levelUpStr = levelUpMessages.length > 0 ? `\n\n🌟 武将突破升级：\n${levelUpMessages.join('\n')}` : '';
+    alert(`🌾【扫荡大捷】主公发兵扫荡 ${meta.name} (Lv.${level})，安抚百姓、屯田丰收！\n` +
+      `收获 ${meta.resName} +${harvest.toLocaleString()} · 参战武将历练经验 +${baseExp.toLocaleString()}${levelUpStr}`);
+
+    this.save();
+    this.renderHUD();
+    this.renderWorldMap();
+  }
+
+  // 快速屯田单个资源领地 (+3小时产出)
+  quickFarmLand(resKey) {
+    const meta = RESOURCE_TYPES[resKey] || { name: '战略领地', resName: '资源' };
+    const landData = this.state.resourceLands[resKey] || { maxOccupiedLevel: 1 };
+    const maxLv = Math.max(1, landData.maxOccupiedLevel || 1);
+
+    // 计算当前小时累计产出
+    let currentProdPerHour = 0;
+    for (let l = 1; l <= maxLv; l++) {
+      currentProdPerHour += (LAND_TIERS[l]?.prodPerHour || 150);
+    }
+    const harvest = currentProdPerHour * 3;
+    this.state.resources[resKey] = (this.state.resources[resKey] || 0) + harvest;
+
+    sound.playVictoryHorn();
+    alert(`🌾【屯田大丰收】主公下令军士开垦 ${meta.name} (开拓Lv.${maxLv})，瞬间收获 3 小时储备！\n获得 ${meta.resName} +${harvest.toLocaleString()}！`);
+
+    this.save();
+    this.renderHUD();
+    this.renderWorldMap();
+  }
+
+  // 全境一键屯田 (+3小时全部4大资源产出)
+  quickFarmAllLands() {
+    let summaryText = [];
+    const resKeys = ['wood', 'iron', 'stone', 'grain'];
+
+    resKeys.forEach(rk => {
+      const meta = RESOURCE_TYPES[rk];
+      const landData = this.state.resourceLands?.[rk] || { maxOccupiedLevel: 1 };
+      const maxLv = Math.max(1, landData.maxOccupiedLevel || 1);
+      let prod = 0;
+      for (let l = 1; l <= maxLv; l++) {
+        prod += (LAND_TIERS[l]?.prodPerHour || 150);
+      }
+      const harvest = prod * 3;
+      this.state.resources[rk] = (this.state.resources[rk] || 0) + harvest;
+      summaryText.push(`${meta.icon} ${meta.resName}: +${harvest.toLocaleString()}`);
+    });
+
+    sound.playVictoryHorn();
+    alert(`🌾【全境大丰收】主公一道令下，四大战略资源领地同时开垦屯田！瞬间收获 3 小时国家储备！\n\n${summaryText.join('\n')}`);
+
+    this.save();
+    this.renderHUD();
+    this.renderWorldMap();
   }
 
   // ================= 0.5. 主城内政城建系统 (君王殿、兵营、军舍、四大资源所) =================
@@ -764,9 +996,9 @@ class GameApp {
     });
   }
 
-  // 发起历史战役对战
+  // 发起历史战役对战 (主线闯关：使用武将真实养成等级与带兵量，保全练级与开荒的真实爽感)
   launchCampaignBattle(camp) {
-    const playerTroop = this.state.troops[0];
+    const playerTroop = this.getCurrentTroop();
     if (!playerTroop || playerTroop.heroes.length === 0) {
       alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
       return;
@@ -774,7 +1006,7 @@ class GameApp {
 
     sound.playDrum();
 
-    // 敌方标准部队
+    // 敌方依据各章节历史设定的阶梯等级与兵力配置
     const enemyTroop = {
       isPlayer: false,
       arm: camp.enemyArm,
@@ -785,7 +1017,7 @@ class GameApp {
       }))
     };
 
-    // 执行8回合战斗推演 (应用战法真实等级属性)
+    // 执行8回合战斗推演 (应用我方武将真实等级、属性成长与战法研习级别)
     const result = simulateBattle(playerTroop, enemyTroop, { tacticLevels: this.state.tacticLevels || {} });
     const isWin = (result.summary.winner === 'player');
 
@@ -801,7 +1033,7 @@ class GameApp {
       const copperReward = 3000 * starsEarned;
       this.state.resources.copper = (this.state.resources.copper || 0) + copperReward;
 
-      // 🌟 参战武将获得战役海量经验 (每颗星 1500 经验)
+      // 🌟 参战武将获得战役海量经验 (实打实练级成长，带来突破与兵力上限飞跃)
       const campExp = 1500 * starsEarned;
       const levelUpMessages = [];
       playerTroop.heroes.forEach(h => {
@@ -809,12 +1041,14 @@ class GameApp {
         const res = addGeneralExp(realHero, campExp);
         h.level = realHero.level;
         h.exp = realHero.exp;
+        h.maxSoldiers = realHero.maxSoldiers;
+        h.currentSoldiers = realHero.currentSoldiers;
         if (res.leveledUp) {
-          levelUpMessages.push(`【${realHero.name}】突破升至 Lv.${res.newLevel}！`);
+          levelUpMessages.push(`【${realHero.name}】突破升至 Lv.${res.newLevel} (带兵上限 +${(res.newLevel - res.oldLevel) * 100})！`);
         }
       });
       if (levelUpMessages.length > 0) {
-        alert(`🌟【武将突破升级】\n${levelUpMessages.join('\n')}`);
+        alert(`🌟【武将练级突破】\n${levelUpMessages.join('\n')}`);
       }
     } else {
       sound.playSwordClash();
@@ -839,21 +1073,35 @@ class GameApp {
     this.openBattleDetailModal(reportItem);
   }
 
-  // 发起演武试炼对战
+  // 发起演武试炼对战 (征战模式：双方全员默认 Lv.50 满级、10,000 满兵力巅峰公平竞技)
   launchTrialBattle(trial) {
-    const playerTroop = this.state.troops[0];
-    if (!playerTroop || playerTroop.heroes.length === 0) {
+    const rawPlayerTroop = this.getCurrentTroop();
+    if (!rawPlayerTroop || rawPlayerTroop.heroes.length === 0) {
       alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
       return;
     }
 
     sound.playDrum();
 
+    // 1. 我方参战部队：克隆出征武将，征战模式统一设置为 Lv.50 满级与 10,000 满兵力
+    const playerTroop = {
+      ...rawPlayerTroop,
+      heroes: rawPlayerTroop.heroes.map(h => ({
+        ...h,
+        level: MAX_GENERAL_LEVEL,
+        currentSoldiers: 10000,
+        maxSoldiers: 10000
+      }))
+    };
+
+    // 2. 敌方试炼部队：统一设置为 Lv.50 满级、10,000 满兵力，且战法等级全部拉满 (Lv.10 满级)
     const enemyHeroes = trial.heroes.map(h => {
       const template = GENERALS_DATA.find(g => g.name === h.name) || h;
       return {
         ...template,
         ...h,
+        level: MAX_GENERAL_LEVEL,
+        tacticLevel: MAX_TACTIC_LEVEL, // 敌方战法统一拉满至 Lv.10
         currentSoldiers: 10000,
         maxSoldiers: 10000,
         aptitude: template.aptitude || { cavalry: 'A', shield: 'A', bow: 'A', spear: 'A', siege: 'B' }
@@ -866,8 +1114,11 @@ class GameApp {
       heroes: enemyHeroes
     };
 
-    // 执行8回合战斗推演
-    const result = simulateBattle(playerTroop, enemyTroop, { tacticLevels: this.state.tacticLevels || {} });
+    // 执行8回合战斗推演 (我方应用实际研习战法等级，演武敌方全员战法统一强制 Lv.10 满级)
+    const result = simulateBattle(playerTroop, enemyTroop, { 
+      tacticLevels: this.state.tacticLevels || {},
+      enemyTacticLevels: new Proxy({}, { get: () => MAX_TACTIC_LEVEL }) // 确保敌方任意战法均为满级 10
+    });
     const isWin = (result.summary.winner === 'player');
 
     if (isWin) {
@@ -876,21 +1127,7 @@ class GameApp {
       const copperReward = trial.floor * 3000;
       this.state.resources.copper = (this.state.resources.copper || 0) + copperReward;
 
-      // 🌟 参战武将获得演武阁历练经验
-      const trialExp = trial.floor * 1000;
-      const levelUpMessages = [];
-      playerTroop.heroes.forEach(h => {
-        const realHero = this.state.ownedGenerals.find(g => g.id === h.id) || h;
-        const res = addGeneralExp(realHero, trialExp);
-        h.level = realHero.level;
-        h.exp = realHero.exp;
-        if (res.leveledUp) {
-          levelUpMessages.push(`【${realHero.name}】突破升至 Lv.${res.newLevel}！`);
-        }
-      });
-
-      const levelUpStr = levelUpMessages.length > 0 ? `\n\n🌟 武将突破升级：\n${levelUpMessages.join('\n')}` : '';
-      alert(`🎉 恭贺主公！力克强敌，斩获演武第 ${trial.floor} 层胜利！获赠 🪙 ${copperReward.toLocaleString()} 铜币 · 历练经验 +${trialExp.toLocaleString()}！晋级至第 ${this.state.trialFloor} 层！${levelUpStr}`);
+      alert(`🎉 恭贺主公！力克强敌，斩获演武第 ${trial.floor} 层胜利！获赠 🪙 ${copperReward.toLocaleString()} 铜币！晋级至第 ${this.state.trialFloor} 层！`);
     } else {
       sound.playSwordClash();
     }
@@ -909,13 +1146,446 @@ class GameApp {
     this.save();
     this.renderHUD();
     this.renderTrials();
+  }
+
+  // ================= 1.8. 假想敌自定义沙盒演习系统 (全武将·全战法自由对战) =================
+  renderSandbox() {
+    if (!this.sandboxContainer) return;
+
+    const playerTroop = this.state.troops[this.state.currentTroopIndex || 0] || this.state.troops[0];
+    const previewEl = document.getElementById('sandboxPlayerTroopPreview');
+    const enemyPanelEl = document.getElementById('sandboxEnemyTroopPanel');
+
+    // 1. 渲染我方出征部队预览
+    if (previewEl && playerTroop) {
+      const armMeta = ARMS[playerTroop.arm] || { name: '枪兵', icon: '🗡️' };
+      const heroCardsHtml = (playerTroop.heroes || []).map((h, sIdx) => {
+        if (!h) {
+          return `
+            <div style="background:rgba(0,0,0,0.3); border:1px dashed #4b5563; border-radius:6px; padding:8px; text-align:center; font-size:11px; color:#6b7280;">
+              ${sIdx === 0 ? '【主将空置】' : '【副将空置】'}
+            </div>
+          `;
+        }
+        const bTactic = TACTICS_DATA.find(t => t.id === h.builtInTacticId);
+        const t1 = TACTICS_DATA.find(t => t.id === h.equippedTactic1);
+        const t2 = TACTICS_DATA.find(t => t.id === h.equippedTactic2);
+        return `
+          <div style="background:rgba(0,0,0,0.3); border:1px solid #2d3340; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:24px;">${h.avatar}</span>
+              <div>
+                <div style="font-size:13px; font-weight:bold; color:#fff;">
+                  ${h.name} <span style="font-size:10px; color:#fbbf24;">(Lv.${h.level || 50})</span>
+                </div>
+                <div style="font-size:10px; color:#9ca3af; margin-top:2px;">
+                  战法: ${bTactic?.name || '自带战法'} · ${t1?.name || '无'} · ${t2?.name || '无'}
+                </div>
+              </div>
+            </div>
+            <span style="font-size:11px; color:#34d399; font-weight:bold;">${sIdx === 0 ? '★主将' : '副将'}</span>
+          </div>
+        `;
+      }).join('');
+
+      previewEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+          <div>
+            <div style="font-weight:800; font-size:15px; color:#10b981;">🛡️ 我方参战：${playerTroop.name}</div>
+            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">兵种：<b style="color:#6ee7b7;">${armMeta.icon} ${armMeta.name}</b> (可在【编队】自由换将)</div>
+          </div>
+          <span style="font-size:11px; background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px;">
+            满状态推演
+          </span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${heroCardsHtml}
+        </div>
+      `;
+    }
+
+    // 2. 渲染敌方假想部队控制台
+    if (enemyPanelEl) {
+      const enemyCfg = this.state.customEnemyTroop || {
+        name: '假想敌军',
+        arm: 'spear',
+        heroes: [
+          { generalId: 'gen_zhu_ge_liang', level: 50, tactic1Id: 'tac_ba_men_jin_suo', tactic2Id: 'tac_chen_huo_da_jie' },
+          { generalId: 'gen_liu_bei', level: 50, tactic1Id: 'tac_yu_di_ping_zhang', tactic2Id: 'tac_zi_yu' },
+          { generalId: 'gen_guan_yu', level: 50, tactic1Id: 'tac_suo_xiang_pi_mi', tactic2Id: 'tac_po_zhen_cui_jian' }
+        ]
+      };
+
+      // 兵种切换按钮
+      const armsHtml = Object.keys(ARMS).map(ak => `
+        <button class="nav-tab-btn btn-enemy-arm ${enemyCfg.arm === ak ? 'active' : ''}" data-arm="${ak}" style="padding:4px 8px; font-size:11px; border:1px solid #374151;">
+          ${ARMS[ak].icon} ${ARMS[ak].name}
+        </button>
+      `).join('');
+
+      // 3个槽位
+      const slotsHtml = [0, 1, 2].map(slotIdx => {
+        const hCfg = enemyCfg.heroes[slotIdx] || { generalId: 'gen_liu_bei', level: 50, tactic1Id: null, tactic2Id: null };
+        const gen = GENERALS_DATA.find(g => g.id === hCfg.generalId) || GENERALS_DATA[0];
+        const t1 = TACTICS_DATA.find(t => t.id === hCfg.tactic1Id);
+        const t2 = TACTICS_DATA.find(t => t.id === hCfg.tactic2Id);
+        const bTactic = TACTICS_DATA.find(t => t.id === gen.builtInTacticId);
+        const camp = CAMPS[gen.camp] || { name: '群', color: '#888' };
+
+        return `
+          <div class="sandbox-slot-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; font-weight:bold; color:${slotIdx === 0 ? '#f87171' : '#fbbf24'};">
+                ${slotIdx === 0 ? '★ 敌方主将' : `敌方副将 ${slotIdx}`}
+              </span>
+              <button class="upgrade-btn btn-change-sandbox-hero" data-slot="${slotIdx}" style="padding:2px 8px; font-size:11px; background:#4b5563;">
+                🔄 换将
+              </button>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.25); padding:6px 8px; border-radius:6px;">
+              <span style="font-size:28px;">${gen.avatar}</span>
+              <div style="flex:1;">
+                <div style="font-size:13px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:6px;">
+                  <span>${gen.name}</span>
+                  <span style="font-size:10px; background:${camp.color}; padding:1px 4px; border-radius:3px;">${camp.name}</span>
+                  <span style="font-size:10px; color:#fbbf24;">${'★'.repeat(gen.star)}</span>
+                </div>
+                <div style="font-size:10px; color:#9ca3af; margin-top:2px;">
+                  自带: <b style="color:#fde047;">${bTactic?.name || '自带战法'}</b> (Lv.10)
+                </div>
+              </div>
+            </div>
+
+            <!-- 战法槽 1 与 战法槽 2 -->
+            <div style="display:flex; gap:6px;">
+              <div class="sandbox-tactic-badge btn-change-sandbox-tactic" data-slot="${slotIdx}" data-tslot="1" style="flex:1;">
+                <span style="font-size:10px; color:#9ca3af;">战法1:</span>
+                <span style="font-weight:bold; color:#6ee7b7;">${t1?.name || '+ 选战法'}</span>
+              </div>
+              <div class="sandbox-tactic-badge btn-change-sandbox-tactic" data-slot="${slotIdx}" data-tslot="2" style="flex:1;">
+                <span style="font-size:10px; color:#9ca3af;">战法2:</span>
+                <span style="font-weight:bold; color:#6ee7b7;">${t2?.name || '+ 选战法'}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      enemyPanelEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; flex-wrap:wrap; gap:6px;">
+          <div>
+            <div style="font-weight:800; font-size:15px; color:#f87171;">⚔️ 敌方假想军团</div>
+            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">等级：Lv.50 · 兵力：30,000 · 战法：Lv.10</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            ${armsHtml}
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${slotsHtml}
+        </div>
+      `;
+
+      // 绑定敌军兵种切换
+      enemyPanelEl.querySelectorAll('.btn-enemy-arm').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.state.customEnemyTroop.arm = btn.getAttribute('data-arm');
+          sound.playDrum();
+          this.renderSandbox();
+          this.save();
+        });
+      });
+
+      // 绑定更换敌将
+      enemyPanelEl.querySelectorAll('.btn-change-sandbox-hero').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const sIdx = parseInt(btn.getAttribute('data-slot'), 10);
+          this.openSandboxSelectModal('general', sIdx);
+        });
+      });
+
+      // 绑定更换战法
+      enemyPanelEl.querySelectorAll('.btn-change-sandbox-tactic').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const sIdx = parseInt(btn.getAttribute('data-slot'), 10);
+          const tSlot = parseInt(btn.getAttribute('data-tslot'), 10);
+          this.openSandboxSelectModal('tactic', sIdx, tSlot);
+        });
+      });
+    }
+  }
+
+  // 套用假想敌经典预设国家队
+  applySandboxPreset(presetKey) {
+    if (!this.state.customEnemyTroop) {
+      this.state.customEnemyTroop = { arm: 'spear', heroes: [] };
+    }
+
+    if (presetKey === 'shuguo') {
+      // 诸葛蜀枪
+      this.state.customEnemyTroop.name = '假想敌·天下第一蜀枪';
+      this.state.customEnemyTroop.arm = 'spear';
+      this.state.customEnemyTroop.heroes = [
+        { generalId: 'gen_zhu_ge_liang', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_ba_men_jin_suo', tactic2Id: 'tac_chen_huo_da_jie' },
+        { generalId: 'gen_liu_bei', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_yu_di_ping_zhang', tactic2Id: 'tac_zi_yu' },
+        { generalId: 'gen_guan_yu', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_suo_xiang_pi_mi', tactic2Id: 'tac_po_zhen_cui_jian' }
+      ];
+    } else if (presetKey === 'taowei') {
+      // 太尉真盾
+      this.state.customEnemyTroop.name = '假想敌·山岳太尉坚盾';
+      this.state.customEnemyTroop.arm = 'shield';
+      this.state.customEnemyTroop.heroes = [
+        { generalId: 'gen_si_ma_yi', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_suo_xiang_pi_mi', tactic2Id: 'tac_ba_men_jin_suo' },
+        { generalId: 'gen_cao_cao', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_yu_di_ping_zhang', tactic2Id: 'tac_zi_yu' },
+        { generalId: 'gen_guo_huai', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_fen_fa', tactic2Id: 'tac_shou_qi_dao_luo' }
+      ];
+    } else if (presetKey === 'dudu') {
+      // 都督神火弓
+      this.state.customEnemyTroop.name = '假想敌·东吴都督火弓';
+      this.state.customEnemyTroop.arm = 'bow';
+      this.state.customEnemyTroop.heroes = [
+        { generalId: 'gen_zhou_yu', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_luo_feng', tactic2Id: 'tac_ba_men_jin_suo' },
+        { generalId: 'gen_lu_xun', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_chen_huo_da_jie', tactic2Id: 'tac_suo_xiang_pi_mi' },
+        { generalId: 'gen_lv_meng', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_yu_di_ping_zhang', tactic2Id: 'tac_zuo_you_kai_gong' }
+      ];
+    } else if (presetKey === 'lvbu') {
+      // 无双三势骑
+      this.state.customEnemyTroop.name = '假想敌·无双突进暴骑';
+      this.state.customEnemyTroop.arm = 'cavalry';
+      this.state.customEnemyTroop.heroes = [
+        { generalId: 'gen_lv_bu', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_shou_qi_dao_luo', tactic2Id: 'tac_luo_feng' },
+        { generalId: 'gen_guo_jia', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_ba_men_jin_suo', tactic2Id: 'tac_yu_di_ping_zhang' },
+        { generalId: 'gen_diao_chan', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_zi_yu', tactic2Id: 'tac_fen_fa' }
+      ];
+    }
+
+    sound.playDrum();
+    this.renderSandbox();
+    this.save();
+  }
+
+  // 打开沙盒假想敌全图鉴武将或战法选择器 Modal
+  openSandboxSelectModal(type, slotIdx, tacticSlot = 1) {
+    if (!this.sandboxCustomModal) return;
+
+    if (type === 'general') {
+      this.sandboxModalTitle.innerHTML = `🎯 选择假想敌【${slotIdx === 0 ? '主将' : `副将${slotIdx}`}】`;
+      
+      // 渲染全武将列表
+      const generalsHtml = GENERALS_DATA.map(g => {
+        const camp = CAMPS[g.camp] || { name: '群', color: '#888' };
+        const bTactic = TACTICS_DATA.find(t => t.id === g.builtInTacticId);
+        const isCore = CORE_FIVE_STAR_IDS.has(g.id);
+
+        return `
+          <div class="general-card-item" data-gid="${g.id}" style="background:#151821; border:1px solid ${g.star === 5 ? (isCore ? '#e11d48' : '#d97706') : '#374151'}; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s ease;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:32px;">${g.avatar}</span>
+              <div>
+                <div style="font-size:14px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:6px;">
+                  <span>${g.name}</span>
+                  <span style="font-size:10px; background:${camp.color}; padding:1px 5px; border-radius:3px;">${camp.name}</span>
+                  <span style="font-size:11px; color:#fbbf24;">${'★'.repeat(g.star)}</span>
+                  ${isCore ? '<span style="font-size:10px; background:rgba(225,29,72,0.2); border:1px solid #e11d48; color:#fb7185; padding:0 4px; border-radius:3px;">大核心</span>' : ''}
+                </div>
+                <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
+                  自带战法: <b style="color:#fde047;">${bTactic?.name || '自带战法'}</b> · 统御: Cost ${g.cost}
+                </div>
+              </div>
+            </div>
+            <button class="upgrade-btn" style="padding:4px 12px; font-size:12px; background:linear-gradient(135deg, #059669 0%, #047857 100%);">选定</button>
+          </div>
+        `;
+      }).join('');
+
+      this.sandboxModalBody.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${generalsHtml}
+        </div>
+      `;
+
+      this.sandboxModalBody.querySelectorAll('.general-card-item').forEach(card => {
+        card.addEventListener('click', () => {
+          const gid = card.getAttribute('data-gid');
+          if (this.state.customEnemyTroop && this.state.customEnemyTroop.heroes[slotIdx]) {
+            this.state.customEnemyTroop.heroes[slotIdx].generalId = gid;
+            sound.playDrum();
+            this.sandboxCustomModal.style.display = 'none';
+            this.renderSandbox();
+            this.save();
+          }
+        });
+      });
+    } else if (type === 'tactic') {
+      const hCfg = this.state.customEnemyTroop.heroes[slotIdx];
+      const gen = GENERALS_DATA.find(g => g.id === hCfg?.generalId) || { name: '敌将' };
+      this.sandboxModalTitle.innerHTML = `🎯 为【${gen.name}】装配第 ${tacticSlot} 战法`;
+
+      const tacticsHtml = TACTICS_DATA.map(t => {
+        const typeMap = { command: { name: '指挥', color: '#60a5fa' }, passive: { name: '被动', color: '#34d399' }, active: { name: '主动', color: '#f59e0b' }, assault: { name: '突击', color: '#f87171' } };
+        const dmgBadgeMap = {
+          physical: { name: '⚔️ 兵刃', color: '#f87171' },
+          tactical: { name: '🔮 谋略', color: '#60a5fa' },
+          heal: { name: '🩹 急救', color: '#34d399' },
+          buff: { name: '🛡️ 增益', color: '#e879f9' },
+          debuff: { name: '⛓️ 控制', color: '#e879f9' }
+        };
+        const typeMeta = typeMap[t.type] || { name: '战法', color: '#9ca3af' };
+        const dmgType = t.damageType || (t.damageRate ? 'physical' : 'buff');
+        const dmgMeta = dmgBadgeMap[dmgType] || { name: '辅助', color: '#9ca3af' };
+
+        return `
+          <div class="tactic-select-item" data-tid="${t.id}" style="background:#151821; border:1px solid #2d3340; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s ease;">
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:8px;">
+                <span>${t.name}</span>
+                <span style="font-size:10px; background:${typeMeta.color}25; border:1px solid ${typeMeta.color}; color:${typeMeta.color}; padding:1px 5px; border-radius:3px;">${typeMeta.name}</span>
+                <span style="font-size:10px; background:${dmgMeta.color}25; border:1px solid ${dmgMeta.color}; color:${dmgMeta.color}; padding:1px 5px; border-radius:3px;">${dmgMeta.name}</span>
+                <span style="font-size:10px; color:#fbbf24;">发动率: ${t.rate}%</span>
+              </div>
+              <div style="font-size:11px; color:#9ca3af; margin-top:3px; line-height:1.4;">
+                ${t.desc || ''}
+              </div>
+            </div>
+            <button class="upgrade-btn" style="padding:4px 12px; font-size:12px; background:linear-gradient(135deg, #d97706 0%, #b45309 100%); margin-left:12px;">装配</button>
+          </div>
+        `;
+      }).join('');
+
+      this.sandboxModalBody.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${tacticsHtml}
+        </div>
+      `;
+
+      this.sandboxModalBody.querySelectorAll('.tactic-select-item').forEach(card => {
+        card.addEventListener('click', () => {
+          const tid = card.getAttribute('data-tid');
+          if (this.state.customEnemyTroop && this.state.customEnemyTroop.heroes[slotIdx]) {
+            if (tacticSlot === 1) {
+              this.state.customEnemyTroop.heroes[slotIdx].tactic1Id = tid;
+            } else {
+              this.state.customEnemyTroop.heroes[slotIdx].tactic2Id = tid;
+            }
+            sound.playDrum();
+            this.sandboxCustomModal.style.display = 'none';
+            this.renderSandbox();
+            this.save();
+          }
+        });
+      });
+    }
+
+    this.sandboxCustomModal.style.display = 'flex';
+  }
+
+  // 发起假想敌沙盒巅峰演习对决推演
+  launchSandboxBattle() {
+    const playerTroop = this.state.troops[this.state.currentTroopIndex || 0] || this.state.troops[0];
+    if (!playerTroop || (playerTroop.heroes || []).filter(Boolean).length === 0) {
+      alert('您的当前军团尚未配置武将，请先前往【编队】配置出战阵容！');
+      return;
+    }
+
+    sound.playDrum();
+
+    const enemyCfg = this.state.customEnemyTroop || {};
+    const enemyArm = enemyCfg.arm || 'spear';
+    const enemyHeroes = (enemyCfg.heroes || []).map((hCfg, idx) => {
+      const gen = GENERALS_DATA.find(g => g.id === hCfg.generalId) || GENERALS_DATA[0];
+      return {
+        ...gen,
+        id: `mock_enemy_${idx}_${Date.now()}`,
+        level: 50,
+        currentSoldiers: 10000,
+        maxSoldiers: 10000,
+        builtInTacticId: gen.builtInTacticId,
+        equippedTactic1: hCfg.tactic1Id,
+        equippedTactic2: hCfg.tactic2Id
+      };
+    });
+
+    const enemyTroop = {
+      name: enemyCfg.name || '假想敌军团',
+      arm: enemyArm,
+      isPlayer: false,
+      heroes: enemyHeroes
+    };
+
+    // 玩家武将在沙盒演习中以 Lv.50、10,000 兵满状态竞技对决
+    const mockPlayerTroop = {
+      ...playerTroop,
+      isPlayer: true,
+      heroes: playerTroop.heroes.map(h => ({
+        ...h,
+        level: 50,
+        currentSoldiers: 10000,
+        maxSoldiers: 10000
+      }))
+    };
+
+    // 执行 8 回合严谨物理伤害与战法判定推演 (双方战法统一强制满级 Lv.10 竞技)
+    const result = simulateBattle(mockPlayerTroop, enemyTroop, {
+      playerMorale: 100,
+      tacticLevels: new Proxy({}, { get: () => MAX_TACTIC_LEVEL }),
+      enemyTacticLevels: new Proxy({}, { get: () => MAX_TACTIC_LEVEL })
+    });
+
+    const isWin = (result.summary.winner === 'player');
+    if (isWin) {
+      sound.playVictoryHorn();
+    } else {
+      sound.playSwordClash();
+    }
+
+    const reportItem = {
+      id: `rep_${Date.now()}`,
+      time: new Date().toLocaleTimeString(),
+      tileName: `🎯 沙盒演习 · 对战【${enemyTroop.name}】`,
+      isVictory: isWin,
+      summary: result.summary,
+      logs: result.logs
+    };
+
+    this.state.battleReports.unshift(reportItem);
+    if (this.state.battleReports.length > 20) this.state.battleReports.pop();
+
+    this.save();
+    this.renderReports();
     this.openBattleDetailModal(reportItem);
   }
 
-  // ================= 2. 军团编制配置与武将上阵 =================
+  // ================= 2. 军团编制配置与武将上阵 (支持 5 支军团共存) =================
   renderTroops() {
     this.troopsContainer.innerHTML = '';
-    const troop = this.state.troops[0];
+    const currentIdx = Math.max(0, Math.min(4, this.state.currentTroopIndex || 0));
+    this.state.currentTroopIndex = currentIdx;
+
+    // 渲染 5 支军团切换导航
+    const troopTabsContainer = document.getElementById('troopTabsContainer');
+    if (troopTabsContainer) {
+      troopTabsContainer.innerHTML = '';
+      this.state.troops.forEach((t, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `troop-tab-btn ${currentIdx === idx ? 'active' : ''}`;
+        const heroCount = (t.heroes || []).filter(Boolean).length;
+        const armMeta = ARMS[t.arm] || { icon: '🛡️' };
+        btn.innerHTML = `
+          <span>${armMeta.icon} ${t.name}</span>
+          <span style="font-size:11px; opacity:0.8; background:rgba(0,0,0,0.3); padding:1px 5px; border-radius:3px;">${heroCount}/3</span>
+        `;
+        btn.addEventListener('click', () => {
+          this.state.currentTroopIndex = idx;
+          sound.playDrum();
+          this.renderTroops();
+          this.save();
+        });
+        troopTabsContainer.appendChild(btn);
+      });
+    }
+
+    const troop = this.state.troops[currentIdx] || this.state.troops[0];
     if (!troop) return;
 
     const el = document.createElement('div');
@@ -1229,13 +1899,18 @@ class GameApp {
     });
   }
 
-  // 选拔上阵弹窗
+  // 选拔上阵弹窗 (支持 5 支军团共存全局排重)
   openAssignHeroModal(troop, slotIdx) {
-    const assignedIds = new Set(troop.heroes.map(h => h.id));
+    const assignedIds = new Set(
+      this.state.troops.flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id))
+    );
+    if (troop.heroes[slotIdx]) {
+      assignedIds.delete(troop.heroes[slotIdx].id);
+    }
     const candidates = this.state.ownedGenerals.filter(g => !assignedIds.has(g.id));
 
     if (candidates.length === 0) {
-      alert('您没有未上阵的武将！请前往【招募】拜将台招揽名将。');
+      alert('背包中没有其他未上阵的闲置武将！请前往【招募】拜将台招揽更多名将。');
       return;
     }
 
@@ -1310,7 +1985,7 @@ class GameApp {
       return;
     }
 
-    const currentTroopHeroIds = new Set((this.state.troops[0]?.heroes || []).map(h => h.id));
+    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
 
     list.forEach(g => {
       const card = document.createElement('div');
@@ -1413,7 +2088,7 @@ class GameApp {
           `}
         </div>
 
-        <!-- 进阶升星与售出操作 -->
+        <!-- 进阶升星与解甲操作 -->
         <div style="display:flex; gap:4px; width:100%;">
           ${canPromote ? `
             <button class="upgrade-btn btn-promote-hero" style="flex:1; padding:3px 0; font-size:10px; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
@@ -1428,8 +2103,8 @@ class GameApp {
               暂无同名卡
             </span>
           `}
-          <button class="upgrade-btn btn-sell-hero" style="padding:3px 8px; font-size:10px; background:${isInTroop?'#374151':'#4b5563'};" ${isInTroop?'disabled title="已在出征军团中，不可售出"':''}>
-            ${isInTroop ? '出征中' : '售出'}
+          <button class="upgrade-btn btn-sell-hero" style="padding:3px 8px; font-size:10px; background:${isInTroop ? '#374151' : (g.star >= 5 ? 'linear-gradient(135deg, #b45309 0%, #78350f 100%)' : (g.star === 4 ? '#5b21b6' : '#4b5563'))};" ${isInTroop ? 'disabled title="已在出征军团中，不可解甲"' : `title="解甲归田可获 ${g.star === 5 ? '5,000' : (g.star === 4 ? '1,000' : '300')} 铜币"`}>
+            ${isInTroop ? '出征中' : `解甲(${g.star === 5 ? '5千' : (g.star === 4 ? '1千' : '3百')})`}
           </button>
         </div>
       `;
@@ -1502,7 +2177,7 @@ class GameApp {
       return;
     }
 
-    const currentTroopHeroIds = new Set((this.state.troops[0]?.heroes || []).map(h => h.id));
+    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
     if (currentTroopHeroIds.has(hero.id)) {
       alert(`武将【${hero.name}】正在主力出征军团中，不可献祭传承！`);
       return;
@@ -1555,7 +2230,7 @@ class GameApp {
   // 一键同名卡升星进阶
   quickAutoPromote() {
     let promotedCount = 0;
-    const currentTroopHeroIds = new Set((this.state.troops[0]?.heroes || []).map(h => h.id));
+    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
 
     // 优先以已上阵或高星卡作为进阶主体
     for (const mainHero of this.state.ownedGenerals) {
@@ -1592,10 +2267,17 @@ class GameApp {
     alert(`🎉【一键升星圆满】共计完成 ${promotedCount} 次红度进阶！麾下核心武将战力大幅跃升！`);
   }
 
-  // 单卡售出
+  // 单卡售出 (自由解甲：3星300 / 4星1000 / 5星5000)
   sellHero(hero) {
     const goldBack = (hero.star === 5 ? 5000 : hero.star === 4 ? 1000 : 300);
-    if (!confirm(`确认遣散武将【${hero.name} (${hero.star}★)】解甲归田吗？\n将返还主公 ${goldBack} 铜币！`)) return;
+    const starStr = '★'.repeat(hero.star);
+
+    // 5星名将解甲时给予格外庄重的敬告提示
+    const warnPrefix = hero.star === 5 
+      ? `👑【五星名将解甲确认】\n\n主公切莫误触！武将【${hero.name} (${starStr})】乃世之名宿！` 
+      : `🪙【武将解甲归田确认】\n\n主公，确认遣散武将【${hero.name} (${starStr})】吗？`;
+
+    if (!confirm(`${warnPrefix}\n解甲后将永久遣散该武将，并为国库返还 🪙 ${goldBack.toLocaleString()} 铜币（用于研习战法）！`)) return;
 
     const idx = this.state.ownedGenerals.findIndex(x => x.id === hero.id);
     if (idx >= 0) {
@@ -1605,12 +2287,13 @@ class GameApp {
       this.save();
       this.renderGenerals();
       this.renderHUD();
+      alert(`✔ 成功遣散【${hero.name}】，获得 🪙 ${goldBack.toLocaleString()} 铜币！`);
     }
   }
 
   // 一键解甲全部3星将
   quickSellThreeStars() {
-    const currentTroopHeroIds = new Set((this.state.troops[0]?.heroes || []).map(h => h.id));
+    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
     const threeStars = this.state.ownedGenerals.filter(g => g.star === 3 && !currentTroopHeroIds.has(g.id));
 
     if (threeStars.length === 0) {
@@ -1628,6 +2311,29 @@ class GameApp {
     this.renderGenerals();
     this.renderHUD();
     alert(`🪙【一键清包完成】成功遣散 ${threeStars.length} 位 3 星武将，获得 ${threeStars.length * 300} 铜币！`);
+  }
+
+  // 一键解甲全部闲置4星将
+  quickSellFourStars() {
+    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
+    const fourStars = this.state.ownedGenerals.filter(g => g.star === 4 && !currentTroopHeroIds.has(g.id));
+
+    if (fourStars.length === 0) {
+      alert('当前背包中没有未上阵的 4 星闲置良将！');
+      return;
+    }
+
+    const copperTotal = fourStars.length * 1000;
+    if (!confirm(`⚠️【一键解甲4星良将确认】\n\n主公，确认一键遣散背包中全部 ${fourStars.length} 位【未上阵的 4 星良将】吗？\n遣散后将直接获得 🪙 ${copperTotal.toLocaleString()} 铜币，用于战法研习升级！`)) return;
+
+    this.state.ownedGenerals = this.state.ownedGenerals.filter(g => !(g.star === 4 && !currentTroopHeroIds.has(g.id)));
+    this.state.resources.copper = (this.state.resources.copper || 0) + copperTotal;
+
+    sound.playGoldChime();
+    this.save();
+    this.renderGenerals();
+    this.renderHUD();
+    alert(`🎉【一键解甲大捷】成功遣散 ${fourStars.length} 位 4 星良将，获得 🪙 ${copperTotal.toLocaleString()} 铜币！`);
   }
 
   openEquipTacticModal(hero, slot = 1) {
@@ -1810,10 +2516,48 @@ class GameApp {
     const ownedTacticsSet = new Set(this.state.ownedTactics || []);
     const currentTroopHeroIds = new Set((this.state.troops[0]?.heroes || []).map(h => h.id));
 
-    // 获取全部传承战法列表
+    // 获取全部传承战法列表并进行多维筛选
     const allInheritableTactics = Object.keys(TACTIC_INHERIT_SOURCES).map(id => TACTICS_MAP.get(id)).filter(Boolean);
 
-    allInheritableTactics.forEach(tac => {
+    // 联合多维过滤 (等级、机制类型、伤害/作用性质)
+    const filteredTactics = allInheritableTactics.filter(tac => {
+      const isUnlocked = ownedTacticsSet.has(tac.id);
+      const currentLvl = this.state.tacticLevels[tac.id] || 1;
+      const isMax = (currentLvl >= MAX_TACTIC_LEVEL);
+
+      // 1. 等级筛选
+      if (this.tacticFilter.level === 'max' && (!isUnlocked || !isMax)) return false;
+      if (this.tacticFilter.level === 'learning' && (!isUnlocked || isMax)) return false;
+      if (this.tacticFilter.level === 'locked' && isUnlocked) return false;
+
+      // 2. 战法机制类型筛选 (指挥 command, 被动 passive, 主动 active, 突击 assault)
+      if (this.tacticFilter.type !== 'all' && tac.type !== this.tacticFilter.type) return false;
+
+      // 3. 伤害/作用性质筛选 (兵刃 physical, 谋略 tactical, 治疗 heal, 增益控制 buff/debuff)
+      if (this.tacticFilter.damageType !== 'all') {
+        const dmgType = tac.damageType || (tac.damageRate ? 'physical' : 'buff');
+        if (this.tacticFilter.damageType === 'buff') {
+          if (dmgType !== 'buff' && dmgType !== 'debuff') return false;
+        } else if (dmgType !== this.tacticFilter.damageType) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    if (filteredTactics.length === 0) {
+      this.tacticsUpgradeContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: #9ca3af; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed #374151;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+          <div style="font-size: 14px; font-weight: bold; color: #e5e7eb;">未找到符合筛选条件的战法</div>
+          <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">可尝试切换顶部筛选标签，查看其他类型或等级的传承战法。</div>
+        </div>
+      `;
+      return;
+    }
+
+    filteredTactics.forEach(tac => {
       const isUnlocked = ownedTacticsSet.has(tac.id);
       const sourceInfo = TACTIC_INHERIT_SOURCES[tac.id];
       const sourceNames = sourceInfo ? sourceInfo.names : [];
@@ -1823,6 +2567,17 @@ class GameApp {
       const typeClass = `tactic-type-${tac.type}`;
 
       const card = document.createElement('div');
+
+      // 伤害/作用性质标签
+      const dmgType = tac.damageType || (tac.damageRate ? 'physical' : 'buff');
+      const dmgBadgeMap = {
+        physical: '<span style="font-size:10px; color:#f87171; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); padding:1px 5px; border-radius:3px;">⚔️ 兵刃</span>',
+        tactical: '<span style="font-size:10px; color:#60a5fa; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); padding:1px 5px; border-radius:3px;">🔮 谋略</span>',
+        heal: '<span style="font-size:10px; color:#34d399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); padding:1px 5px; border-radius:3px;">🩹 急救</span>',
+        buff: '<span style="font-size:10px; color:#e879f9; background:rgba(217,70,239,0.15); border:1px solid rgba(217,70,239,0.4); padding:1px 5px; border-radius:3px;">🛡️ 增益</span>',
+        debuff: '<span style="font-size:10px; color:#e879f9; background:rgba(217,70,239,0.15); border:1px solid rgba(217,70,239,0.4); padding:1px 5px; border-radius:3px;">⛓️ 控制</span>'
+      };
+      const dmgBadgeHtml = dmgBadgeMap[dmgType] || dmgBadgeMap.buff;
 
       if (isUnlocked) {
         // ========== 1. 已解锁战法：研习与升级 ==========
@@ -1859,6 +2614,7 @@ class GameApp {
               <span style="font-weight:bold; color:#fbbf24; font-size:15px;">${tac.name}</span>
               <div style="display:flex; gap:4px; align-items:center;">
                 <span class="tactic-type-tag ${typeClass}">${typeMap[tac.type] || tac.type}</span>
+                ${dmgBadgeHtml}
                 <span style="font-size:11px; font-weight:bold; color:${tac.quality==='S'?'#fbbf24':'#c084fc'}; border:1px solid currentColor; padding:1px 4px; border-radius:3px;">${tac.quality}级</span>
               </div>
             </div>
@@ -1914,6 +2670,7 @@ class GameApp {
               <span style="font-weight:bold; color:#9ca3af; font-size:15px;">🔒 ${tac.name}</span>
               <div style="display:flex; gap:4px; align-items:center;">
                 <span class="tactic-type-tag ${typeClass}">${typeMap[tac.type] || tac.type}</span>
+                ${dmgBadgeHtml}
                 <span style="font-size:11px; font-weight:bold; color:#6b7280; border:1px solid currentColor; padding:1px 4px; border-radius:3px;">${tac.quality}级</span>
               </div>
             </div>
@@ -2000,11 +2757,19 @@ class GameApp {
     const pulledCards = [];
 
     for (let i = 0; i < count; i++) {
+      this.state.totalGachaCount = (this.state.totalGachaCount || 0) + 1;
       const pityFive = this.state.gachaPity || 0;
       const pityFour = this.state.gachaFourPity || 0;
       const res = pullGeneral(poolType, pityFive, pityFour);
 
       if (isFamous) {
+        if (res.general.star >= 5) {
+          this.state.totalFiveStarCount = (this.state.totalFiveStarCount || 0) + 1;
+          if (res.isCore) {
+            this.state.totalCoreCount = (this.state.totalCoreCount || 0) + 1;
+          }
+        }
+
         if (res.resetFivePity) {
           this.state.gachaPity = 0;
         } else {
@@ -2019,8 +2784,11 @@ class GameApp {
       }
 
       pulledCards.push(res.general);
+      const instanceId = `${res.general.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
       this.state.ownedGenerals.push({
         ...res.general,
+        id: instanceId,
+        templateId: res.general.id,
         level: res.general.star >= 5 ? 10 : 5,
         exp: 0,
         currentSoldiers: (res.general.star >= 5 ? 10 : 5) * 200,
@@ -2031,11 +2799,14 @@ class GameApp {
     }
 
     // 判定本次抽卡最高品质（出金 / 出紫）
+    const hasCoreStar = pulledCards.some(c => c.isCore);
     const hasFiveStar = pulledCards.some(c => c.star >= 5);
     const hasFourStar = pulledCards.some(c => c.star === 4);
 
     // 播放专属音效与视听反馈
-    if (hasFiveStar) {
+    if (hasCoreStar) {
+      sound.playVictoryHorn();
+    } else if (hasFiveStar) {
       sound.playGachaGold();
     } else if (hasFourStar) {
       sound.playGachaPurple();
@@ -2061,6 +2832,7 @@ class GameApp {
 
     pulledCards.forEach((c, idx) => {
       const isFive = (c.star >= 5);
+      const isCore = c.isCore;
       const isFour = (c.star === 4);
       const qualityClass = isFive ? 'gacha-card-gold' : (isFour ? 'gacha-card-purple' : '');
 
@@ -2089,7 +2861,7 @@ class GameApp {
             <div class="avatar-box" style="font-size:46px;">${c.avatar}</div>
             <div class="hero-name" style="font-size:15px; margin:4px 0;">${c.name}</div>
             <div class="stars-row" style="${starClass} font-size:14px; letter-spacing:2px; margin-bottom:4px;">${starStr}</div>
-            ${isFive ? '<div class="gacha-gold-badge">5★神将</div>' : ''}
+            ${isCore ? '<div class="gacha-gold-badge" style="background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); border:1px solid #f43f5e; box-shadow:0 0 8px #f43f5e;">👑 绝世核心</div>' : (isFive ? '<div class="gacha-gold-badge">5★神将</div>' : '')}
             ${isFour ? '<div class="gacha-purple-badge">4★良将</div>' : ''}
           </div>
         </div>
@@ -2103,10 +2875,17 @@ class GameApp {
 
         // 翻到半途（300ms）触发金光/紫光音效与环境光增强
         setTimeout(() => {
-          if (isFive) {
-            sound.playGachaGold();
+          if (isCore) {
+            sound.playVictoryHorn();
             this.gachaShowcase.classList.add('has-gold');
             if (this.gachaShowcaseTitle) {
+              this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
+              this.gachaShowcaseTitle.innerHTML = '👑 乾坤震动 · 恭迎绝世核心神将！';
+            }
+          } else if (isFive) {
+            sound.playGachaGold();
+            this.gachaShowcase.classList.add('has-gold');
+            if (this.gachaShowcaseTitle && !this.gachaShowcaseTitle.innerHTML.includes('绝世核心')) {
               this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
               this.gachaShowcaseTitle.innerHTML = '🌟 华光万道 · 恭迎五星神将！';
             }
@@ -2186,6 +2965,10 @@ class GameApp {
     const pArmObj = ARMS[s.playerArm] || { name: '主力', icon: '⚔️' };
     const eArmObj = ARMS[s.enemyArm] || { name: '守军', icon: '🛡️' };
 
+    // 提取双方武将姓名集合，用于日志容错兼容高亮
+    const pNames = new Set((s.playerHeroStats || []).map(h => h.name));
+    const eNames = new Set((s.enemyHeroStats || []).map(h => h.name));
+
     // 格式化单阵营武将卡片列表
     const renderHeroList = (heroes, isPlayer) => {
       return (heroes || []).map(h => {
@@ -2215,7 +2998,7 @@ class GameApp {
               </div>
               <div style="text-align:right; font-size:11px;">
                 <div style="color:${isPlayer ? '#34d399' : '#f87171'}; font-weight:bold;">余兵: ${h.remaining} / ${h.initial}</div>
-                <div style="color:#9ca3af; font-size:10px;">造成伤害: <b style="color:#fde047;">${h.damage || 0}</b> | 治疗: <b style="color:#6ee7b7;">${h.heals || 0}</b></div>
+                <div style="color:#9ca3af; font-size:10px;">造成伤害: <b class="battle-num-dmg" style="color:#ef4444;">${h.damage || 0}</b> | 治疗: <b class="battle-num-heal" style="color:#10b981;">${h.heals || 0}</b></div>
               </div>
             </div>
             <div class="lineup-hero-tactics">
@@ -2226,18 +3009,33 @@ class GameApp {
       }).join('');
     };
 
-    // 格式化日志，自动标注 [我军] 与 [敌军]
-    const pNames = new Set((s.playerHeroStats || []).map(h => h.name));
-    const eNames = new Set((s.enemyHeroStats || []).map(h => h.name));
-
+    // 格式化日志，自动标注 [我军] 与 [敌军]，并将伤害数字置红、治疗数字置绿 (三战原版经典战报呈现)
     const formattedLogs = (rep.logs || []).map(l => {
-      let txt = l.text;
+      let txt = l.text || '';
+      // 1. 若日志已自带原生阵营前缀（我军·XX 或 敌军·XX），直接正则转换为高亮标签
+      txt = txt.replace(/【我军·([^】]+)】/g, '【<span class="tag-player">我军·$1</span>】');
+      txt = txt.replace(/【敌军·([^】]+)】/g, '【<span class="tag-enemy">敌军·$1</span>】');
+
+      // 2. 兼容历史旧日志中未带前缀的武将名字（仅在非重名或特定上下文中补充）
       pNames.forEach(name => {
+        if (eNames.has(name)) return;
         txt = txt.replaceAll(`【${name}】`, `【<span class="tag-player">我军·${name}</span>】`);
       });
       eNames.forEach(name => {
+        if (pNames.has(name)) return;
         txt = txt.replaceAll(`【${name}】`, `【<span class="tag-enemy">敌军·${name}</span>】`);
       });
+
+      // 3. 🎯 三战原版战报核心：精准将【造成/受到/承受伤害数字】标记为鲜红色
+      // 匹配形如：造成 1234 点 / 受到 567 点 / 承受 890 点 / 反弹 120 点 / 转移至...承受 345 点伤害
+      txt = txt.replace(/(造成|受到|承受|反弹|转移(?:至.*?承受)?)\s*(\d+)\s*(点(?:兵刃|谋略|溃逃|叛逃|火攻|水攻|稳定|致命|反弹)?伤害)/g, '$1 <span class="battle-num-dmg">-$2</span> $3');
+      // 匹配形如：造成了 1234 点伤害
+      txt = txt.replace(/(造成了)\s*(\d+)\s*(点(?:兵刃|谋略)?伤害)/g, '$1 <span class="battle-num-dmg">-$2</span> $3');
+
+      // 4. 🎯 三战原版战报核心：精准将【治疗/恢复兵力数字】标记为翡翠绿色
+      // 匹配形如：恢复 680 点兵力 / 恢复自身 500 点兵力 / 治愈 350 点兵力 / 驱散负面并恢复 450 点兵力
+      txt = txt.replace(/(恢复(?:自身|友军|群体|兵力)?|治愈|急救)\s*(\d+)\s*(点兵力|点伤兵|点气血)/g, '$1 <span class="battle-num-heal">+$2</span> $3');
+
       return `<div class="battle-log-item ${l.type}">${txt}</div>`;
     }).join('');
 
@@ -2291,15 +3089,205 @@ class GameApp {
         </div>
       </div>
 
-      <!-- 标签切换：阵容概要与8回合推演日志 -->
-      <div class="modal-tab-nav">
-        <button class="modal-tab-btn active" id="btnModalTabLogs">📜 8回合沙盘实战推演日志</button>
+      <!-- 标签切换：8回合推演日志 VS 战报数据统计 (三战原版经典双重视角) -->
+      <div class="modal-tab-nav" style="display:flex; gap:8px; margin: 12px 0 8px 0; border-bottom:1px solid #374151; padding-bottom:6px;">
+        <button class="modal-tab-btn active" id="btnModalTabLogs" style="padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer;">
+          📜 8回合实战推演日志
+        </button>
+        <button class="modal-tab-btn" id="btnModalTabStats" style="padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer; color:#fbbf24; border:1px solid #d97706; background:rgba(217,119,6,0.15); border-radius:4px;">
+          📊 对战数据统计 (原版战报)
+        </button>
       </div>
 
+      <!-- 1. 实战日志容器 -->
       <div id="modalLogsContainer" style="display:flex; flex-direction:column; gap:3px;">
         ${formattedLogs}
       </div>
+
+      <!-- 2. 对战数据统计全息容器 (默认隐藏) -->
+      <div id="modalStatsContainer" style="display:none;" class="battle-stats-container">
+        <!-- 动态由内部构建填充 -->
+      </div>
     `;
+
+    // ========== 构建对战统计看板内容 ==========
+    const statsContainer = this.battleDetailBody.querySelector('#modalStatsContainer');
+    if (statsContainer) {
+      const allHeroStats = [...(s.playerHeroStats || []), ...(s.enemyHeroStats || [])];
+      
+      // 1. 计算全场 MVP 称号
+      let topDmgHero = null;
+      let topHealHero = null;
+      let topTankHero = null;
+
+      allHeroStats.forEach(h => {
+        if (!topDmgHero || (h.damage || 0) > (topDmgHero.damage || 0)) topDmgHero = h;
+        if (!topHealHero || (h.heals || 0) > (topHealHero.heals || 0)) topHealHero = h;
+        if (!topTankHero || (h.losses || 0) > (topTankHero.losses || 0)) topTankHero = h;
+      });
+
+      const maxDmgInMatch = Math.max(1, ...(allHeroStats.map(h => h.damage || 0)));
+      const maxHealInMatch = Math.max(1, ...(allHeroStats.map(h => h.heals || 0)));
+      const maxLossInMatch = Math.max(1, ...(allHeroStats.map(h => h.losses || 0)));
+
+      // 渲染单支队伍的武将数据行
+      const renderTeamStatsRows = (heroList, isPlayer) => {
+        return (heroList || []).map(h => {
+          const campObj = CAMPS[h.camp] || { name: '群', color: '#888' };
+          const dmgPct = Math.min(100, Math.round(((h.damage || 0) / maxDmgInMatch) * 100));
+          const healPct = Math.min(100, Math.round(((h.heals || 0) / maxHealInMatch) * 100));
+          const lossPct = Math.min(100, Math.round(((h.losses || 0) / maxLossInMatch) * 100));
+
+          return `
+            <tr>
+              <td style="min-width:140px;">
+                <div class="stats-hero-col">
+                  <span style="font-size:20px;">${h.avatar || '👤'}</span>
+                  <div>
+                    <div style="display:flex; align-items:center; gap:4px;">
+                      <span style="font-weight:bold; color:#fff;">${h.name}</span>
+                      <span style="font-size:9px; background:${campObj.color}; color:#fff; border-radius:2px; padding:0 3px;">${campObj.name}</span>
+                      ${h.isLeader ? '<span style="font-size:9px; background:#d97706; color:#fff; border-radius:2px; padding:0 2px;">主</span>' : ''}
+                    </div>
+                    <div style="font-size:10px; color:#9ca3af; margin-top:2px;">
+                      ${(h.tactics || []).map(t => t.name).join(' · ')}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div style="font-weight:bold; color:${h.remaining > 0 ? (isPlayer ? '#34d399' : '#f87171') : '#6b7280'};">
+                  ${h.remaining} <span style="font-size:10px; color:#6b7280;">/ ${h.initial}</span>
+                </div>
+                <div style="font-size:10px; color:#9ca3af;">战损 -${h.losses}</div>
+              </td>
+              <td style="min-width:110px;">
+                <div style="font-weight:800; color:#ef4444; font-size:13px;">${(h.damage || 0).toLocaleString()}</div>
+                <div class="stats-bar-track" title="全场输出占比: ${dmgPct}%">
+                  <div class="stats-bar-fill damage" style="width: ${dmgPct}%;"></div>
+                </div>
+              </td>
+              <td style="min-width:100px;">
+                <div style="font-weight:800; color:#10b981; font-size:13px;">${(h.heals || 0).toLocaleString()}</div>
+                <div class="stats-bar-track" title="全场治疗占比: ${healPct}%">
+                  <div class="stats-bar-fill heal" style="width: ${healPct}%;"></div>
+                </div>
+              </td>
+              <td style="min-width:100px;">
+                <div style="font-weight:bold; color:#93c5fd; font-size:12px;">-${(h.losses || 0).toLocaleString()}</div>
+                <div class="stats-bar-track" title="承伤战损占比: ${lossPct}%">
+                  <div class="stats-bar-fill tank" style="width: ${lossPct}%;"></div>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      };
+
+      statsContainer.innerHTML = `
+        <!-- 全场巅峰荣耀 MVP 展板 -->
+        <div class="battle-mvp-banner">
+          <div class="mvp-badge-item">
+            <span class="mvp-tag damage">🗡️ 全场输出之王</span>
+            <span style="font-size:16px;">${topDmgHero?.avatar || '👤'}</span>
+            <span style="font-weight:bold; color:#fff; font-size:13px;">${topDmgHero?.name || '无'}</span>
+            <b style="color:#ef4444; font-size:13px;">(${(topDmgHero?.damage || 0).toLocaleString()} 杀伤)</b>
+          </div>
+          ${(topHealHero && topHealHero.heals > 0) ? `
+            <div class="mvp-badge-item">
+              <span class="mvp-tag heal">🩹 妙手回春先驱</span>
+              <span style="font-size:16px;">${topHealHero.avatar || '👤'}</span>
+              <span style="font-weight:bold; color:#fff; font-size:13px;">${topHealHero.name}</span>
+              <b style="color:#10b981; font-size:13px;">(+${topHealHero.heals.toLocaleString()} 恢复)</b>
+            </div>
+          ` : ''}
+          <div class="mvp-badge-item">
+            <span class="mvp-tag tank">🛡️ 铁壁金汤承伤</span>
+            <span style="font-size:16px;">${topTankHero?.avatar || '👤'}</span>
+            <span style="font-weight:bold; color:#fff; font-size:13px;">${topTankHero?.name || '无'}</span>
+            <b style="color:#93c5fd; font-size:13px;">(-${(topTankHero?.losses || 0).toLocaleString()} 承受)</b>
+          </div>
+        </div>
+
+        <!-- 🛡️ 我军数据统计表格 -->
+        <div class="stats-table-wrapper">
+          <div class="stats-table-header player">
+            <span>🛡️ 我军出征军团 · 数据统计 (${pArmObj.icon} ${pArmObj.name})</span>
+            <span style="font-size:11px; font-weight:normal; color:#a7f3d0;">
+              总输出: <b style="color:#ef4444;">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
+            </span>
+          </div>
+          <table class="stats-grid-table">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding-left:12px;">参战名将与战法</th>
+                <th>剩余/总兵力</th>
+                <th>造成伤害</th>
+                <th>恢复兵力</th>
+                <th>承受战损</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderTeamStatsRows(s.playerHeroStats, true)}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 🏯 敌军数据统计表格 -->
+        <div class="stats-table-wrapper">
+          <div class="stats-table-header enemy">
+            <span>🏯 敌军守备军团 · 数据统计 (${eArmObj.icon} ${eArmObj.name})</span>
+            <span style="font-size:11px; font-weight:normal; color:#fca5a5;">
+              总输出: <b style="color:#ef4444;">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
+            </span>
+          </div>
+          <table class="stats-grid-table">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding-left:12px;">守军将领与战法</th>
+                <th>剩余/总兵力</th>
+                <th>造成伤害</th>
+                <th>恢复兵力</th>
+                <th>承受战损</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderTeamStatsRows(s.enemyHeroStats, false)}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // 绑定【实战日志】与【对战统计】选项卡切换
+    const btnLogs = this.battleDetailBody.querySelector('#btnModalTabLogs');
+    const btnStats = this.battleDetailBody.querySelector('#btnModalTabStats');
+    const logsContainer = this.battleDetailBody.querySelector('#modalLogsContainer');
+
+    if (btnLogs && btnStats && logsContainer && statsContainer) {
+      btnLogs.addEventListener('click', () => {
+        btnLogs.classList.add('active');
+        btnLogs.style.background = '';
+        btnLogs.style.color = '#fff';
+        btnStats.classList.remove('active');
+        btnStats.style.background = 'rgba(217,119,6,0.15)';
+        logsContainer.style.display = 'flex';
+        statsContainer.style.display = 'none';
+        sound.playDrum();
+      });
+
+      btnStats.addEventListener('click', () => {
+        btnStats.classList.add('active');
+        btnStats.style.background = 'linear-gradient(135deg, #d97706 0%, #b45309 100%)';
+        btnStats.style.color = '#fff';
+        btnLogs.classList.remove('active');
+        btnLogs.style.background = '#1f2937';
+        btnLogs.style.color = '#9ca3af';
+        logsContainer.style.display = 'none';
+        statsContainer.style.display = 'flex';
+        sound.playDrum();
+      });
+    }
 
     this.battleDetailModal.style.display = 'flex';
   }

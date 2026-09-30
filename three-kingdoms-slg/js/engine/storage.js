@@ -34,7 +34,13 @@ export function createInitialGameState() {
     infiniteGold: true,
     campaignProgress: {}, // 关卡ID -> { stars: 3, cleared: true }
     trialFloor: 1, // 当前演武层数
-    mapTiles: generateWorldMap(), // 9x9沙盘大地图
+    mapTiles: generateWorldMap(), // 9x9沙盘大地图 (兼顾兼容)
+    resourceLands: { // 战棋版四大资源领地开拓进度 (木/铁/石/粮)
+      wood: { maxOccupiedLevel: 1 },
+      iron: { maxOccupiedLevel: 1 },
+      stone: { maxOccupiedLevel: 1 },
+      grain: { maxOccupiedLevel: 1 }
+    },
     buildings: {
       palace: 1, // 君王殿 Lv.1
       barracks: 0, // 兵营
@@ -70,13 +76,69 @@ export function createInitialGameState() {
       },
       {
         id: 'troop_2',
-        name: '第二军团·游骑',
+        name: '第二军团·神射营',
         arm: 'bow',
+        heroes: [ownedGenerals[3]], // 韩当(弓神)
+        status: 'idle'
+      },
+      {
+        id: 'troop_3',
+        name: '第三军团·铁骑营',
+        arm: 'cavalry',
+        heroes: [],
+        status: 'idle'
+      },
+      {
+        id: 'troop_4',
+        name: '第四军团·陷阵营',
+        arm: 'spear',
+        heroes: [],
+        status: 'idle'
+      },
+      {
+        id: 'troop_5',
+        name: '第五军团·器械宿卫',
+        arm: 'siege',
         heroes: [],
         status: 'idle'
       }
     ],
-    gachaPity: 0,
+    currentTroopIndex: 0, // 当前出征选中的军团索引 (0~4)
+    gachaPity: 0, // 距离5星保底已抽次数
+    gachaPityFour: 0, // 距离4星保底已抽次数
+    totalGachaCount: 0, // 历史累计抽卡总次数
+    totalFiveStarCount: 0, // 历史累计获得5星总数
+    totalCoreCount: 0, // 历史累计获得大核心总数
+    customEnemyTroop: { // 自定义敌方演习阵容 (默认预设经典神将阵容：诸葛亮+刘备+关羽)
+      name: '演习假想敌·天王神武军',
+      arm: 'spear',
+      heroes: [
+        {
+          generalId: 'gen_zhu_ge_liang', // 主将诸葛亮
+          level: 50,
+          currentSoldiers: 10000,
+          maxSoldiers: 10000,
+          tactic1Id: 'tac_ba_men_jin_suo',
+          tactic2Id: 'tac_chen_huo_da_jie'
+        },
+        {
+          generalId: 'gen_liu_bei', // 副将刘备
+          level: 50,
+          currentSoldiers: 10000,
+          maxSoldiers: 10000,
+          tactic1Id: 'tac_yu_di_ping_zhang',
+          tactic2Id: 'tac_zi_yu'
+        },
+        {
+          generalId: 'gen_guan_yu', // 副将关羽
+          level: 50,
+          currentSoldiers: 10000,
+          maxSoldiers: 10000,
+          tactic1Id: 'tac_suo_xiang_pi_mi',
+          tactic2Id: 'tac_po_zhen_cui_jian'
+        }
+      ]
+    },
     battleReports: []
   };
 }
@@ -86,6 +148,63 @@ export function loadGameState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return createInitialGameState();
     const data = JSON.parse(raw);
+
+    // 确保 5 支军团槽位完整
+    if (!data.troops || data.troops.length < 5) {
+      const defaultNames = ['第一军团·先锋营', '第二军团·神射营', '第三军团·铁骑营', '第四军团·陷阵营', '第五军团·器械营'];
+      const defaultArms = ['shield', 'bow', 'cavalry', 'spear', 'siege'];
+      const existing = data.troops || [];
+      for (let i = existing.length; i < 5; i++) {
+        existing.push({
+          id: `troop_${i + 1}`,
+          name: defaultNames[i] || `第${i + 1}军团`,
+          arm: defaultArms[i] || 'spear',
+          heroes: [],
+          status: 'idle'
+        });
+      }
+      data.troops = existing;
+    }
+
+    if (data.currentTroopIndex === undefined) data.currentTroopIndex = 0;
+
+    // 确保抽卡累计次数完整
+    if (data.totalGachaCount === undefined) data.totalGachaCount = 0;
+    if (data.totalFiveStarCount === undefined) data.totalFiveStarCount = 0;
+    if (data.totalCoreCount === undefined) data.totalCoreCount = 0;
+    if (data.gachaPityFour === undefined) data.gachaPityFour = 0;
+
+    // 确保演习假想敌结构完整
+    if (!data.customEnemyTroop) {
+      data.customEnemyTroop = {
+        name: '演习假想敌·天王神武军',
+        arm: 'spear',
+        heroes: [
+          { generalId: 'gen_zhu_ge_liang', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_ba_men_jin_suo', tactic2Id: 'tac_chen_huo_da_jie' },
+          { generalId: 'gen_liu_bei', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_yu_di_ping_zhang', tactic2Id: 'tac_zi_yu' },
+          { generalId: 'gen_guan_yu', level: 50, currentSoldiers: 10000, maxSoldiers: 10000, tactic1Id: 'tac_suo_xiang_pi_mi', tactic2Id: 'tac_po_zhen_cui_jian' }
+        ]
+      };
+    }
+
+    // 确保 resourceLands 结构存在
+    if (!data.resourceLands) {
+      data.resourceLands = {
+        wood: { maxOccupiedLevel: 1 },
+        iron: { maxOccupiedLevel: 1 },
+        stone: { maxOccupiedLevel: 1 },
+        grain: { maxOccupiedLevel: 1 }
+      };
+      // 从老 mapTiles 中继承最高等级
+      (data.mapTiles || []).forEach(tile => {
+        if (tile.occupiedByPlayer && tile.level > 0 && data.resourceLands[tile.resType]) {
+          data.resourceLands[tile.resType].maxOccupiedLevel = Math.max(
+            data.resourceLands[tile.resType].maxOccupiedLevel,
+            tile.level
+          );
+        }
+      });
+    }
 
     // 计算挂机收益
     const now = Date.now();
@@ -98,16 +217,20 @@ export function loadGameState() {
       let stonePerHour = 600;
       let grainPerHour = 600;
 
-      (data.mapTiles || []).forEach(tile => {
-        if (tile.occupiedByPlayer && tile.level > 0) {
-          const cfg = LAND_TIERS[tile.level];
-          if (cfg) {
-            if (tile.resType === 'wood') woodPerHour += cfg.prodPerHour;
-            if (tile.resType === 'iron') ironPerHour += cfg.prodPerHour;
-            if (tile.resType === 'stone') stonePerHour += cfg.prodPerHour;
-            if (tile.resType === 'grain') grainPerHour += cfg.prodPerHour;
-          }
+      // 四大资源领地产能
+      const resTypes = ['wood', 'iron', 'stone', 'grain'];
+      resTypes.forEach(rt => {
+        const land = data.resourceLands[rt];
+        const maxLv = land ? land.maxOccupiedLevel : 1;
+        // 累计已通关等级产能或最高等级产能
+        let prod = 0;
+        for (let l = 1; l <= maxLv; l++) {
+          prod += (LAND_TIERS[l]?.prodPerHour || 150);
         }
+        if (rt === 'wood') woodPerHour += prod;
+        if (rt === 'iron') ironPerHour += prod;
+        if (rt === 'stone') stonePerHour += prod;
+        if (rt === 'grain') grainPerHour += prod;
       });
 
       const hours = elapsedMinutes / 60;
@@ -174,11 +297,21 @@ export function loadGameState() {
     if (!data.resources.stone) data.resources.stone = 10000;
     if (!data.resources.grain) data.resources.grain = 8000;
 
-    // 保证武将 level 与 exp 兼容，并清洗历史重复装配战法的脏数据
+    // 保证武将 level 与 exp 兼容，并清洗历史重复装配战法的脏数据与同 ID 冲突
     const seenTactics = new Set();
-    (data.ownedGenerals || []).forEach(g => {
+    const seenGeneralIds = new Set();
+
+    (data.ownedGenerals || []).forEach((g, idx) => {
       if (!g.level) g.level = 1;
       if (g.exp === undefined || g.exp === null) g.exp = 0;
+
+      // 修复存量历史重复卡 ID 冲突问题 (赋予每张卡独立的实体身份)
+      if (!g.id || seenGeneralIds.has(g.id)) {
+        const oldId = g.id;
+        g.id = `${g.id || 'gen'}_auto_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`;
+      } else {
+        seenGeneralIds.add(g.id);
+      }
 
       if (g.equippedTactic1) {
         if (seenTactics.has(g.equippedTactic1)) {

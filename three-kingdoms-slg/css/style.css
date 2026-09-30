@@ -194,7 +194,129 @@ body {
   background: #090a0d;
   border: 1px solid #262c37;
   border-radius: 8px;
-  padding: 20px;
+  padding: 16px;
+}
+
+/* ================= 战棋版四大资源领地模块卡片 ================= */
+.resource-lands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.resource-land-card {
+  background: #14171f;
+  border: 1px solid #2d3340;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.resource-land-card:hover {
+  transform: translateY(-3px);
+  border-color: #fbbf24;
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.15);
+}
+
+.resource-land-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.resource-land-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.resource-land-icon {
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resource-land-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.resource-land-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.resource-land-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.resource-land-stats-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resource-land-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ================= 1~10级关卡阶梯列表样式 ================= */
+.land-tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.land-tier-item {
+  background: #151821;
+  border: 1px solid #282f3d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.land-tier-item:hover {
+  background: #1a1f2b;
+  border-color: #3b4556;
+}
+
+.land-tier-item.occupied {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, #151821 100%);
+}
+
+.land-tier-item.current-target {
+  border-left: 4px solid #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
 }
 
 .world-map-grid {
@@ -825,6 +947,23 @@ body {
   padding: 0 4px;
   border-radius: 3px;
   margin-right: 2px;
+}
+
+/* 🎯 三战原版经典战报：伤害鲜红、治疗翡翠绿 */
+.battle-num-dmg {
+  color: #ef4444 !important;
+  font-weight: 800 !important;
+  font-size: 1.05em;
+  padding: 0 2px;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.battle-num-heal {
+  color: #10b981 !important;
+  font-weight: 800 !important;
+  font-size: 1.05em;
+  padding: 0 2px;
+  text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
 }
 
 .battle-log-item.header {
@@ -1513,5 +1652,212 @@ body {
 .btn-inherit-tactic:hover {
   filter: brightness(1.2);
   transform: scale(1.02);
+}
+
+/* ================= 5 支军团切换与沙盒演习样式 ================= */
+.troop-tab-btn {
+  background: #151821;
+  border: 1px solid #2d3340;
+  color: #9ca3af;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.troop-tab-btn:hover {
+  background: #1f2430;
+  color: #fff;
+  border-color: #4b5563;
+}
+
+.troop-tab-btn.active {
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.15) 100%);
+  border-color: #d97706;
+  color: #fbbf24;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.3);
+}
+
+.sandbox-slot-card {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #2d3340;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.sandbox-slot-card:hover {
+  border-color: #f87171;
+}
+
+.sandbox-tactic-badge {
+  background: #1e2430;
+  border: 1px solid #374151;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sandbox-tactic-badge:hover {
+  border-color: #fbbf24;
+  color: #fff;
+}
+
+/* ================= 📊 三战原版战报数据统计看板样式 ================= */
+.battle-stats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.25s ease;
+}
+
+.battle-mvp-banner {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+  border: 1px solid #d97706;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mvp-badge-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mvp-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mvp-tag.damage {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+.mvp-tag.heal {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.mvp-tag.tank {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+}
+
+.stats-table-wrapper {
+  background: #141720;
+  border: 1px solid #2d3340;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stats-table-header {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #2d3340;
+}
+
+.stats-table-header.player {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border-left: 4px solid #10b981;
+}
+
+.stats-table-header.enemy {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-left: 4px solid #ef4444;
+}
+
+.stats-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.stats-grid-table th {
+  background: #191d28;
+  color: #9ca3af;
+  padding: 8px 6px;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid #2d3340;
+  white-space: nowrap;
+}
+
+.stats-grid-table td {
+  padding: 10px 6px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #e5e7eb;
+}
+
+.stats-grid-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-hero-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding-left: 8px;
+}
+
+.stats-bar-track {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.stats-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.stats-bar-fill.damage {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.stats-bar-fill.heal {
+  background: linear-gradient(90deg, #059669, #34d399);
+}
+
+.stats-bar-fill.tank {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
 }
 

@@ -745,11 +745,15 @@ export const TACTICS_DATA = [
     id: 'tac_zhe_chong_yu_wu',
     name: '折冲御侮',
     type: 'assault',
+    baseRate: 25,
     rate: 45,
+    statDebuff: 100,
+    shieldCount: 2,
+    shieldDuration: 2,
     target: 'attack_target',
     quality: 'S',
     damageType: 'debuff',
-    desc: '【太史慈专属传承】普通攻击后，使随机敌军单体统率与智力削减100点持续2回合，并使我军主将获得2次抵御(完全免疫伤害)持续2回合！'
+    desc: '【太史慈专属传承】普通攻击后，使随机敌军单体统率与智力各削减100点(受等级影响)持续2回合；若携带者不是主将，使我军主将获得2次抵御(免疫伤害)，持续2回合！'
   },
   {
     id: 'tac_wo_xin_chang_dan',
@@ -803,8 +807,11 @@ export function getTacticEffectiveProps(tactic, level = 1) {
 
   const effective = { ...tactic, level: lvl };
 
-  // 发动率成长：非100%发动率战法，每级提升 +1% (Lv.1到Lv.10共提升+9%)
-  if (tactic.rate && tactic.rate < 100) {
+  // 发动率成长：若指定 baseRate 与 rate (作为满级率)，按区间平滑成长；否则默认每级提升 +1%
+  if (tactic.baseRate && tactic.rate && tactic.rate < 100) {
+    const rateStep = (tactic.rate - tactic.baseRate) / 9;
+    effective.rate = Math.round(tactic.baseRate + rateStep * (lvl - 1));
+  } else if (tactic.rate && tactic.rate < 100) {
     effective.rate = Math.min(75, Math.round(tactic.rate - 9 + (lvl * 1)));
   }
 

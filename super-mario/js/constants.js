@@ -11,18 +11,18 @@ const CONFIG = {
 
   // 物理动力学参数 (高保真还原 FC 马里奥操作惯性)
   PHYSICS: {
-    GRAVITY: 0.28,
+    GRAVITY: 0.27,
     MAX_FALL_SPEED: 4.8,
     WALK_ACCEL: 0.075,
     RUN_ACCEL: 0.12,
     MAX_WALK_SPEED: 1.5,
-    MAX_RUN_SPEED: 2.5,
+    MAX_RUN_SPEED: 2.6,
     FRICTION: 0.06,
     SKID_FRICTION: 0.16,
-    JUMP_IMPULSE: -4.3,
-    JUMP_HOLD_BONUS: -0.16,
-    MAX_JUMP_FRAMES: 14,
-    BOUNCE_IMPULSE: -3.4
+    JUMP_IMPULSE: -4.8,
+    JUMP_HOLD_BONUS: -0.18,
+    MAX_JUMP_FRAMES: 16,
+    BOUNCE_IMPULSE: -3.6
   },
 
   // 瓦片枚举
