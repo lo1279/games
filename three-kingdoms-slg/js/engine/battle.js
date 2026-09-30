@@ -305,7 +305,9 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         opposingTeam.slice(0, 2).forEach(opp => {
           if (!opp.buffs.insight && Math.random() * 100 < (tactic.disarmRate || 90)) {
             opp.buffs.disarmed = tactic.firstRounds || 2;
-            logFn(0, `【${actor.label}】触发指挥战法【${tactic.name}】：敌将【${opp.label}】陷入缴械，前2回合无法普通攻击！`, 'debuff', { target: opp });
+            logFn(0, `【${actor.label}】触发指挥战法【${tactic.name}】：敌将【${opp.label}】陷入【缴械】，前2回合无法普通攻击！`, 'debuff', { target: opp });
+          } else if (opp.buffs.insight) {
+            logFn(0, `【${opp.label}】身具【洞察】护体，从容化解免疫了来自【${tactic.name}】的【缴械】效果！`, 'buff', { target: opp });
           }
         });
       }
