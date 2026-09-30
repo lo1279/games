@@ -19,12 +19,24 @@ class TouchController {
 
     // 震动支持检测
     this.canVibrate = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+    this.wakeLock = null;
 
     this.init();
   }
 
   get game() {
     return this._game || window.game;
+  }
+
+  async requestWakeLock() {
+    if ('wakeLock' in navigator && !this.wakeLock) {
+      try {
+        this.wakeLock = await navigator.wakeLock.request('screen');
+        this.wakeLock.addEventListener('release', () => {
+          this.wakeLock = null;
+        });
+      } catch (err) {}
+    }
   }
 
   vibrate(ms = 15) {
@@ -91,6 +103,7 @@ class TouchController {
       e.preventDefault();
       soundEngine.init();
       soundEngine.resume();
+      this.requestWakeLock();
 
       if (this.dpadTouchId === null && e.changedTouches.length > 0) {
         const touch = e.changedTouches[0];
@@ -100,9 +113,9 @@ class TouchController {
       }
     }, { passive: false });
 
-    // 触摸滑动变向
-    this.dpadEl.addEventListener('touchmove', (e) => {
-      e.preventDefault();
+    // 全局触摸滑动追踪 (即使手指滑出 D-Pad 圆形边缘依然持续响应变向)
+    window.addEventListener('touchmove', (e) => {
+      if (this.dpadTouchId === null) return;
       for (let i = 0; i < e.touches.length; i++) {
         if (e.touches[i].identifier === this.dpadTouchId) {
           handleTouch(e.touches[i]);
@@ -111,8 +124,9 @@ class TouchController {
       }
     }, { passive: false });
 
-    // 触摸结束
+    // 全局触摸抬起与取消
     const endTouch = (e) => {
+      if (this.dpadTouchId === null) return;
       for (let i = 0; i < e.changedTouches.length; i++) {
         if (e.changedTouches[i].identifier === this.dpadTouchId) {
           this.dpadTouchId = null;
@@ -122,8 +136,8 @@ class TouchController {
       }
     };
 
-    this.dpadEl.addEventListener('touchend', endTouch, { passive: false });
-    this.dpadEl.addEventListener('touchcancel', endTouch, { passive: false });
+    window.addEventListener('touchend', endTouch, { passive: false });
+    window.addEventListener('touchcancel', endTouch, { passive: false });
   }
 
   setDirection(dir) {
@@ -177,15 +191,14 @@ class TouchController {
    */
   initFireButtons() {
     // 1. 单发主开火键 (A 键)
-    this.fireBtn.addEventListener('touchstart', (e) => {
+    const handleFireStart = (e) => {
       e.preventDefault();
       soundEngine.init();
       soundEngine.resume();
+      this.requestWakeLock();
 
       if (this.game) {
-        if (this.game.state === this.game.STATE.TITLE) {
-          this.game.startNewGame();
-        } else if (this.game.state === this.game.STATE.GAME_OVER) {
+        if (this.game.state === this.game.STATE.TITLE || this.game.state === this.game.STATE.GAME_OVER) {
           this.game.startNewGame();
         } else {
           this.game.playerShoot();
@@ -193,21 +206,26 @@ class TouchController {
         }
       }
       this.fireBtn.classList.add('active');
-    }, { passive: false });
+    };
 
-    const endFire = (e) => {
+    const handleFireEnd = (e) => {
       e.preventDefault();
       this.fireBtn.classList.remove('active');
     };
-    this.fireBtn.addEventListener('touchend', endFire, { passive: false });
-    this.fireBtn.addEventListener('touchcancel', endFire, { passive: false });
+
+    this.fireBtn.addEventListener('touchstart', handleFireStart, { passive: false });
+    this.fireBtn.addEventListener('touchend', handleFireEnd, { passive: false });
+    this.fireBtn.addEventListener('touchcancel', handleFireEnd, { passive: false });
+    this.fireBtn.addEventListener('mousedown', handleFireStart);
+    this.fireBtn.addEventListener('mouseup', handleFireEnd);
 
     // 2. 极速连发键 (B 键) - 按住自动高频开火
     if (this.rapidFireBtn) {
-      this.rapidFireBtn.addEventListener('touchstart', (e) => {
+      const handleRapidStart = (e) => {
         e.preventDefault();
         soundEngine.init();
         soundEngine.resume();
+        this.requestWakeLock();
 
         if (this.game) {
           if (this.game.state === this.game.STATE.TITLE || this.game.state === this.game.STATE.GAME_OVER) {
@@ -215,7 +233,6 @@ class TouchController {
           } else {
             this.game.playerShoot();
             this.vibrate(15);
-            // 启动每 160ms 自动连发
             if (!this.rapidFireInterval) {
               this.rapidFireInterval = setInterval(() => {
                 if (this.game && this.game.state === this.game.STATE.PLAYING) {
@@ -226,9 +243,9 @@ class TouchController {
           }
         }
         this.rapidFireBtn.classList.add('active');
-      }, { passive: false });
+      };
 
-      const endRapid = (e) => {
+      const handleRapidEnd = (e) => {
         e.preventDefault();
         if (this.rapidFireInterval) {
           clearInterval(this.rapidFireInterval);
@@ -236,8 +253,12 @@ class TouchController {
         }
         this.rapidFireBtn.classList.remove('active');
       };
-      this.rapidFireBtn.addEventListener('touchend', endRapid, { passive: false });
-      this.rapidFireBtn.addEventListener('touchcancel', endRapid, { passive: false });
+
+      this.rapidFireBtn.addEventListener('touchstart', handleRapidStart, { passive: false });
+      this.rapidFireBtn.addEventListener('touchend', handleRapidEnd, { passive: false });
+      this.rapidFireBtn.addEventListener('touchcancel', handleRapidEnd, { passive: false });
+      this.rapidFireBtn.addEventListener('mousedown', handleRapidStart);
+      this.rapidFireBtn.addEventListener('mouseup', handleRapidEnd);
     }
   }
 

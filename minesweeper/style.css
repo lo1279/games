@@ -10,10 +10,12 @@
   padding: 0;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -21,6 +23,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
   padding: 20px 10px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
   overflow-x: hidden;
 }
 
@@ -345,6 +348,8 @@ body.theme-classic .smiley-btn:active {
    ============================================================ */
 .board-container {
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   max-width: 95vw;
   max-height: 70vh;
   border-radius: 8px;
@@ -368,6 +373,7 @@ body.theme-classic .board-container {
   display: grid;
   gap: 2px;
   width: max-content;
+  min-width: max-content;
   margin: 0 auto;
   align-content: center;
 }
@@ -380,6 +386,9 @@ body.theme-classic .board {
 .cell {
   width: var(--cell-size);
   height: var(--cell-size);
+  min-width: var(--cell-size);
+  min-height: var(--cell-size);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,6 +397,7 @@ body.theme-classic .board {
   cursor: pointer;
   border-radius: 4px;
   transition: background-color 0.15s ease, transform 0.05s ease;
+  touch-action: manipulation;
 }
 
 body.theme-classic .cell {
@@ -670,32 +680,67 @@ body.theme-classic .mobile-mode-btn.active {
   font-weight: bold;
 }
 
-/* 手机端响应式微调 */
+/* 手机端响应式微调与全屏兼容 */
 @media (max-width: 600px) {
   body {
     padding: 8px 4px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
     justify-content: flex-start;
   }
 
   .game-window {
-    padding: 10px 8px;
+    padding: 10px 6px;
     width: 100vw;
     border-radius: 0;
     border-left: none;
     border-right: none;
+    box-shadow: none;
   }
 
+  /* 现代暗夜主题手机端格子自适应 */
   body.theme-modern {
-    --cell-size: 30px;
+    --cell-size: 32px;
+  }
+
+  /* 针对初级难度(9×9)，在手机端给予更适合拇指点击的舒适尺寸 */
+  body.diff-beginner.theme-modern {
+    --cell-size: 36px;
+  }
+
+  body.theme-classic {
+    --cell-size: 28px;
+  }
+
+  body.diff-beginner.theme-classic {
+    --cell-size: 32px;
   }
 
   .board-container {
-    max-height: 60vh;
+    max-height: calc(100vh - 250px);
+    max-width: 98vw;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 
   .led-display {
     font-size: 22px;
     min-width: 58px;
     padding: 2px 6px;
+  }
+
+  .mobile-mode-bar {
+    margin-top: 10px;
+    padding: 0 4px;
+  }
+
+  .mobile-mode-btn {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .footer-tips {
+    margin-top: 10px;
+    font-size: 11px;
   }
 }

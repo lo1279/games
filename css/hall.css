@@ -26,10 +26,22 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  word-break: break-word;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, select {
+  touch-action: manipulation; /* 消除手机网页 300ms 点击延迟并防止双击误放大 */
 }
 
 body {
@@ -37,7 +49,14 @@ body {
   color: var(--text-main);
   font-family: var(--font-sans);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
   background-image: 
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.25), transparent),
     radial-gradient(circle at 15% 25%, rgba(6, 182, 212, 0.12), transparent 40%),
@@ -635,6 +654,8 @@ body {
 .theater-overlay {
   position: fixed;
   inset: 0;
+  height: 100vh;
+  height: 100dvh; /* 避免手机浏览器动态地址栏弹出/缩回时上下拉扯抖动 */
   z-index: 100;
   background: rgba(5, 7, 13, 0.94);
   backdrop-filter: blur(20px);
@@ -644,6 +665,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease-out;
+  touch-action: none; /* 剧场激活时禁止背景事件穿透 */
 }
 
 .theater-overlay.active {
@@ -660,6 +682,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 1.25rem;
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
   flex-shrink: 0;
 }
 
@@ -938,23 +962,335 @@ body {
   50% { transform: translateY(-8px); }
 }
 
-/* 响应式设计 */
-@media (max-width: 900px) {
+/* ==========================================================================
+   响应式设计与移动端深度兼容适配 (Mobile & Tablet Optimization)
+   ========================================================================== */
+
+/* 平板与大屏手机优化 (<= 992px) */
+@media (max-width: 992px) {
+  .hub-main {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .hero-banner {
+    padding: 2rem 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .hero-title {
+    font-size: 1.85rem;
+  }
+
+  .hero-badge-art {
+    font-size: 2.8rem;
+  }
+
+  .games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+/* 手机通用适配 (<= 768px) */
+@media (max-width: 768px) {
+  /* 导航栏自适应 */
+  .hub-nav {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .brand-title {
+    font-size: 1.1rem;
+    letter-spacing: normal;
+  }
+
+  .brand-subtitle {
+    display: none; /* 移动端隐藏过长的副标题，避免顶破两端 */
+  }
+
+  .brand-icon {
+    font-size: 1.65rem;
+  }
+
+  .nav-stats {
+    gap: 0.5rem;
+  }
+
+  .stat-item {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.55rem;
+    white-space: nowrap;
+  }
+
+  /* 英雄区 (Hero Banner) 调整 */
   .hero-banner {
     flex-direction: column;
     align-items: flex-start;
+    padding: 1.5rem 1.15rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
   }
+
   .hero-badge-art {
-    display: none;
+    display: none; /* 手机端隐藏背景悬浮表情，腾出视觉垂直空间 */
   }
+
+  .hero-title {
+    font-size: 1.45rem;
+    line-height: 1.35;
+    margin-bottom: 0.6rem;
+    word-break: break-word;
+  }
+
+  .hero-desc {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    margin-bottom: 1.15rem;
+    word-break: break-word;
+  }
+
+  .hero-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .hero-quick-btn,
+  .hero-outline-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.65rem 1rem;
+    font-size: 0.88rem;
+  }
+
+  /* 筛选工具栏自适应：分类选项卡支持横向平滑滑动 */
   .hub-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
   }
+
+  .category-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox 隐藏滚动条 */
+    padding: 0.3rem 0.25rem;
+    border-radius: 12px;
+  }
+
+  .category-tabs::-webkit-scrollbar {
+    display: none; /* WebKit 隐藏滚动条保持清爽 */
+  }
+
+  .tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
   .toolbar-right {
     max-width: 100%;
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
   }
+
+  .search-box {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .search-input {
+    font-size: 0.82rem;
+    padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+    border-radius: 10px;
+  }
+
+  .sort-select {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.5rem;
+    border-radius: 10px;
+    white-space: nowrap;
+    max-width: 120px;
+  }
+
+  /* 游戏卡片网格系统：单列全宽自适应 */
   .games-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .game-card {
+    padding: 1.15rem;
+    border-radius: 16px;
+  }
+
+  .card-header {
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-icon-wrap {
+    width: 48px;
+    height: 48px;
+    font-size: 1.6rem;
+    border-radius: 12px;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+    line-height: 1.3;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .card-eng-title {
+    font-size: 0.7rem;
+    max-width: 100%;
+  }
+
+  .card-desc {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin-bottom: 0.65rem;
+  }
+
+  .card-tags {
+    gap: 0.3rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .tag-badge {
+    font-size: 0.68rem;
+    padding: 0.15rem 0.45rem;
+  }
+
+  .card-meta-bar {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  .card-actions {
+    gap: 0.5rem;
+  }
+
+  .btn-play-theater {
+    font-size: 0.82rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 9px;
+  }
+
+  .btn-newtab,
+  .btn-info-detail {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    font-size: 0.88rem;
+  }
+
+  /* 剧场模式 (Arcade Theater) 移动端顶栏精简优化 */
+  .theater-header {
+    height: 48px;
+    padding: 0 0.65rem;
+    gap: 0.5rem;
+  }
+
+  .theater-left {
+    min-width: 0;
+    gap: 0.45rem;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .theater-back-btn {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .theater-game-title {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #theaterTitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .theater-right {
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .theater-tool-btn {
+    height: 30px;
+    padding: 0 0.45rem;
+    font-size: 0.72rem;
+  }
+
+  /* 在手机端隐藏剧场顶部的非核心文字，仅保留图标以防挤爆工具栏 */
+  .theater-tool-btn span:first-child + * {
+    display: none;
+  }
+
+  /* 详情模态弹窗优化 */
+  .modal-overlay {
+    padding: 0.85rem;
+    align-items: flex-end; /* 手机端贴底呈现抽屉感 */
+  }
+
+  .modal-content {
+    padding: 1.35rem 1.15rem;
+    border-radius: 20px 20px 12px 12px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .modal-features-list {
+    grid-template-columns: 1fr; /* 移动端改为单列，防止特性文本挤压 */
+    gap: 0.4rem;
+  }
+
+  .modal-desc-box,
+  .modal-controls-box {
+    font-size: 0.82rem;
+    padding: 0.75rem;
+    line-height: 1.5;
   }
 }
+
+/* 超窄屏特别适配 (<= 400px，如 iPhone SE、小屏安卓机) */
+@media (max-width: 400px) {
+  .brand-title {
+    font-size: 0.95rem;
+  }
+
+  .stat-item {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .hero-title {
+    font-size: 1.3rem;
+  }
+
+  .card-actions {
+    grid-template-columns: 1fr auto auto;
+    gap: 0.35rem;
+  }
+
+  .btn-play-theater {
+    padding: 0.55rem 0.5rem;
+    font-size: 0.78rem;
+  }
+}
+

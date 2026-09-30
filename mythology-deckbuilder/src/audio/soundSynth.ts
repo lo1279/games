@@ -26,8 +26,20 @@ class SoundEngine {
     }
   }
 
+  // 移动端轻量触觉震颤 (Haptic Vibration)
+  public vibrate(pattern: number | number[] = 15) {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch {
+        // 静默捕获非用户交互或不支持时的异常
+      }
+    }
+  }
+
   // 攻击与打击音效
   public playAttack() {
+    this.vibrate(20);
     if (!this.enabled) return;
     this.initCtx();
     if (!this.ctx) return;
@@ -52,6 +64,7 @@ class SoundEngine {
 
   // 圣盾与防御音效
   public playShield() {
+    this.vibrate(10);
     if (!this.enabled) return;
     this.initCtx();
     if (!this.ctx) return;
@@ -76,6 +89,7 @@ class SoundEngine {
 
   // 雷霆雷暴音效 (白噪音 + 降频震颤)
   public playLightning() {
+    this.vibrate([25, 30, 40]);
     if (!this.enabled) return;
     this.initCtx();
     if (!this.ctx) return;

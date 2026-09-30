@@ -14,12 +14,73 @@ class LiarDiceGame {
         this.currentTurn = 'player';
         this.roundActive = false;
         this.betAmount = 100;
+        this.isPeeking = false;
 
         this.initUI();
     }
 
     initUI() {
         this.updateStatsDisplay();
+        this.isPeeking = false;
+        this.updatePeekButtonUI();
+
+        // 待机状态：展示等待手牌与提示
+        const playerHandEl = document.getElementById('liar-player-hand');
+        if (playerHandEl && !this.roundActive) {
+            playerHandEl.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const diceEl = document.createElement('div');
+                diceEl.className = 'w-10 h-10 bg-slate-900 text-slate-600 border-2 border-dashed border-slate-700 rounded-lg flex items-center justify-center font-bold text-base';
+                diceEl.textContent = '？';
+                playerHandEl.appendChild(diceEl);
+            }
+        }
+        const aiHandEl = document.getElementById('liar-ai-hand');
+        if (aiHandEl && !this.roundActive) {
+            aiHandEl.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const diceEl = document.createElement('div');
+                diceEl.className = 'w-10 h-10 bg-slate-900 text-slate-600 border-2 border-dashed border-slate-700 rounded-lg flex items-center justify-center font-bold text-base';
+                diceEl.textContent = '？';
+                aiHandEl.appendChild(diceEl);
+            }
+        }
+
+        const banner = document.getElementById('liar-current-call-banner');
+        if (banner && !this.roundActive) {
+            banner.innerHTML = '点击下方【开始对决】入场！底注 100 筹码';
+        }
+
+        this.setPlayerControlsEnabled(false);
+        const startBtn = document.getElementById('liar-start-btn');
+        const restartBtn = document.getElementById('liar-restart-btn');
+        if (startBtn) startBtn.classList.remove('hidden');
+        if (restartBtn) restartBtn.classList.add('hidden');
+    }
+
+    togglePeek() {
+        if (!this.diceEngine || !this.diceEngine.cup) return;
+        this.isPeeking = !this.isPeeking;
+        if (this.isPeeking) {
+            this.diceEngine.animateCup('peek');
+        } else {
+            this.diceEngine.animateCup('cover');
+        }
+        this.updatePeekButtonUI();
+        if (window.soundEngine) window.soundEngine.playClick();
+    }
+
+    updatePeekButtonUI() {
+        const textEl = document.getElementById('liar-peek-text');
+        const btn = document.getElementById('liar-peek-btn');
+        if (!btn) return;
+        if (this.isPeeking) {
+            if (textEl) textEl.textContent = '扣回骰盅';
+            btn.className = 'px-3.5 py-2 bg-amber-500 active:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all flex items-center space-x-1';
+        } else {
+            if (textEl) textEl.textContent = '偷瞄骰盅';
+            btn.className = 'px-3.5 py-2 bg-slate-800 active:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center space-x-1';
+        }
     }
 
     updateStatsDisplay() {
@@ -41,6 +102,8 @@ class LiarDiceGame {
         this.isOneWild = true;
         this.currentCall = null;
         this.currentTurn = 'player';
+        this.isPeeking = false;
+        this.updatePeekButtonUI();
 
         // 双方摇出各自 5 颗骰子
         this.playerDices = Array.from({ length: 5 }, () => Math.floor(Math.random() * 6) + 1).sort();
@@ -49,7 +112,7 @@ class LiarDiceGame {
         // 3D 渲染台面展示玩家的骰子，并在其上方放置骰盅动画
         this.diceEngine.setDiceCount(5);
         this.diceEngine.roll(this.playerDices, null, () => {
-            // 落地后盖上骰盅动效
+            // 落地后平滑盖上骰盅动效
             this.diceEngine.animateCup('cover');
         });
 
@@ -59,10 +122,11 @@ class LiarDiceGame {
         this.updateCallUI();
         this.logMessage(`对决开始！双方各持 5 颗骰子，底注 100 筹码。当前 1 点为【万能点】。请玩家先叫！`, 'info');
 
-        const bidControls = document.getElementById('liar-bid-controls');
-        if (bidControls) bidControls.classList.remove('opacity-50', 'pointer-events-none');
-        document.getElementById('liar-start-btn').classList.add('hidden');
-        document.getElementById('liar-restart-btn').classList.remove('hidden');
+        this.setPlayerControlsEnabled(true);
+        const startBtn = document.getElementById('liar-start-btn');
+        const restartBtn = document.getElementById('liar-restart-btn');
+        if (startBtn) startBtn.classList.add('hidden');
+        if (restartBtn) restartBtn.classList.remove('hidden');
     }
 
     renderPlayerHand(visible = true) {
@@ -193,8 +257,9 @@ class LiarDiceGame {
         const expectedInPlayer = 5 * p; // 期望大约 1.67 或 0.83 个
         const totalExpected = aiOwnCount + expectedInPlayer;
 
-        // 质疑判定阈值：如果叫的个数超出预期较大，或者总数达到 6 个以上且自己很少，AI 决定开！
-        const shouldChallenge = (curC > totalExpected + 1.3) || (curC >= 6 && aiOwnCount <= 1) || (curC >= 8);
+        // 质疑判定阈值：
+        // 1. 如果叫的个数已经达到 10 (全场上限)，或者超出预期较大，或者总数达到 6 个以上且自己很少，AI 决定开！
+        const shouldChallenge = (curC >= 10) || (curC > totalExpected + 1.25) || (curC >= 6 && aiOwnCount <= 1) || (curC >= 8);
 
         if (shouldChallenge) {
             this.logMessage(`AI 沉思片刻，眼神凌厉：“我不信你有那么多！【开你！】”`, 'ai');
@@ -209,11 +274,13 @@ class LiarDiceGame {
         if (nextV > 6) {
             nextC = curC + 1;
             // 找 AI 自己手里数量最多的点数加叫
+            // 若万能1点已失效，则 1 点也作为候选点数
+            const startV = this.isOneWild ? 2 : 1;
             const freq = [0, 0, 0, 0, 0, 0, 0];
             this.aiDices.forEach(v => freq[v]++);
-            let bestV = 2;
+            let bestV = startV;
             let maxF = -1;
-            for (let v = 2; v <= 6; v++) {
+            for (let v = startV; v <= 6; v++) {
                 if (freq[v] > maxF) {
                     maxF = freq[v];
                     bestV = v;
@@ -225,6 +292,13 @@ class LiarDiceGame {
         // 极小概率心理诈唬
         if (Math.random() < 0.2 && nextV < 6) {
             nextV = Math.floor(Math.random() * (6 - nextV + 1)) + nextV;
+        }
+
+        // 如果加叫计算出的数量超过全场上限 10 颗，强制转为质疑开牌
+        if (nextC > 10) {
+            this.logMessage(`AI 摇了摇头：“全场总共才 10 颗骰子，根本不可能有 ${nextC} 个！【开你！】”`, 'ai');
+            setTimeout(() => this.resolveOpen('ai'), 800);
+            return;
         }
 
         if (nextV === 1 && this.isOneWild) {
@@ -250,6 +324,9 @@ class LiarDiceGame {
 
     resolveOpen(opener) {
         this.roundActive = false;
+        this.isPeeking = false;
+        this.updatePeekButtonUI();
+
         const call = this.currentCall;
         const targetV = call.value;
         const targetC = call.count;

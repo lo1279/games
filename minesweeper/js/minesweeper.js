@@ -82,8 +82,8 @@ export class MinesweeperGame {
     safeSet.add(`${firstClickR},${firstClickC}`);
     const neighbors = this.getNeighbors(firstClickR, firstClickC);
     
-    // 如果棋盘总格数足以容纳地雷与 9 格安全区，则将 9 格全部作为避险区；否则只保证首格安全
-    if (totalCells - 9 >= this.mines) {
+    // 如果棋盘总格数足以容纳地雷与避险区（首点+实际邻居格数），则全部作为避险区；否则只保证首格安全
+    if (totalCells - (neighbors.length + 1) >= this.mines) {
       neighbors.forEach(n => safeSet.add(`${n.row},${n.col}`));
     }
 

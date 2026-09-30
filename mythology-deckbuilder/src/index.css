@@ -25,8 +25,22 @@
     overflow-x: hidden;
     min-height: 100vh;
     min-height: 100dvh;
+    height: 100%;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
     touch-action: manipulation;
   }
+}
+
+/* 移动端滚动吸附 */
+.snap-x-mandatory {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
 }
 
 /* 微信小程序与移动端安全区辅助类 */
@@ -43,6 +57,7 @@
   padding-bottom: max(12px, var(--sab));
   padding-left: max(8px, var(--sal));
   padding-right: max(8px, var(--sar));
+  box-sizing: border-box;
 }
 
 /* 游戏发光效果与卡牌边框特效 */

@@ -89,22 +89,25 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overscroll-contain">
-      <div className="w-full max-w-lg max-h-[88dvh] flex flex-col bg-slate-900 border border-pink-500/30 rounded-2xl sm:rounded-3xl shadow-2xl shadow-pink-500/10 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overscroll-contain">
+      <div className="w-full sm:max-w-lg max-h-[90dvh] sm:max-h-[88dvh] flex flex-col bg-slate-900 border-t sm:border border-pink-500/30 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-pink-500/10 overflow-hidden animate-drawer-up sm:animate-scale-up">
+        {/* 移动端顶部把手条 */}
+        <div className="w-10 h-1 bg-slate-700/80 rounded-full mx-auto sm:hidden mt-2.5 -mb-1 shrink-0" />
+
         {/* 顶部标题与家族声望 */}
-        <div className="shrink-0 p-4 border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/90 to-transparent flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-600 flex items-center justify-center text-white shadow-md shadow-pink-500/25 text-base">
+        <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/90 to-transparent flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-600 flex items-center justify-center text-white shadow-md shadow-pink-500/25 text-sm sm:text-base shrink-0">
               ❤️
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-white tracking-tight">情缘与家族谱系</h2>
-                <span className="text-[10px] font-bold text-pink-300 bg-pink-500/15 border border-pink-500/30 px-1.5 py-0.5 rounded-full">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-sm sm:text-lg font-black text-white tracking-tight">情缘与家族谱系</h2>
+                <span className="text-[10px] font-bold text-pink-300 bg-pink-500/15 border border-pink-500/30 px-1.5 py-0.5 rounded-full shrink-0">
                   第 {family.generation} 代世家
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-pink-300 mt-0.5">
+              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-pink-300 mt-0.5">
                 <span>家族声望：{family.familyPrestige}</span>
                 <span>· 可支配现金：{cash.toFixed(1)}万</span>
               </div>
@@ -312,14 +315,14 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
           )}
         </div>
 
-        {/* 底部操作 */}
-        <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
+        {/* 底部操作 (适配手机底部横条安全区) */}
+        <div className="shrink-0 px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] border-t border-slate-800 bg-slate-900 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">
             终局时可将家族部分家资与天赋传承给二代子嗣
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer"
           >
             关闭
           </button>

@@ -11,7 +11,8 @@ import {
     SOFT_DROP_POINTS, 
     HARD_DROP_POINTS, 
     PREVIEW_SIZE, 
-    PREVIEW_BLOCK_SIZE 
+    PREVIEW_BLOCK_SIZE,
+    MORPH_INTERVAL
 } from './constants.js';
 
 export class Game {
@@ -167,6 +168,19 @@ export class Game {
         this.board.updateParticles();
 
         if (!this.isClearing) {
+            // 变异变色龙方块在空中动态变换形状
+            if (this.currentPiece && this.currentPiece.isMorphing) {
+                this.currentPiece.morphTimer += deltaTime;
+                if (this.currentPiece.morphTimer >= MORPH_INTERVAL) {
+                    this.currentPiece.morphTimer = 0;
+                    if (this.currentPiece.morph(this.board)) {
+                        this.board.spawnMorphParticles(this.currentPiece);
+                        sound.playMorph();
+                        this.triggerHaptic('medium');
+                    }
+                }
+            }
+
             this.dropCounter += deltaTime;
             const dropInterval = this.getDropInterval();
 
@@ -259,6 +273,11 @@ export class Game {
 
         this.canHold = false;
         this.dropCounter = 0;
+
+        // 若换出的新方块在生成位发生碰撞，判定 Game Over
+        if (!this.board.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.shape)) {
+            this.triggerGameOver();
+        }
     }
 
     lockCurrentPiece() {
@@ -289,17 +308,18 @@ export class Game {
                     sound.playLevelUp();
                 }
 
-                this.updateUI();
-                this.spawnNext();
+                // 四行连消达成 Tetris! 奖励必定产出神秘变色龙变异方块
+                const rewardMorph = clearedCount === 4;
+                this.spawnNext(rewardMorph);
             }, 180);
         } else {
-            this.spawnNext();
+            this.spawnNext(false);
         }
     }
 
-    spawnNext() {
+    spawnNext(forceMorph = false) {
         this.currentPiece = this.nextPiece;
-        this.nextPiece = this.randomizer.next();
+        this.nextPiece = this.randomizer.next(forceMorph);
         this.canHold = true;
 
         if (!this.board.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.shape)) {
@@ -350,6 +370,9 @@ export class Game {
         const offsetX = (ctx.canvas.width - cols * PREVIEW_BLOCK_SIZE) / 2;
         const offsetY = (ctx.canvas.height - rows * PREVIEW_BLOCK_SIZE) / 2;
 
+        const pieceColor = piece.getDisplayColor ? piece.getDisplayColor() : piece.color;
+        const pieceGlow = piece.getDisplayGlow ? piece.getDisplayGlow() : piece.glow;
+
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 if (shape[r][c]) {
@@ -357,18 +380,29 @@ export class Game {
                     const py = offsetY + r * PREVIEW_BLOCK_SIZE;
 
                     ctx.save();
-                    ctx.shadowColor = piece.glow;
-                    ctx.shadowBlur = 6;
-                    ctx.fillStyle = piece.color;
+                    ctx.shadowColor = pieceGlow;
+                    ctx.shadowBlur = piece.isMorphing ? 10 : 6;
+                    ctx.fillStyle = pieceColor;
                     ctx.fillRect(px + 1, py + 1, PREVIEW_BLOCK_SIZE - 2, PREVIEW_BLOCK_SIZE - 2);
 
                     ctx.shadowBlur = 0;
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
                     ctx.fillRect(px + 1, py + 1, PREVIEW_BLOCK_SIZE - 2, 2);
                     ctx.fillRect(px + 1, py + 1, 2, PREVIEW_BLOCK_SIZE - 2);
                     ctx.restore();
                 }
             }
+        }
+
+        // 变异变色龙方块专属发光角标
+        if (piece.isMorphing) {
+            ctx.save();
+            ctx.fillStyle = '#ffee00';
+            ctx.shadowColor = '#ffee00';
+            ctx.shadowBlur = 6;
+            ctx.font = 'bold 9px monospace';
+            ctx.fillText('★MORPH', 4, 11);
+            ctx.restore();
         }
     }
 
@@ -396,9 +430,10 @@ export class Game {
         let lastTapTime = 0;
 
         const MOVE_THRESHOLD = 20; // 左右平移步进阈值
-        const DROP_THRESHOLD = 26; // 下滑加速步进阈值
+        const DROP_THRESHOLD = 24; // 下滑加速步进阈值
 
         target.addEventListener('touchstart', (e) => {
+            sound.init(); // 首触及时唤醒 AudioContext
             if (!this.isPlaying || this.isPaused || this.isGameOver) return;
             const touch = e.touches[0];
             startX = touch.clientX;
@@ -412,19 +447,23 @@ export class Game {
         target.addEventListener('touchmove', (e) => {
             if (!this.isPlaying || this.isPaused || this.isGameOver) return;
             const touch = e.touches[0];
-            const deltaX = touch.clientX - lastMoveX;
-            const deltaY = touch.clientY - lastMoveY;
 
-            // 水平滑移
-            if (Math.abs(deltaX) >= MOVE_THRESHOLD) {
+            // 1. 水平滑动检测（步进消费，防止快速滑动丢步）
+            let deltaX = touch.clientX - lastMoveX;
+            while (Math.abs(deltaX) >= MOVE_THRESHOLD) {
                 const dir = deltaX > 0 ? 1 : -1;
                 this.movePiece(dir);
-                lastMoveX = touch.clientX;
+                lastMoveX += dir * MOVE_THRESHOLD;
+                deltaX = touch.clientX - lastMoveX;
                 hasMoved = true;
             }
 
-            // 向下滑动加速
-            if (deltaY >= DROP_THRESHOLD) {
+            // 2. 垂直滑动检测（防止上滑导致锚点脱轨）
+            const deltaY = touch.clientY - lastMoveY;
+            if (deltaY < 0) {
+                // 手指向上滑动时，重置锚点，防止负向累积导致后续下滑不灵敏
+                lastMoveY = touch.clientY;
+            } else if (deltaY >= DROP_THRESHOLD) {
                 this.softDrop();
                 lastMoveY = touch.clientY;
                 hasMoved = true;
@@ -521,32 +560,49 @@ export class Game {
             });
         }
 
-        // 移动端虚拟手柄监听（支持 pointerdown 极速触发）
-        const bindButton = (id, action) => {
+        // 移动端虚拟手柄监听（支持 pointerdown 极速触发与长按自动连发 DAS / ARR）
+        const bindButton = (id, action, allowRepeat = false) => {
             const btn = document.getElementById(id);
             if (btn) {
-                let triggered = false;
+                let repeatTimer = null;
+                let repeatInterval = null;
+
+                const startAction = () => {
+                    sound.init();
+                    action();
+                    if (allowRepeat) {
+                        clearTimeout(repeatTimer);
+                        clearInterval(repeatInterval);
+                        repeatTimer = setTimeout(() => {
+                            repeatInterval = setInterval(() => {
+                                action();
+                            }, 50); // ARR 连发频率 50ms
+                        }, 180); // DAS 延迟 180ms
+                    }
+                };
+
+                const stopAction = () => {
+                    clearTimeout(repeatTimer);
+                    clearInterval(repeatInterval);
+                };
+
                 btn.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
-                    triggered = true;
-                    action();
+                    startAction();
                 });
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (!triggered) {
-                        action();
-                    }
-                    triggered = false;
-                });
+                btn.addEventListener('pointerup', stopAction);
+                btn.addEventListener('pointercancel', stopAction);
+                btn.addEventListener('pointerleave', stopAction);
+                btn.addEventListener('contextmenu', (e) => e.preventDefault());
             }
         };
 
-        bindButton('ctrl-left', () => this.movePiece(-1));
-        bindButton('ctrl-right', () => this.movePiece(1));
-        bindButton('ctrl-rotate', () => this.rotatePiece(true));
-        bindButton('ctrl-down', () => this.softDrop());
-        bindButton('ctrl-drop', () => this.hardDrop());
-        bindButton('ctrl-hold', () => this.hold());
+        bindButton('ctrl-left', () => this.movePiece(-1), true);
+        bindButton('ctrl-right', () => this.movePiece(1), true);
+        bindButton('ctrl-down', () => this.softDrop(), true);
+        bindButton('ctrl-rotate', () => this.rotatePiece(true), false);
+        bindButton('ctrl-drop', () => this.hardDrop(), false);
+        bindButton('ctrl-hold', () => this.hold(), false);
 
         // 阻止移动端与微信全屏滚动干扰
         document.body.addEventListener('touchmove', (e) => {

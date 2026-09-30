@@ -21,6 +21,7 @@ class GameApp {
     this.activeTab = 'tabMap'; // 默认沙盘开荒大地图
     this.battleSubTab = 'campaigns'; // 'campaigns' | 'trials'
     this.generalSubTab = 'generals'; // 'generals' | 'tactics'
+    this.generalFilter = { camp: 'all', star: 'all' }; // 武将多维筛选状态
     this.initDOM();
     this.bindEvents();
     this.renderAll();
@@ -72,6 +73,7 @@ class GameApp {
     this.battleDetailTitle = document.getElementById('battleDetailTitle');
     this.battleDetailBody = document.getElementById('battleDetailBody');
     this.gachaShowcase = document.getElementById('gachaShowcase');
+    this.gachaShowcaseTitle = document.getElementById('gachaShowcaseTitle');
     this.gachaCardsContainer = document.getElementById('gachaCardsContainer');
   }
 
@@ -186,16 +188,27 @@ class GameApp {
       });
     }
 
-    // 武将筛选
-    document.getElementById('btnFilterAllGen').addEventListener('click', () => {
-      document.getElementById('btnFilterAllGen').classList.add('active');
-      document.getElementById('btnFilterFiveStar').classList.remove('active');
-      this.renderGenerals(false);
+    // 阵营筛选事件绑定
+    document.querySelectorAll('.btn-filter-camp').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-filter-camp').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.generalFilter.camp = btn.getAttribute('data-camp');
+        sound.playDrum();
+        this.renderGenerals();
+      });
     });
-    document.getElementById('btnFilterFiveStar').addEventListener('click', () => {
-      document.getElementById('btnFilterFiveStar').classList.add('active');
-      document.getElementById('btnFilterAllGen').classList.remove('active');
-      this.renderGenerals(true);
+
+    // 星级筛选事件绑定
+    document.querySelectorAll('.btn-filter-star').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-filter-star').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const starVal = btn.getAttribute('data-star');
+        this.generalFilter.star = starVal === 'all' ? 'all' : parseInt(starVal, 10);
+        sound.playDrum();
+        this.renderGenerals();
+      });
     });
 
     // 🌟 一键同名升星进阶
@@ -937,30 +950,38 @@ class GameApp {
         const expPct = reqExp > 0 ? Math.min(100, Math.round((hExp / reqExp) * 100)) : 100;
 
         return `
-          <div style="background:#11141a; border:1px solid ${hero.star===5?'#d97706':'#374151'}; border-radius:10px; padding:14px; width:220px; display:flex; flex-direction:column; align-items:center; position:relative;">
+          <div class="troop-hero-card clickable" style="background:#11141a; border:1px solid ${hero.star===5?'#d97706':'#374151'}; border-radius:10px; padding:14px; width:220px; display:flex; flex-direction:column; align-items:center; position:relative;">
             <div style="font-size:12px; color:#fbbf24; font-weight:bold; margin-bottom:4px;">${slotIdx===0?'★ 主将位 (核心) ★':`副将位 ${slotIdx}`}</div>
-            <div style="font-size:40px;">${hero.avatar}</div>
-            <div style="font-size:15px; font-weight:bold; margin-top:2px; color:#fff; display:flex; align-items:center; gap:6px;">
-              <span>${hero.name}</span>
-              <span class="hero-level-badge">Lv.${hLvl}</span>
-            </div>
             
-            <!-- 经验条 -->
-            <div style="width:100%; margin:4px 0 2px 0;">
-              <div style="display:flex; justify-content:space-between; font-size:10px; color:#9ca3af;">
-                <span>历练经验</span>
-                <span>${hLvl>=MAX_GENERAL_LEVEL?'已达满级':`${hExp}/${reqExp}`}</span>
+            <!-- 可点击查看详情的武将核心主体 -->
+            <div class="hero-click-area" data-slot="${slotIdx}" title="点击查看【${hero.name}】军略全息详情">
+              <div style="font-size:40px;">${hero.avatar}</div>
+              <div style="font-size:15px; font-weight:bold; margin-top:2px; color:#fff; display:flex; align-items:center; gap:6px;">
+                <span>${hero.name}</span>
+                <span class="hero-level-badge">Lv.${hLvl}</span>
               </div>
-              <div class="hero-exp-track" style="margin-top:2px;">
-                <div class="hero-exp-progress" style="width:${expPct}%;"></div>
+              
+              <!-- 经验条 -->
+              <div style="width:100%; margin:4px 0 2px 0;">
+                <div style="display:flex; justify-content:space-between; font-size:10px; color:#9ca3af;">
+                  <span>历练经验</span>
+                  <span>${hLvl>=MAX_GENERAL_LEVEL?'已达满级':`${hExp}/${reqExp}`}</span>
+                </div>
+                <div class="hero-exp-track" style="margin-top:2px;">
+                  <div class="hero-exp-progress" style="width:${expPct}%;"></div>
+                </div>
               </div>
+
+              <div style="font-size:11px; color:#9ca3af; margin:2px 0;">${CAMPS[hero.camp].name} · ${troop.arm.toUpperCase()}适性:<b class="apt-tag ${apt}">${apt} (${Math.round(aptMod*100)}%)</b></div>
+              <div style="font-size:12px; color:#34d399; margin:4px 0;">带兵量: <b>${(hero.maxSoldiers || 3000).toLocaleString()}</b></div>
+              <div style="font-size:10px; color:#38bdf8; margin-top:1px;">🔍 点击查看全息属性</div>
             </div>
 
-            <div style="font-size:11px; color:#9ca3af; margin:2px 0;">${CAMPS[hero.camp].name} · ${troop.arm.toUpperCase()}适性:<b class="apt-tag ${apt}">${apt} (${Math.round(aptMod*100)}%)</b></div>
-            <div style="font-size:12px; color:#34d399; margin:4px 0;">带兵量: <b>${(hero.maxSoldiers || 3000).toLocaleString()}</b></div>
-            <div style="display:flex; gap:6px; width:100%; margin-top:4px;">
-              <button class="upgrade-btn btn-change-hero" data-slot="${slotIdx}" style="padding:4px 8px; font-size:11px; flex:1;">更换武将</button>
-              <button class="upgrade-btn btn-remove-hero" data-slot="${slotIdx}" style="padding:4px 8px; font-size:11px; background:#4b5563; flex:1;">下阵</button>
+            <!-- 操作按钮组 -->
+            <div style="display:flex; gap:6px; width:100%; margin-top:8px;">
+              <button class="upgrade-btn btn-view-hero-detail" data-slot="${slotIdx}" style="padding:4px 6px; font-size:11px; flex:1; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">🔍 详情</button>
+              <button class="upgrade-btn btn-change-hero" data-slot="${slotIdx}" style="padding:4px 6px; font-size:11px; flex:1;">更换</button>
+              <button class="upgrade-btn btn-remove-hero" data-slot="${slotIdx}" style="padding:4px 6px; font-size:11px; background:#4b5563; flex:1;">下阵</button>
             </div>
           </div>
         `;
@@ -997,6 +1018,19 @@ class GameApp {
       });
     });
 
+    // 绑定点击查看武将详情 (卡片主体与详情按钮)
+    el.querySelectorAll('.hero-click-area, .btn-view-hero-detail').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sIdx = parseInt(b.getAttribute('data-slot'));
+        const hero = troop.heroes[sIdx];
+        if (hero) {
+          sound.playDrum();
+          this.openHeroDetailModal(hero);
+        }
+      });
+    });
+
     // 卸下武将
     el.querySelectorAll('.btn-remove-hero').forEach(b => {
       b.addEventListener('click', () => {
@@ -1017,6 +1051,182 @@ class GameApp {
     });
 
     this.troopsContainer.appendChild(el);
+  }
+
+  // 武将全息详情弹窗 (战法配装、五维属性与成长、兵种适性)
+  openHeroDetailModal(hero) {
+    // 确保从 ownedGenerals 获取最新引用
+    const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
+    const campInfo = CAMPS[realHero.camp] || CAMPS.qun;
+    const builtInTac = TACTICS_MAP.get(realHero.builtInTacticId);
+    const tac1 = TACTICS_MAP.get(realHero.equippedTactic1);
+    const tac2 = TACTICS_MAP.get(realHero.equippedTactic2);
+    const inheritTacId = getHeroInheritTacticId(realHero);
+    const inheritTac = TACTICS_MAP.get(inheritTacId);
+
+    const hLvl = realHero.level || 1;
+    const hExp = realHero.exp || 0;
+    const reqExp = getExpRequiredForLevel(hLvl);
+    const expPct = reqExp > 0 ? Math.min(100, Math.round((hExp / reqExp) * 100)) : 100;
+    const redStars = realHero.redStars || 0;
+
+    // 星级渲染
+    let starsHtml = '';
+    for (let s = 1; s <= realHero.star; s++) {
+      starsHtml += (s <= redStars) ? `<span class="star-red">★</span>` : `<span class="star-gold">★</span>`;
+    }
+    if (redStars > 0) starsHtml += ` <span style="font-size:11px; color:#ef4444; font-weight:bold;">(+${redStars}红)</span>`;
+
+    // 模态弹窗构建
+    const modal = document.createElement('div');
+    modal.className = 'modal-mask';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width:580px;">
+        <div class="modal-header">
+          <div class="modal-title">🎴 武将全息军略档案 · ${realHero.name}</div>
+          <button class="modal-close-btn" id="btnHeroDetailClose">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+          
+          <!-- 基础信息卡片 -->
+          <div class="hero-detail-section" style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 100%);">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="font-size:46px; background:#0f1217; padding:6px 12px; border-radius:10px; border:1px solid #374151;">${realHero.avatar}</div>
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:18px; font-weight:bold; color:#fff;">${realHero.name}</span>
+                  <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}国</span>
+                  <span class="cost-badge" style="font-size:12px;">Cost ${realHero.cost}</span>
+                  <span class="hero-level-badge">Lv.${hLvl}</span>
+                </div>
+                <div style="margin:4px 0;">${starsHtml}</div>
+                <div style="font-size:12px; color:#9ca3af;">${realHero.title || '三国名宿'}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px; color:#9ca3af;">带兵上限</div>
+              <div style="font-size:16px; font-weight:bold; color:#34d399;">${(realHero.maxSoldiers || 3000).toLocaleString()}</div>
+            </div>
+          </div>
+
+          <!-- 历练等级与经验进度 -->
+          <div class="hero-detail-section">
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+              <span style="color:#fbbf24; font-weight:bold;">⚔️ 历练等级进度</span>
+              <span style="color:#9ca3af;">${hLvl>=MAX_GENERAL_LEVEL?'已达最高境界 (Lv.50 满级)':`当前经验: ${hExp} / ${reqExp} (${expPct}%)`}</span>
+            </div>
+            <div class="hero-exp-track" style="height:6px;">
+              <div class="hero-exp-progress" style="width:${expPct}%;"></div>
+            </div>
+            <div style="font-size:10px; color:#6b7280; margin-top:4px;">提示：通过开荒攻打沙盘领地、征战历史名役或演武试炼可积攒历练经验提升等级。</div>
+          </div>
+
+          <!-- 四维核心战斗属性与成长率 -->
+          <div class="hero-detail-section">
+            <div class="hero-detail-title">📊 四维实战属性与成长</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
+                <span>🗡️ 武力: <b style="color:#fde047; font-size:14px;">${realHero.force}</b></span>
+                <span class="hero-growth-tag">(+${realHero.forceGrowth || 1.0}/级)</span>
+              </div>
+              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
+                <span>🧠 智力: <b style="color:#60a5fa; font-size:14px;">${realHero.intel}</b></span>
+                <span class="hero-growth-tag">(+${realHero.intelGrowth || 1.0}/级)</span>
+              </div>
+              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
+                <span>🛡️ 统率: <b style="color:#34d399; font-size:14px;">${realHero.command}</b></span>
+                <span class="hero-growth-tag">(+${realHero.commandGrowth || 1.0}/级)</span>
+              </div>
+              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
+                <span>⚡ 速度: <b style="color:#f472b6; font-size:14px;">${realHero.speed}</b></span>
+                <span class="hero-growth-tag">(+${realHero.speedGrowth || 1.0}/级)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 五大兵种适性面板 -->
+          <div class="hero-detail-section">
+            <div class="hero-detail-title">🛡️ 兵种统领适性</div>
+            <div class="apt-row" style="padding:8px 12px; font-size:12px;">
+              <span>骑兵 <b class="apt-tag ${realHero.aptitude.cavalry}">${realHero.aptitude.cavalry}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.cavalry]||1)*100)}%)</span>
+              <span>盾兵 <b class="apt-tag ${realHero.aptitude.shield}">${realHero.aptitude.shield}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.shield]||1)*100)}%)</span>
+              <span>弓兵 <b class="apt-tag ${realHero.aptitude.bow}">${realHero.aptitude.bow}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.bow]||1)*100)}%)</span>
+              <span>枪兵 <b class="apt-tag ${realHero.aptitude.spear}">${realHero.aptitude.spear}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.spear]||1)*100)}%)</span>
+              <span>器械 <b class="apt-tag ${realHero.aptitude.siege || 'B'}">${realHero.aptitude.siege || 'B'}</b></span>
+            </div>
+            <div style="font-size:10px; color:#9ca3af; margin-top:4px;">适性加成说明：S级 120% 全属性 · A级 100% · B级 85% · C级 70%</div>
+          </div>
+
+          <!-- 三大战法配置槽位 -->
+          <div class="hero-detail-section">
+            <div class="hero-detail-title">📚 战法装配与研习</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              
+              <!-- 自带战法 -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid #d97706; padding:8px 12px; border-radius:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:#fbbf24; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
+                  <span style="font-size:10px; color:#fde047; background:rgba(217,119,6,0.2); border:1px solid #d97706; padding:1px 5px; border-radius:3px;">
+                    ${builtInTac?.type || '被动'}
+                  </span>
+                </div>
+                <div style="font-size:11px; color:#cbd5e1; margin-top:3px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
+              </div>
+
+              <!-- 战法槽位 1 -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="color:#fbbf24; font-weight:bold; font-size:12px;">[传承战法①]</span>
+                    <span style="color:#fff; font-size:12px;">${tac1 ? tac1.name : '<span style="color:#9ca3af;">未装配</span>'}</span>
+                    ${tac1 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px;">Lv.${this.state.tacticLevels?.[tac1.id] || 1}</span>` : ''}
+                  </div>
+                  <div style="font-size:11px; color:#9ca3af; margin-top:2px;">${tac1 ? tac1.desc.substring(0, 36) + '...' : '点击右侧按钮装配传承战法'}</div>
+                </div>
+                <button class="upgrade-btn btn-modal-change-tac1" style="padding:4px 10px; font-size:11px; white-space:nowrap;">换配</button>
+              </div>
+
+              <!-- 战法槽位 2 -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="color:#60a5fa; font-weight:bold; font-size:12px;">[传承战法②]</span>
+                    <span style="color:#fff; font-size:12px;">${tac2 ? tac2.name : '<span style="color:#9ca3af;">未装配</span>'}</span>
+                    ${tac2 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px;">Lv.${this.state.tacticLevels?.[tac2.id] || 1}</span>` : ''}
+                  </div>
+                  <div style="font-size:11px; color:#9ca3af; margin-top:2px;">${tac2 ? tac2.desc.substring(0, 36) + '...' : '点击右侧按钮装配第二战法'}</div>
+                </div>
+                <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; background:#2563eb; white-space:nowrap;">换配</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 生平列传 -->
+          ${realHero.bio ? `
+            <div class="hero-detail-section" style="font-size:11px; color:#9ca3af; line-height:1.5;">
+              <span style="color:#fbbf24; font-weight:bold;">📜 将领列传：</span>${realHero.bio}
+            </div>
+          ` : ''}
+
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnHeroDetailClose').addEventListener('click', () => modal.remove());
+
+    // 绑定槽位1换配
+    modal.querySelector('.btn-modal-change-tac1')?.addEventListener('click', () => {
+      modal.remove();
+      this.openEquipTacticModal(realHero, 1);
+    });
+
+    // 绑定槽位2换配
+    modal.querySelector('.btn-modal-change-tac2')?.addEventListener('click', () => {
+      modal.remove();
+      this.openEquipTacticModal(realHero, 2);
+    });
   }
 
   // 选拔上阵弹窗
@@ -1077,9 +1287,29 @@ class GameApp {
   }
 
   // ================= 3. 武将图鉴、升星进阶与双战法装配 =================
-  renderGenerals(onlyFiveStar = false) {
+  renderGenerals() {
     this.ownedGeneralsGrid.innerHTML = '';
-    const list = onlyFiveStar ? this.state.ownedGenerals.filter(g => g.star === 5) : this.state.ownedGenerals;
+    const campFilter = this.generalFilter?.camp || 'all';
+    const starFilter = this.generalFilter?.star || 'all';
+
+    // 联合筛选过滤
+    const list = (this.state.ownedGenerals || []).filter(g => {
+      if (campFilter !== 'all' && g.camp !== campFilter) return false;
+      if (starFilter !== 'all' && g.star !== starFilter) return false;
+      return true;
+    });
+
+    if (list.length === 0) {
+      this.ownedGeneralsGrid.innerHTML = `
+        <div style="width:100%; text-align:center; color:#9ca3af; padding:60px 0; background:rgba(0,0,0,0.2); border-radius:8px; border:1px dashed #374151;">
+          <div style="font-size:32px; margin-bottom:8px;">🏮</div>
+          <div style="font-size:14px; font-weight:bold; color:#d1d5db;">暂无符合当前筛选条件的武将</div>
+          <div style="font-size:12px; color:#6b7280; margin-top:4px;">请尝试切换阵营或品质标签，或前往【招募】点将台抽取更多名将！</div>
+        </div>
+      `;
+      return;
+    }
+
     const currentTroopHeroIds = new Set((this.state.troops[0]?.heroes || []).map(h => h.id));
 
     list.forEach(g => {
@@ -1243,6 +1473,20 @@ class GameApp {
           });
         }
 
+        // 绑定点击头像/名字直接查看全息档案详情
+        card.querySelector('.avatar-box').style.cursor = 'pointer';
+        card.querySelector('.avatar-box').title = `点击查看【${g.name}】全息军略档案`;
+        card.querySelector('.avatar-box').addEventListener('click', () => {
+          sound.playDrum();
+          this.openHeroDetailModal(g);
+        });
+        card.querySelector('.hero-name').style.cursor = 'pointer';
+        card.querySelector('.hero-name').title = `点击查看【${g.name}】全息军略档案`;
+        card.querySelector('.hero-name').addEventListener('click', () => {
+          sound.playDrum();
+          this.openHeroDetailModal(g);
+        });
+
         this.ownedGeneralsGrid.appendChild(card);
       });
   }
@@ -1390,31 +1634,78 @@ class GameApp {
     const modal = document.createElement('div');
     modal.className = 'modal-mask';
     const currentEquippedId = (slot === 1 ? hero.equippedTactic1 : hero.equippedTactic2);
+    const otherSlotEquippedId = (slot === 1 ? hero.equippedTactic2 : hero.equippedTactic1);
+
+    // 统计全局所有武将的战法占用情况 (战法ID -> 占用武将名称)
+    const tacticOccupiedMap = new Map();
+    (this.state.ownedGenerals || []).forEach(g => {
+      if (g.equippedTactic1) tacticOccupiedMap.set(g.equippedTactic1, { heroId: g.id, heroName: g.name, slot: 1 });
+      if (g.equippedTactic2) tacticOccupiedMap.set(g.equippedTactic2, { heroId: g.id, heroName: g.name, slot: 2 });
+    });
 
     modal.innerHTML = `
-      <div class="modal-content" style="max-width:540px;">
+      <div class="modal-content" style="max-width:560px;">
         <div class="modal-header">
-          <div class="modal-title">更换传承战法 · ${hero.name} (战法槽位 ${slot})</div>
+          <div class="modal-title">换配传承战法 · ${hero.name} (槽位 ${slot})</div>
           <button class="modal-close-btn" id="btnTacModalClose">✕</button>
         </div>
         <div class="modal-body" style="display:flex; flex-direction:column; gap:10px;">
+          
+          <!-- 卸下当前战法选项 -->
+          <div style="background:rgba(239, 68, 68, 0.08); border:1px dashed #ef4444; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:bold; color:#fca5a5; font-size:13px;">🚫 卸下当前战法</div>
+              <div style="font-size:11px; color:#9ca3af; margin-top:2px;">卸下后槽位空置，可供其他武将研习装配该战法。</div>
+            </div>
+            <button class="upgrade-btn btn-unequip-tactic" style="background:#4b5563; padding:5px 14px; font-size:11px;" ${!currentEquippedId ? 'disabled' : ''}>
+              ${currentEquippedId ? '立即卸下' : '当前已空置'}
+            </button>
+          </div>
+
+          <!-- 可装配战法列表 -->
           ${this.state.ownedTactics.map(tId => {
             const tac = TACTICS_MAP.get(tId);
             if (!tac) return '';
-            const isEquipped = (currentEquippedId === tId);
+
+            const isCurrentSlot = (currentEquippedId === tId);
+            const isOtherSlot = (otherSlotEquippedId === tId);
+            const occupier = tacticOccupiedMap.get(tId);
+            const isOccupiedByOther = occupier && occupier.heroId !== hero.id;
             const currentTacticLvl = this.state.tacticLevels?.[tId] || 1;
+
+            let btnText = '装配此战法';
+            let btnStyle = 'background:linear-gradient(135deg, #10b981 0%, #059669 100%);';
+            let btnDisabled = false;
+            let statusBadge = '';
+
+            if (isCurrentSlot) {
+              btnText = '当前装配中';
+              btnStyle = 'background:#1f2937; color:#9ca3af; border:1px solid #374151;';
+              btnDisabled = true;
+            } else if (isOtherSlot) {
+              btnText = '自身另槽已装';
+              btnStyle = 'background:#374151; color:#9ca3af; opacity:0.6;';
+              btnDisabled = true;
+              statusBadge = `<span style="font-size:10px; color:#f87171; background:rgba(239,68,68,0.15); border:1px solid #ef4444; padding:1px 5px; border-radius:3px;">本将另一槽位已装配</span>`;
+            } else if (isOccupiedByOther) {
+              btnText = `顶替【${occupier.heroName}】`;
+              btnStyle = 'background:linear-gradient(135deg, #ea580c 0%, #c2410c 100%);';
+              statusBadge = `<span style="font-size:10px; color:#fdba74; background:rgba(234,88,12,0.15); border:1px solid #ea580c; padding:1px 5px; border-radius:3px;">已被【${occupier.heroName}】占用</span>`;
+            }
+
             return `
-              <div style="background:#11141a; border:1px solid #374151; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <div style="display:flex; align-items:center; gap:6px;">
+              <div style="background:#11141a; border:1px solid ${isCurrentSlot?'#059669':'#374151'}; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1; padding-right:12px;">
+                  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span style="font-weight:bold; color:#fbbf24; font-size:14px;">${tac.name}</span>
                     <span style="font-size:11px; color:#6ee7b7; background:rgba(110,231,183,0.15); border:1px solid #059669; padding:0 4px; border-radius:3px; font-weight:bold;">Lv.${currentTacticLvl}</span>
                     <span style="font-size:11px; color:#9ca3af;">(${tac.type})</span>
+                    ${statusBadge}
                   </div>
-                  <div style="font-size:11px; color:#9ca3af; max-width:340px; margin-top:2px;">${tac.desc}</div>
+                  <div style="font-size:11px; color:#9ca3af; margin-top:3px; line-height:1.4;">${tac.desc}</div>
                 </div>
-                <button class="upgrade-btn btn-confirm-equip" data-id="${tac.id}" style="padding:4px 12px; font-size:11px;">
-                  ${isEquipped ? '当前装配' : '装配此战法'}
+                <button class="upgrade-btn btn-confirm-equip" data-id="${tac.id}" data-occupied="${isOccupiedByOther?occupier.heroId:''}" style="padding:5px 12px; font-size:11px; white-space:nowrap; ${btnStyle}" ${btnDisabled ? 'disabled' : ''}>
+                  ${btnText}
                 </button>
               </div>
             `;
@@ -1426,19 +1717,86 @@ class GameApp {
     document.body.appendChild(modal);
     modal.querySelector('#btnTacModalClose').addEventListener('click', () => modal.remove());
 
+    // 卸下战法处理
+    const btnUnequip = modal.querySelector('.btn-unequip-tactic');
+    if (btnUnequip && currentEquippedId) {
+      btnUnequip.addEventListener('click', () => {
+        // 同步更新真实武将对象
+        const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
+        if (slot === 1) {
+          realHero.equippedTactic1 = null;
+          hero.equippedTactic1 = null;
+        } else {
+          realHero.equippedTactic2 = null;
+          hero.equippedTactic2 = null;
+        }
+
+        // 同步队伍中的武将引用
+        this.syncTroopHeroTactics(hero.id);
+
+        sound.playDrum();
+        this.renderGenerals();
+        this.renderTroops();
+        this.save();
+        modal.remove();
+        alert(`✔ 已成功将【${hero.name}】槽位 ${slot} 的战法卸下！该战法现已处于闲置状态，可供其他名将装配！`);
+      });
+    }
+
+    // 确定装配与顶替处理
     modal.querySelectorAll('.btn-confirm-equip').forEach(b => {
       b.addEventListener('click', () => {
         const id = b.getAttribute('data-id');
+        const occupiedHeroId = b.getAttribute('data-occupied');
+
+        // 如果被其他武将占用，提示并从原武将身上卸下
+        if (occupiedHeroId) {
+          const prevHero = this.state.ownedGenerals.find(g => g.id === occupiedHeroId);
+          if (prevHero) {
+            if (prevHero.equippedTactic1 === id) prevHero.equippedTactic1 = null;
+            if (prevHero.equippedTactic2 === id) prevHero.equippedTactic2 = null;
+            this.syncTroopHeroTactics(prevHero.id);
+          }
+        }
+
+        // 装配到当前武将
+        const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
         if (slot === 1) {
+          realHero.equippedTactic1 = id;
           hero.equippedTactic1 = id;
         } else {
+          realHero.equippedTactic2 = id;
           hero.equippedTactic2 = id;
         }
+
+        this.syncTroopHeroTactics(hero.id);
+
         sound.playGoldChime();
         this.renderGenerals();
         this.renderTroops();
         this.save();
         modal.remove();
+
+        const tac = TACTICS_MAP.get(id);
+        const tipMsg = occupiedHeroId 
+          ? `✔ 战法唯一性生效：已将【${tac?.name}】从原配武将卸下，成功调配并装配至【${hero.name}】！` 
+          : `🎉 成功为【${hero.name}】装配战法【${tac?.name}】！`;
+        alert(tipMsg);
+      });
+    });
+  }
+
+  // 同步部队槽位中的武将战法
+  syncTroopHeroTactics(heroId) {
+    (this.state.troops || []).forEach(troop => {
+      (troop.heroes || []).forEach(h => {
+        if (h && h.id === heroId) {
+          const real = this.state.ownedGenerals.find(g => g.id === heroId);
+          if (real) {
+            h.equippedTactic1 = real.equippedTactic1;
+            h.equippedTactic2 = real.equippedTactic2;
+          }
+        }
       });
     });
   }
@@ -1672,28 +2030,112 @@ class GameApp {
       });
     }
 
-    sound.playGoldChime();
+    // 判定本次抽卡最高品质（出金 / 出紫）
+    const hasFiveStar = pulledCards.some(c => c.star >= 5);
+    const hasFourStar = pulledCards.some(c => c.star === 4);
+
+    // 播放专属音效与视听反馈
+    if (hasFiveStar) {
+      sound.playGachaGold();
+    } else if (hasFourStar) {
+      sound.playGachaPurple();
+    } else {
+      sound.playGoldChime();
+    }
+
     this.renderHUD();
     this.save();
 
-    // 弹出开箱展示
+    // 调整开箱浮层整体氛围环境光（初始悬念状态）
+    this.gachaShowcase.classList.remove('has-gold', 'has-purple');
+    if (this.gachaShowcaseTitle) {
+      this.gachaShowcaseTitle.className = 'gacha-title-banner';
+      this.gachaShowcaseTitle.innerHTML = '🎴 天命所归 · 点击翻开名将令';
+    }
+
+    // 弹出开箱展示，先展示神秘虎符卡背，支持手动点击翻牌或按序自动翻开
     this.gachaCardsContainer.innerHTML = '';
-    pulledCards.forEach(c => {
-      const el = document.createElement('div');
-      el.className = `general-card ${c.star===5?'star-5':''}`;
-      el.innerHTML = `
-        <div class="card-header">
-          <span class="camp-tag" style="background:${CAMPS[c.camp]?.color||'#888'};">${CAMPS[c.camp]?.badge||'群'}</span>
-          <span class="cost-badge">Cost ${c.cost}</span>
+    
+    // 跟踪已翻牌状态
+    const cardElements = [];
+
+    pulledCards.forEach((c, idx) => {
+      const isFive = (c.star >= 5);
+      const isFour = (c.star === 4);
+      const qualityClass = isFive ? 'gacha-card-gold' : (isFour ? 'gacha-card-purple' : '');
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'gacha-card-wrapper gacha-anim-card';
+      wrapper.style.animationDelay = `${idx * 0.1}s`;
+
+      const campInfo = CAMPS[c.camp] || { color: '#888', badge: '群' };
+      const starStr = isFive ? '★★★★★' : (isFour ? '★★★★' : '★★★');
+      const starClass = isFive ? 'color:#fbbf24; text-shadow:0 0 8px rgba(251,191,36,0.8);' : (isFour ? 'color:#c084fc; text-shadow:0 0 6px rgba(192,132,252,0.6);' : 'color:#9ca3af;');
+
+      wrapper.innerHTML = `
+        <div class="gacha-card-inner">
+          <!-- 🎴 背面：神秘古风虎符卡背 -->
+          <div class="gacha-card-face card-back">
+            <div class="card-back-emblem">🐯</div>
+            <div class="card-back-title">英雄令</div>
+            <div class="card-back-hint">点击翻开</div>
+          </div>
+          <!-- 🎴 正面：名将真容全息卡牌 -->
+          <div class="gacha-card-face card-front general-card ${qualityClass}">
+            <div class="card-header">
+              <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}</span>
+              <span class="cost-badge">Cost ${c.cost}</span>
+            </div>
+            <div class="avatar-box" style="font-size:46px;">${c.avatar}</div>
+            <div class="hero-name" style="font-size:15px; margin:4px 0;">${c.name}</div>
+            <div class="stars-row" style="${starClass} font-size:14px; letter-spacing:2px; margin-bottom:4px;">${starStr}</div>
+            ${isFive ? '<div class="gacha-gold-badge">5★神将</div>' : ''}
+            ${isFour ? '<div class="gacha-purple-badge">4★良将</div>' : ''}
+          </div>
         </div>
-        <div class="avatar-box">${c.avatar}</div>
-        <div class="hero-name">${c.name}</div>
-        <div class="stars-row">${'★'.repeat(c.star)}</div>
       `;
-      this.gachaCardsContainer.appendChild(el);
+
+      // 翻开单张卡牌逻辑
+      const flipCard = () => {
+        if (wrapper.classList.contains('flipped')) return;
+        wrapper.classList.add('flipped');
+        sound.playCardFlip();
+
+        // 翻到半途（300ms）触发金光/紫光音效与环境光增强
+        setTimeout(() => {
+          if (isFive) {
+            sound.playGachaGold();
+            this.gachaShowcase.classList.add('has-gold');
+            if (this.gachaShowcaseTitle) {
+              this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
+              this.gachaShowcaseTitle.innerHTML = '🌟 华光万道 · 恭迎五星神将！';
+            }
+          } else if (isFour && !this.gachaShowcase.classList.contains('has-gold')) {
+            sound.playGachaPurple();
+            this.gachaShowcase.classList.add('has-purple');
+            if (this.gachaShowcaseTitle && !this.gachaShowcaseTitle.classList.contains('gold')) {
+              this.gachaShowcaseTitle.className = 'gacha-title-banner purple';
+              this.gachaShowcaseTitle.innerHTML = '💜 紫气东来 · 恭获四星良将！';
+            }
+          }
+        }, 280);
+      };
+
+      // 绑定手动点击翻开
+      wrapper.addEventListener('click', flipCard);
+
+      this.gachaCardsContainer.appendChild(wrapper);
+      cardElements.push(flipCard);
     });
 
     this.gachaShowcase.style.display = 'flex';
+
+    // 优雅体验：入场完成后，如果主公未点击，依次按序自动掀起翻开（带来丝滑连环揭晓仪式）
+    cardElements.forEach((doFlip, i) => {
+      setTimeout(() => {
+        doFlip();
+      }, 550 + i * 280);
+    });
   }
 
   // ================= 5. 战报全书与推演详情 =================

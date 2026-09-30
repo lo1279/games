@@ -129,13 +129,13 @@ export const HeaderStats: React.FC<HeaderStatsProps> = ({
           {statConfig.map((item) => (
             <div
               key={item.key}
-              className={`flex items-center justify-between px-2 py-1.5 rounded-xl bg-gradient-to-br border ${item.color} shadow-xs`}
+              className={`flex items-center justify-between px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-xl bg-gradient-to-br border ${item.color} shadow-xs min-w-0`}
             >
-              <div className="flex items-center gap-1 min-w-0">
-                <span className="shrink-0">{item.icon}</span>
-                <span className="text-[11px] text-slate-400 font-medium truncate">{item.label}</span>
+              <div className="flex items-center gap-0.5 sm:gap-1 min-w-0 shrink">
+                <span className="shrink-0 scale-90 sm:scale-100">{item.icon}</span>
+                <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate">{item.label}</span>
               </div>
-              <span className="text-xs sm:text-sm font-extrabold ml-1 shrink-0">{item.value}</span>
+              <span className="text-xs sm:text-sm font-extrabold ml-0.5 sm:ml-1 shrink-0 tabular-nums">{item.value}</span>
             </div>
           ))}
         </div>

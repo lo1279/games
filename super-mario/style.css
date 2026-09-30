@@ -1,0 +1,543 @@
+/* 🎮 超级马里奥兄弟 - 经典红白机 (FC) 典藏版样式表 */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+:root {
+  /* FC 红白机经典工业色板 */
+  --fc-cream-white: #e9e2ce;
+  --fc-cream-dark: #d5cbaf;
+  --fc-red: #8b181b;
+  --fc-red-bright: #b82226;
+  --fc-gold: #c59b27;
+  --fc-gold-light: #e5b948;
+  --fc-dark-plate: #1c1a17;
+  --fc-plastic-shadow: rgba(0, 0, 0, 0.45);
+
+  /* 背景与暗黑环境 */
+  --bg-deep: #0a0b12;
+  --text-light: #f1f5f9;
+  --text-muted: #8e9bb0;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-light);
+  font-family: 'Press Start 2P', -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  padding: 16px 10px;
+  background-image: 
+    radial-gradient(circle at 50% 20%, rgba(184, 34, 38, 0.12) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(197, 155, 39, 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+}
+
+/* 游戏舞台外框 */
+.arcade-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 820px;
+}
+
+/* 🕹️ 核心：FC 红白机复古主机箱体 (Console Housing) */
+.famicom-console {
+  width: 100%;
+  background: linear-gradient(180deg, var(--fc-cream-white) 0%, var(--fc-cream-dark) 100%);
+  border-radius: 18px;
+  border-top: 4px solid #fff;
+  border-bottom: 6px solid #a89c7d;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.85),
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.2);
+  padding: 14px 18px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 机身顶部铭牌与红金装饰 */
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #1c1a17 0%, #29241d 50%, #1c1a17 100%);
+  border-radius: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--fc-gold);
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.9),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* 发光的红白机电源指示灯 */
+.power-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.power-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff2222;
+  box-shadow: 
+    0 0 8px #ff1111,
+    0 0 16px rgba(255, 34, 34, 0.8),
+    inset 0 1px 2px #fff;
+  animation: ledPulse 2.8s infinite ease-in-out;
+}
+
+@keyframes ledPulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); box-shadow: 0 0 12px #ff2222, 0 0 20px rgba(255, 34, 34, 1); }
+}
+
+.power-label {
+  font-size: 8px;
+  color: var(--fc-gold);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.console-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.famicom-logo-text {
+  font-size: 11px;
+  color: var(--fc-gold-light);
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px #000;
+  font-weight: bold;
+}
+
+.cartridge-badge {
+  font-size: 7px;
+  color: #c084fc;
+  letter-spacing: 0.5px;
+}
+
+/* 顶部复古按键组 */
+.console-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.retro-btn {
+  background: linear-gradient(180deg, #38332c 0%, #1f1b16 100%);
+  border: 1px solid rgba(197, 155, 39, 0.4);
+  color: #f1f5f9;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.retro-btn:hover {
+  border-color: var(--fc-gold-light);
+  background: linear-gradient(180deg, #4d463d 0%, #29241e 100%);
+  transform: translateY(-1px);
+}
+
+.retro-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 3px #000;
+}
+
+.retro-btn.active {
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+}
+
+/* 📺 拟真 CRT 凸面显像管显示器外框 */
+.crt-monitor {
+  background: #11131a;
+  border-radius: 14px;
+  padding: 12px;
+  border: 3px solid #232736;
+  box-shadow: 
+    inset 0 0 20px rgba(0, 0, 0, 0.95),
+    0 8px 20px rgba(0, 0, 0, 0.4);
+  position: relative;
+  width: 100%;
+  aspect-ratio: 256 / 240;
+  max-height: 480px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.crt-screen-bezel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #5c94fc;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
+}
+
+/* 核心 Canvas */
+#gameCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* CRT 扫描线光栅效果 */
+.crt-scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.28) 50%
+  );
+  background-size: 100% 4px;
+  opacity: 0.85;
+  transition: opacity 0.3s;
+}
+
+.crt-scanlines.disabled {
+  opacity: 0;
+}
+
+/* 球面反光高光 (CRT Glare) */
+.crt-glass-glare {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 15%,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    transparent 70%
+  );
+}
+
+/* 屏幕暗角滤镜 (Vignette) */
+.crt-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.75);
+}
+
+/* 机身音响条纹格栅 */
+.speaker-grille {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.grille-line {
+  height: 4px;
+  width: 48px;
+  background: #a89c7d;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* 🎮 拟物化红白机经典控制器面板 (FC Controller) */
+.famicom-controller {
+  width: 100%;
+  background: var(--fc-red);
+  border-radius: 12px;
+  padding: 8px;
+  border-top: 2px solid #b82226;
+  border-bottom: 3px solid #4a0d0f;
+  box-shadow: 
+    0 6px 14px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.controller-faceplate {
+  background: linear-gradient(180deg, #1c1a17 0%, #2b2721 100%);
+  border-radius: 8px;
+  border: 2px solid var(--fc-gold);
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* 1. 经典黑色十字方向键 D-Pad */
+.dpad-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dpad-housing {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(3, 40px);
+  background: #0f0e0d;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.dpad-key {
+  background: linear-gradient(180deg, #32302d 0%, #1e1d1b 100%);
+  border: 1px solid #141312;
+  color: #8c8983;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.08s;
+  box-shadow: 0 3px 0 #0d0c0b;
+}
+
+.dpad-key:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0d0c0b;
+  background: #141312;
+  color: #fff;
+}
+
+.dpad-up { grid-column: 2; grid-row: 1; border-radius: 4px 4px 0 0; }
+.dpad-left { grid-column: 1; grid-row: 2; border-radius: 4px 0 0 4px; }
+.dpad-center { grid-column: 2; grid-row: 2; background: #242220; border-radius: 50%; width: 14px; height: 14px; margin: auto; box-shadow: inset 0 1px 3px #000; }
+.dpad-right { grid-column: 3; grid-row: 2; border-radius: 0 4px 4px 0; }
+.dpad-down { grid-column: 2; grid-row: 3; border-radius: 0 0 4px 4px; }
+
+/* 2. 中间条形橡胶按键 (SELECT / START) */
+.system-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pill-group {
+  display: flex;
+  gap: 18px;
+}
+
+.pill-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pill-capsule {
+  width: 32px;
+  height: 10px;
+  background: #181716;
+  border-radius: 6px;
+  border: 1px solid #000;
+  box-shadow: 
+    0 2px 0 #0a0a09,
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+  transition: all 0.08s;
+}
+
+.pill-btn:active .pill-capsule {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #0a0a09;
+  background: #0d0c0b;
+}
+
+.pill-label {
+  font-size: 7px;
+  color: var(--fc-gold-light);
+  letter-spacing: 0.5px;
+  font-family: inherit;
+}
+
+.controller-badge {
+  font-size: 7px;
+  color: #7d7256;
+  letter-spacing: 0.5px;
+}
+
+/* 3. 经典酒红倾斜圆形按键 (B / A) */
+.action-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-buttons-wrap {
+  display: flex;
+  gap: 18px;
+  transform: rotate(-12deg);
+}
+
+.action-btn-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.arcade-round-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #5a0e10;
+  background: radial-gradient(circle at 35% 30%, #d82b30 0%, #8b181b 70%, #520c0e 100%);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 5px 0 #42080a,
+    0 8px 12px rgba(0, 0, 0, 0.5),
+    inset 0 2px 3px rgba(255, 255, 255, 0.4);
+  touch-action: manipulation;
+  transition: all 0.08s;
+}
+
+.arcade-round-btn:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0 1px 0 #42080a,
+    0 2px 4px rgba(0, 0, 0, 0.6);
+  filter: brightness(1.15);
+}
+
+.btn-letter {
+  font-size: 15px;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: inherit;
+}
+
+.btn-subtext {
+  font-size: 6px;
+  color: var(--fc-gold);
+  letter-spacing: 0.5px;
+}
+
+.zone-label {
+  font-size: 7px;
+  color: var(--fc-gold);
+  letter-spacing: 1px;
+}
+
+/* 键盘操作指南铭牌 */
+.keyboard-cheat-sheet {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  background: rgba(28, 26, 23, 0.85);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px dashed rgba(197, 155, 39, 0.4);
+}
+
+.cheat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #e2e8f0;
+}
+
+.keycap {
+  background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
+  color: #0f172a;
+  padding: 3px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 0 #64748b, 0 3px 5px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+}
+
+.key-space {
+  padding: 3px 12px;
+}
+
+.cheat-desc {
+  color: var(--text-muted);
+}
+
+/* 移动端与不同视口宽度优化 */
+@media (max-width: 680px) {
+  .famicom-console {
+    padding: 10px;
+  }
+  .console-brand .cartridge-badge {
+    display: none;
+  }
+  .famicom-logo-text {
+    font-size: 8px;
+  }
+  .controller-faceplate {
+    padding: 10px 8px;
+  }
+  .dpad-housing {
+    grid-template-columns: repeat(3, 34px);
+    grid-template-rows: repeat(3, 34px);
+  }
+  .arcade-round-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .keyboard-cheat-sheet {
+    display: none;
+  }
+}

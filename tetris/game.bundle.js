@@ -1,6 +1,6 @@
 /**
  * 俄罗斯方块（Tetris Neon Edition）独立整合运行包
- * 支持移动端/手机触控手势、震动反馈、微信内置浏览器与小程序 web-view 极速运行
+ * 支持移动端/手机触控手势、震动反馈、微信内置浏览器、动态变异方块（变色龙方块）与小程序 web-view 极速运行
  */
 
 (function () {
@@ -24,6 +24,10 @@
     const LINE_POINTS = [0, 100, 300, 500, 800];
     const SOFT_DROP_POINTS = 1;
     const HARD_DROP_POINTS = 2;
+
+    // 变异变色龙方块配置 (Morphing Piece)
+    const MORPH_INTERVAL = 1400; // 变换形状的时间间隔（毫秒）
+    const MORPH_CHANCE = 0.15;   // 随机生成变色龙方块的概率 (15%)
 
     const TETROMINOES = {
         I: {
@@ -257,6 +261,24 @@
         playHold() {
             this.playTone(587.33, 'triangle', 0.08, 0.08);
         }
+
+        playMorph() {
+            if (this.muted || !this.ctx) return;
+            this.init();
+            try {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(780, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            } catch (e) {}
+        }
     }
 
     const sound = new SoundEngine();
@@ -265,7 +287,7 @@
     // 3. 方块类与随机袋 (Piece & Bag)
     // ==========================================
     class Piece {
-        constructor(type) {
+        constructor(type, isMorphing = false) {
             this.type = type;
             this.config = TETROMINOES[type];
             this.rotation = 0;
@@ -273,12 +295,68 @@
             this.color = this.config.color;
             this.glow = this.config.glow;
 
+            this.isMorphing = isMorphing;
+            this.morphTimer = 0;
+            this.hue = Math.floor(Math.random() * 360);
+
             this.x = Math.floor((COLS - this.shape[0].length) / 2);
             this.y = this.type === 'I' ? -1 : 0;
         }
 
         getShape(rotIndex = this.rotation) {
             return this.config.shapes[rotIndex % 4];
+        }
+
+        getDisplayColor() {
+            if (this.isMorphing) {
+                this.hue = (this.hue + 2.5) % 360;
+                return `hsl(${this.hue}, 100%, 62%)`;
+            }
+            return this.color;
+        }
+
+        getDisplayGlow() {
+            if (this.isMorphing) {
+                return `hsla(${this.hue}, 100%, 65%, 0.8)`;
+            }
+            return this.glow;
+        }
+
+        morph(board) {
+            if (!this.isMorphing) return false;
+
+            const allTypes = Object.keys(TETROMINOES).filter(t => t !== this.type);
+            for (let i = allTypes.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allTypes[i], allTypes[j]] = [allTypes[j], allTypes[i]];
+            }
+
+            for (const candidateType of allTypes) {
+                const candidateConfig = TETROMINOES[candidateType];
+                const candidateShape = candidateConfig.shapes[0];
+
+                const testOffsets = [
+                    [0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0], [0, -2]
+                ];
+
+                for (const [ox, oy] of testOffsets) {
+                    const targetX = this.x + ox;
+                    const targetY = this.y + oy;
+
+                    if (board.isValidMove(targetX, targetY, candidateShape)) {
+                        this.type = candidateType;
+                        this.config = candidateConfig;
+                        this.rotation = 0;
+                        this.shape = candidateShape;
+                        this.x = targetX;
+                        this.y = targetY;
+                        this.color = candidateConfig.color;
+                        this.glow = candidateConfig.glow;
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         rotate(board, clockwise = true) {
@@ -329,7 +407,7 @@
             this.bag = [];
         }
 
-        next() {
+        next(forceMorph = false) {
             if (this.bag.length === 0) {
                 this.bag = Object.keys(TETROMINOES);
                 for (let i = this.bag.length - 1; i > 0; i--) {
@@ -338,7 +416,8 @@
                 }
             }
             const type = this.bag.pop();
-            return new Piece(type);
+            const isMorphing = forceMorph || (Math.random() < MORPH_CHANCE);
+            return new Piece(type, isMorphing);
         }
     }
 
@@ -394,8 +473,8 @@
                         const boardX = piece.x + c;
                         if (boardY >= 0) {
                             this.grid[boardY][boardX] = {
-                                color: piece.color,
-                                glow: piece.glow
+                                color: piece.getDisplayColor ? piece.getDisplayColor() : piece.color,
+                                glow: piece.getDisplayGlow ? piece.getDisplayGlow() : piece.glow
                             };
                         }
                     }
@@ -411,6 +490,31 @@
                 }
             }
             return fullRows;
+        }
+
+        spawnMorphParticles(piece) {
+            for (let r = 0; r < piece.shape.length; r++) {
+                for (let c = 0; c < piece.shape[r].length; c++) {
+                    if (piece.shape[r][c]) {
+                        const px = (piece.x + c) * BLOCK_SIZE + BLOCK_SIZE / 2;
+                        const py = (piece.y + r) * BLOCK_SIZE + BLOCK_SIZE / 2;
+                        for (let i = 0; i < 4; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = 1.0 + Math.random() * 3.5;
+                            this.particles.push({
+                                x: px,
+                                y: py,
+                                vx: Math.cos(angle) * speed,
+                                vy: Math.sin(angle) * speed,
+                                size: 2.5 + Math.random() * 2.5,
+                                alpha: 1,
+                                decay: 0.03 + Math.random() * 0.02,
+                                color: piece.getDisplayColor ? piece.getDisplayColor() : '#00ffff'
+                            });
+                        }
+                    }
+                }
+            }
         }
 
         spawnClearParticles(rowIndices) {
@@ -526,6 +630,9 @@
             }
 
             if (activePiece) {
+                const pieceColor = activePiece.getDisplayColor ? activePiece.getDisplayColor() : activePiece.color;
+                const pieceGlow = activePiece.getDisplayGlow ? activePiece.getDisplayGlow() : activePiece.glow;
+
                 const ghostY = activePiece.getGhostY(this);
                 for (let r = 0; r < activePiece.shape.length; r++) {
                     for (let c = 0; c < activePiece.shape[r].length; c++) {
@@ -533,7 +640,7 @@
                             const drawY = ghostY + r;
                             const drawX = activePiece.x + c;
                             if (drawY >= 0) {
-                                this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, activePiece.color, activePiece.glow, true);
+                                this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, pieceColor, pieceGlow, true);
                             }
                         }
                     }
@@ -545,7 +652,7 @@
                             const drawY = activePiece.y + r;
                             const drawX = activePiece.x + c;
                             if (drawY >= 0) {
-                                this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, activePiece.color, activePiece.glow, false);
+                                this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, pieceColor, pieceGlow, false);
                             }
                         }
                     }
@@ -701,6 +808,19 @@
             this.board.updateParticles();
 
             if (!this.isClearing) {
+                // 变异变色龙方块在空中动态变换形状
+                if (this.currentPiece && this.currentPiece.isMorphing) {
+                    this.currentPiece.morphTimer += deltaTime;
+                    if (this.currentPiece.morphTimer >= MORPH_INTERVAL) {
+                        this.currentPiece.morphTimer = 0;
+                        if (this.currentPiece.morph(this.board)) {
+                            this.board.spawnMorphParticles(this.currentPiece);
+                            sound.playMorph();
+                            this.triggerHaptic('medium');
+                        }
+                    }
+                }
+
                 this.dropCounter += deltaTime;
                 const dropInterval = this.getDropInterval();
 
@@ -779,19 +899,25 @@
             sound.playHold();
             this.triggerHaptic('medium');
             const currentType = this.currentPiece.type;
+            const currentMorph = this.currentPiece.isMorphing;
 
             if (!this.heldPiece) {
-                this.heldPiece = new Piece(currentType);
+                this.heldPiece = new Piece(currentType, currentMorph);
                 this.currentPiece = this.nextPiece;
                 this.nextPiece = this.randomizer.next();
             } else {
                 const tempType = this.heldPiece.type;
-                this.heldPiece = new Piece(currentType);
-                this.currentPiece = new Piece(tempType);
+                const tempMorph = this.heldPiece.isMorphing;
+                this.heldPiece = new Piece(currentType, currentMorph);
+                this.currentPiece = new Piece(tempType, tempMorph);
             }
 
             this.canHold = false;
             this.dropCounter = 0;
+
+            if (!this.board.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.shape)) {
+                this.triggerGameOver();
+            }
         }
 
         lockCurrentPiece() {
@@ -823,16 +949,19 @@
                     }
 
                     this.updateUI();
-                    this.spawnNext();
+
+                    // 四行连消达成 Tetris! 奖励必定产出神秘变色龙变异方块
+                    const rewardMorph = clearedCount === 4;
+                    this.spawnNext(rewardMorph);
                 }, 180);
             } else {
-                this.spawnNext();
+                this.spawnNext(false);
             }
         }
 
-        spawnNext() {
+        spawnNext(forceMorph = false) {
             this.currentPiece = this.nextPiece;
-            this.nextPiece = this.randomizer.next();
+            this.nextPiece = this.randomizer.next(forceMorph);
             this.canHold = true;
 
             if (!this.board.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.shape)) {
@@ -883,6 +1012,9 @@
             const offsetX = (ctx.canvas.width - cols * PREVIEW_BLOCK_SIZE) / 2;
             const offsetY = (ctx.canvas.height - rows * PREVIEW_BLOCK_SIZE) / 2;
 
+            const pieceColor = piece.getDisplayColor ? piece.getDisplayColor() : piece.color;
+            const pieceGlow = piece.getDisplayGlow ? piece.getDisplayGlow() : piece.glow;
+
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     if (shape[r][c]) {
@@ -890,18 +1022,29 @@
                         const py = offsetY + r * PREVIEW_BLOCK_SIZE;
 
                         ctx.save();
-                        ctx.shadowColor = piece.glow;
-                        ctx.shadowBlur = 6;
-                        ctx.fillStyle = piece.color;
+                        ctx.shadowColor = pieceGlow;
+                        ctx.shadowBlur = piece.isMorphing ? 10 : 6;
+                        ctx.fillStyle = pieceColor;
                         ctx.fillRect(px + 1, py + 1, PREVIEW_BLOCK_SIZE - 2, PREVIEW_BLOCK_SIZE - 2);
 
                         ctx.shadowBlur = 0;
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
                         ctx.fillRect(px + 1, py + 1, PREVIEW_BLOCK_SIZE - 2, 2);
                         ctx.fillRect(px + 1, py + 1, 2, PREVIEW_BLOCK_SIZE - 2);
                         ctx.restore();
                     }
                 }
+            }
+
+            // 变异变色龙方块专属发光角标
+            if (piece.isMorphing) {
+                ctx.save();
+                ctx.fillStyle = '#ffee00';
+                ctx.shadowColor = '#ffee00';
+                ctx.shadowBlur = 6;
+                ctx.font = 'bold 9px monospace';
+                ctx.fillText('★MORPH', 4, 11);
+                ctx.restore();
             }
         }
 
@@ -926,9 +1069,10 @@
             let lastTapTime = 0;
 
             const MOVE_THRESHOLD = 20;
-            const DROP_THRESHOLD = 26;
+            const DROP_THRESHOLD = 24;
 
             target.addEventListener('touchstart', (e) => {
+                sound.init();
                 if (!this.isPlaying || this.isPaused || this.isGameOver) return;
                 const touch = e.touches[0];
                 startX = touch.clientX;
@@ -942,17 +1086,20 @@
             target.addEventListener('touchmove', (e) => {
                 if (!this.isPlaying || this.isPaused || this.isGameOver) return;
                 const touch = e.touches[0];
-                const deltaX = touch.clientX - lastMoveX;
-                const deltaY = touch.clientY - lastMoveY;
 
-                if (Math.abs(deltaX) >= MOVE_THRESHOLD) {
+                let deltaX = touch.clientX - lastMoveX;
+                while (Math.abs(deltaX) >= MOVE_THRESHOLD) {
                     const dir = deltaX > 0 ? 1 : -1;
                     this.movePiece(dir);
-                    lastMoveX = touch.clientX;
+                    lastMoveX += dir * MOVE_THRESHOLD;
+                    deltaX = touch.clientX - lastMoveX;
                     hasMoved = true;
                 }
 
-                if (deltaY >= DROP_THRESHOLD) {
+                const deltaY = touch.clientY - lastMoveY;
+                if (deltaY < 0) {
+                    lastMoveY = touch.clientY;
+                } else if (deltaY >= DROP_THRESHOLD) {
                     this.softDrop();
                     lastMoveY = touch.clientY;
                     hasMoved = true;
@@ -1042,31 +1189,48 @@
                 });
             }
 
-            const bindButton = (id, action) => {
+            const bindButton = (id, action, allowRepeat = false) => {
                 const btn = document.getElementById(id);
                 if (btn) {
-                    let triggered = false;
+                    let repeatTimer = null;
+                    let repeatInterval = null;
+
+                    const startAction = () => {
+                        sound.init();
+                        action();
+                        if (allowRepeat) {
+                            clearTimeout(repeatTimer);
+                            clearInterval(repeatInterval);
+                            repeatTimer = setTimeout(() => {
+                                repeatInterval = setInterval(() => {
+                                    action();
+                                }, 50);
+                            }, 180);
+                        }
+                    };
+
+                    const stopAction = () => {
+                        clearTimeout(repeatTimer);
+                        clearInterval(repeatInterval);
+                    };
+
                     btn.addEventListener('pointerdown', (e) => {
                         e.preventDefault();
-                        triggered = true;
-                        action();
+                        startAction();
                     });
-                    btn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        if (!triggered) {
-                            action();
-                        }
-                        triggered = false;
-                    });
+                    btn.addEventListener('pointerup', stopAction);
+                    btn.addEventListener('pointercancel', stopAction);
+                    btn.addEventListener('pointerleave', stopAction);
+                    btn.addEventListener('contextmenu', (e) => e.preventDefault());
                 }
             };
 
-            bindButton('ctrl-left', () => this.movePiece(-1));
-            bindButton('ctrl-right', () => this.movePiece(1));
-            bindButton('ctrl-rotate', () => this.rotatePiece(true));
-            bindButton('ctrl-down', () => this.softDrop());
-            bindButton('ctrl-drop', () => this.hardDrop());
-            bindButton('ctrl-hold', () => this.hold());
+            bindButton('ctrl-left', () => this.movePiece(-1), true);
+            bindButton('ctrl-right', () => this.movePiece(1), true);
+            bindButton('ctrl-down', () => this.softDrop(), true);
+            bindButton('ctrl-rotate', () => this.rotatePiece(true), false);
+            bindButton('ctrl-drop', () => this.hardDrop(), false);
+            bindButton('ctrl-hold', () => this.hold(), false);
 
             document.body.addEventListener('touchmove', (e) => {
                 if (e.target.closest('.touch-btn, .icon-btn, .btn')) return;

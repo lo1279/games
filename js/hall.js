@@ -157,6 +157,23 @@ const GAMES_DATA = [
     controls: '触屏或鼠标点选天赋与自由属性点，点击「下一年」演进人生，可在商海理财与家族谱系中经营决策。',
     rating: '5.0',
     features: ['局外功德神殿永久养成', '商海大亨：基金/房产/创办独角兽', '良缘恋爱、婚育与家族世代继承', 'D20 命运转盘物理检定奇遇']
+  },
+  {
+    id: 'super-mario',
+    title: '超级马里奥兄弟',
+    englishTitle: 'Super Mario Bros FC',
+    category: 'arcade',
+    categoryLabel: '街机复古',
+    tags: ['经典FC', '平台跳跃', '横版闯关', '红白机', '8-Bit'],
+    icon: '🍄',
+    accentColor: '#ef4444',
+    gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.08) 100%)',
+    borderGlow: 'rgba(239, 68, 68, 0.45)',
+    summary: '100% 原生纯净复刻 1985 年红白机《超级马里奥兄弟》World 1-1！包含精准跳跃惯性、变大红蘑菇、顶砖碎石、踢飞绿龟壳、钻管与终点金字塔城堡升旗过关。',
+    path: 'super-mario/index.html',
+    controls: 'A/D 或 方向键移动，S 或 下键下蹲，K/Z/空格键跳跃，J/X/Shift 冲刺奔跑，P 键暂停，R 键重开。支持触控手柄与CRT扫描线。',
+    rating: '5.0',
+    features: ['高保真 NES 物理加速度与跳跃手感', 'World 1-1 原版关卡与砖块怪物布局', 'Web Audio 8-Bit 实时程序化音效合成', '变大红蘑菇与可滑行绿龟壳武器机制']
   }
 ];
 
@@ -561,6 +578,12 @@ class GameHubApp {
     // 激活视窗
     this.theaterIframe.src = game.path;
     this.theaterOverlay.classList.add('active');
+    
+    // 移动端网页防穿透滚动锁定
+    this.savedScrollY = window.scrollY || window.pageYOffset;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${this.savedScrollY}px`;
+    document.body.style.width = '100%';
     document.body.style.overflow = 'hidden';
 
     // 刷新大厅里的已游玩统计
@@ -583,7 +606,16 @@ class GameHubApp {
   closeTheater() {
     this.hideLoading();
     this.theaterOverlay.classList.remove('active');
+    
+    // 恢复移动端网页页面滚动位置
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
     document.body.style.overflow = '';
+    if (typeof this.savedScrollY === 'number') {
+      window.scrollTo(0, this.savedScrollY);
+    }
+
     // 释放 iframe 避免后台继续播放声音或消耗 CPU/GPU
     this.theaterIframe.src = 'about:blank';
     this.currentGame = null;

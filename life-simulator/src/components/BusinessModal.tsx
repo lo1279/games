@@ -91,13 +91,16 @@ export const BusinessModal: React.FC<BusinessModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overscroll-contain">
-      <div className="w-full max-w-lg max-h-[88dvh] flex flex-col bg-slate-900 border border-emerald-500/30 rounded-2xl sm:rounded-3xl shadow-2xl shadow-emerald-500/10 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overscroll-contain">
+      <div className="w-full sm:max-w-lg max-h-[90dvh] sm:max-h-[88dvh] flex flex-col bg-slate-900 border-t sm:border border-emerald-500/30 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-emerald-500/10 overflow-hidden animate-drawer-up sm:animate-scale-up">
+        {/* 移动端顶部把手条 */}
+        <div className="w-10 h-1 bg-slate-700/80 rounded-full mx-auto sm:hidden mt-2.5 -mb-1 shrink-0" />
+
         {/* 顶部个人资产速览 */}
-        <div className="shrink-0 p-4 border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/90 to-transparent flex items-center justify-between">
+        <div className="shrink-0 p-3.5 sm:p-4 border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/90 to-transparent flex items-center justify-between">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">商海大亨 · 资产管理</h2>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h2 className="text-sm sm:text-lg font-black text-white tracking-tight">商海大亨 · 资产管理</h2>
               {getMarketBadge(assets.marketSentiment)}
             </div>
             <div className="flex items-center gap-4 text-xs">
@@ -408,14 +411,14 @@ export const BusinessModal: React.FC<BusinessModalProps> = ({
           )}
         </div>
 
-        {/* 底部操作 */}
-        <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
+        {/* 底部操作 (适配手机底部安全区) */}
+        <div className="shrink-0 px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] border-t border-slate-800 bg-slate-900 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">
             每年岁末随年轮推进自动结算投资盈亏与租金利润
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer"
           >
             完成
           </button>

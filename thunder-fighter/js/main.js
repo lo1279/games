@@ -40,10 +40,11 @@ class ThunderGame {
         this.shakeTime = 0;
         this.shakeIntensity = 0;
 
-        // 控制输入状态 (触屏相对拖拽微操，视线完全开阔)
+        // 控制输入状态 (触屏相对拖拽微操，支持双手多指协同与单指防跳跃锁定)
         this.keys = {};
         this.mousePos = { x: this.width / 2, y: this.height - 100, active: false };
         this.touchPos = { x: this.width / 2, y: this.height - 100, deltaX: 0, deltaY: 0, active: false };
+        this.activeTouchId = null; // 绑定的战机主控指触控ID
         this.lastTouchX = 0;
         this.lastTouchY = 0;
         this.lastTouchTime = 0;
@@ -51,34 +52,57 @@ class ThunderGame {
         this.resize();
         this.initInput();
         this.bindUI();
+        this.initMobileSafeguards();
+
         window.addEventListener('resize', () => this.resize());
         window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 150));
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => this.resize());
+        }
 
         this.lastTime = performance.now();
         requestAnimationFrame(this.loop.bind(this));
     }
 
-    // 动态全屏自适应与 Retina 像素比缩放
+    // 动态全屏自适应与 Retina 像素比缩放 (结合 visualViewport 精准避让刘海屏与地址栏)
     resize() {
+        const vp = window.visualViewport;
         const container = document.getElementById('game-container') || document.body;
-        const w = container.clientWidth || window.innerWidth || 480;
-        const h = container.clientHeight || window.innerHeight || 720;
-        this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-        this.width = w;
-        this.height = h;
+        const w = (vp && vp.width) ? vp.width : (container.clientWidth || window.innerWidth || 480);
+        const h = (vp && vp.height) ? vp.height : (container.clientHeight || window.innerHeight || 720);
+        // 限制 DPR 在 1.5 ~ 2.0，兼顾 Retina 极清与手机省电流畅防发热
+        this.dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2.0);
+        this.width = Math.round(w);
+        this.height = Math.round(h);
 
-        this.canvas.width = Math.round(w * this.dpr);
-        this.canvas.height = Math.round(h * this.dpr);
-        this.canvas.style.width = `${w}px`;
-        this.canvas.style.height = `${h}px`;
+        this.canvas.width = Math.round(this.width * this.dpr);
+        this.canvas.height = Math.round(this.height * this.dpr);
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
 
         if (this.starfield) {
-            this.starfield.resize(w, h);
+            this.starfield.resize(this.width, this.height);
         }
         if (this.player) {
-            this.player.canvasWidth = w;
-            this.player.canvasHeight = h;
+            this.player.canvasWidth = this.width;
+            this.player.canvasHeight = this.height;
         }
+    }
+
+    // 移动端全屏安全手势防护 (杜绝微信/Safari双指缩放、下拉露白与橡皮筋反弹)
+    initMobileSafeguards() {
+        // 1. 禁用 iOS Safari 默认双指缩放手势
+        document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+        document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+        document.addEventListener('gestureend', e => e.preventDefault(), { passive: false });
+
+        // 2. 拦截整个视口向下的橡皮筋下拉露底手势
+        document.body.addEventListener('touchmove', e => {
+            // 如果事件不是发生在具有滚动条的内容区，则完全锁死
+            if (e.target === this.canvas || e.target.id === 'game-container') {
+                e.preventDefault();
+            }
+        }, { passive: false });
     }
 
     // 微信小程序与现代手机震动反馈
@@ -136,11 +160,15 @@ class ThunderGame {
             this.mousePos.active = false;
         });
 
-        // 手机触屏微操控制 (支持屏幕任意区域盲操相对位移 + 双击释放核弹)
+        // 手机触屏微操控制 (单指独立锁定防跳跃 + 双手多指协同支持 + 双击核弹)
         this.canvas.addEventListener('touchstart', e => {
             e.preventDefault();
-            if (e.touches.length > 0) {
-                const touch = e.touches[0];
+            const now = performance.now();
+
+            // 若当前未锁定主控手指，绑定新触点为主控摇杆指
+            if (this.activeTouchId === null && e.changedTouches.length > 0) {
+                const touch = e.changedTouches[0];
+                this.activeTouchId = touch.identifier;
                 this.lastTouchX = touch.clientX;
                 this.lastTouchY = touch.clientY;
                 this.touchPos.deltaX = 0;
@@ -148,7 +176,6 @@ class ThunderGame {
                 this.touchPos.active = true;
 
                 // 双击全屏释放核弹 (Double Tap Bomb)
-                const now = performance.now();
                 if (now - this.lastTouchTime < 320) {
                     if (this.state === 'PLAYING') {
                         const used = this.player.useBomb(this.bullets, this.enemies, this.boss);
@@ -156,54 +183,93 @@ class ThunderGame {
                     }
                 }
                 this.lastTouchTime = now;
-
-                if (window.sounds) window.sounds.ensureResume();
             }
+
+            if (window.sounds) window.sounds.ensureResume();
         }, { passive: false });
 
         this.canvas.addEventListener('touchmove', e => {
             e.preventDefault();
-            if (e.touches.length > 0) {
-                const touch = e.touches[0];
-                // 累计手指位移差，驱动战机防遮挡平滑机动
-                const dx = touch.clientX - this.lastTouchX;
-                const dy = touch.clientY - this.lastTouchY;
-                this.touchPos.deltaX += dx;
-                this.touchPos.deltaY += dy;
-                this.lastTouchX = touch.clientX;
-                this.lastTouchY = touch.clientY;
-                this.touchPos.active = true;
+            if (this.activeTouchId !== null && this.state === 'PLAYING') {
+                // 精准定位主控战机触点，彻底隔离副手指点击造成的坐标跳变
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    if (touch.identifier === this.activeTouchId) {
+                        const dx = touch.clientX - this.lastTouchX;
+                        const dy = touch.clientY - this.lastTouchY;
+                        this.touchPos.deltaX += dx;
+                        this.touchPos.deltaY += dy;
+                        this.touchPos.active = true;
+                        this.lastTouchX = touch.clientX;
+                        this.lastTouchY = touch.clientY;
+                        break;
+                    }
+                }
             }
         }, { passive: false });
 
-        this.canvas.addEventListener('touchend', () => {
-            this.touchPos.active = false;
-            this.touchPos.deltaX = 0;
-            this.touchPos.deltaY = 0;
-        });
+        const handleTouchEnd = (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === this.activeTouchId) {
+                    this.activeTouchId = null;
+                    this.touchPos.active = false;
+                    this.touchPos.deltaX = 0;
+                    this.touchPos.deltaY = 0;
+                    break;
+                }
+            }
+        };
 
-        this.canvas.addEventListener('touchcancel', () => {
-            this.touchPos.active = false;
-            this.touchPos.deltaX = 0;
-            this.touchPos.deltaY = 0;
+        this.canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        this.canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+    }
+
+    // 移动端零延迟瞬态按键绑定 (消灭300ms点击延迟与触摸穿透)
+    bindFastButton(elementId, callback) {
+        const elem = document.getElementById(elementId);
+        if (!elem) return;
+
+        let lastTouchTrigger = 0;
+        const trigger = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            if (window.sounds) window.sounds.ensureResume();
+            callback();
+        };
+
+        elem.addEventListener('touchstart', (e) => {
+            lastTouchTrigger = performance.now();
+            trigger(e);
+        }, { passive: false });
+
+        elem.addEventListener('click', (e) => {
+            // 若 400ms 内已被 touchstart 瞬态触发，忽略合成 click，防二次触发
+            if (performance.now() - lastTouchTrigger < 400) return;
+            trigger(e);
         });
     }
 
     bindUI() {
-        document.getElementById('start-btn')?.addEventListener('click', () => this.startGame());
-        document.getElementById('restart-btn')?.addEventListener('click', () => this.startGame());
-        document.getElementById('resume-btn')?.addEventListener('click', () => this.togglePause());
-        document.getElementById('pause-btn')?.addEventListener('click', () => this.togglePause());
-        document.getElementById('bomb-btn')?.addEventListener('click', () => {
+        this.bindFastButton('start-btn', () => this.startGame());
+        this.bindFastButton('restart-btn', () => this.startGame());
+        this.bindFastButton('resume-btn', () => this.togglePause());
+        this.bindFastButton('pause-btn', () => this.togglePause());
+
+        // 右下角核弹专用按键 (零延迟瞬间爆发)
+        this.bindFastButton('bomb-btn', () => {
             if (this.state === 'PLAYING') {
                 const used = this.player.useBomb(this.bullets, this.enemies, this.boss);
                 if (used) this.hapticFeedback('heavy');
             }
         });
-        document.getElementById('sound-toggle')?.addEventListener('click', () => {
+
+        this.bindFastButton('sound-toggle', () => {
             if (window.sounds) {
                 const muted = window.sounds.toggleMute();
-                document.getElementById('sound-toggle').innerText = muted ? '🔇 静音' : '🔊 音效';
+                const btn = document.getElementById('sound-toggle');
+                if (btn) btn.innerText = muted ? '🔇 静音' : '🔊 音效';
             }
         });
     }
@@ -229,12 +295,24 @@ class ThunderGame {
         this.isGameOverPending = false;
         this.state = 'PLAYING';
 
+        // 彻底清空触控累积位移与锁定的触点，防止开局突变瞬移
+        this.touchPos.deltaX = 0;
+        this.touchPos.deltaY = 0;
+        this.touchPos.active = false;
+        this.activeTouchId = null;
+
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('game-over-screen').classList.add('hidden');
         document.getElementById('pause-screen').classList.add('hidden');
     }
 
     togglePause() {
+        // 切换暂停状态时同步清空手指残留位移
+        this.touchPos.deltaX = 0;
+        this.touchPos.deltaY = 0;
+        this.touchPos.active = false;
+        this.activeTouchId = null;
+
         if (this.state === 'PLAYING') {
             this.state = 'PAUSED';
             document.getElementById('pause-screen').classList.remove('hidden');
@@ -554,9 +632,9 @@ class ThunderGame {
             }
         }
 
-        // Boss 血条
+        // Boss 血条 (濒死爆炸演出时立即隐藏，呈现震撼胜利通关画面)
         const bossHud = document.getElementById('boss-hud');
-        if (this.boss && this.boss.alive && !this.boss.isEntering) {
+        if (this.boss && this.boss.alive && !this.boss.isEntering && !this.boss.isDying) {
             bossHud.classList.remove('hidden');
             const bossHpPct = Math.max(0, (this.boss.hp / this.boss.maxHp) * 100);
             document.getElementById('boss-hp-bar').style.width = `${bossHpPct}%`;

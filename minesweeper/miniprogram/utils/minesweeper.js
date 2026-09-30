@@ -78,7 +78,7 @@ class MinesweeperGame {
     safeSet.add(`${firstClickR},${firstClickC}`);
     const neighbors = this.getNeighbors(firstClickR, firstClickC);
 
-    if (totalCells - 9 >= this.mines) {
+    if (totalCells - (neighbors.length + 1) >= this.mines) {
       neighbors.forEach(n => safeSet.add(`${n.row},${n.col}`));
     }
 

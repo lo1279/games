@@ -75,7 +75,11 @@ class Item {
 
     applyEffect(player) {
         if (this.type === 'crystal') {
-            player.score += 200;
+            if (window.game) {
+                window.game.addScore(200);
+            } else {
+                player.score += 200;
+            }
             player.addRage(6);
             if (window.sounds) window.sounds.playPickupCrystal();
             if (window.particles) window.particles.addText('+200', this.x, this.y, '#00f6ff', 14);

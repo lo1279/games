@@ -18,14 +18,26 @@ class SoundEngine {
         if (AudioContext) {
             this.ctx = new AudioContext();
             this.initialized = true;
+
+            // 监听微信生态就绪事件
+            document.addEventListener('WeixinJSBridgeReady', () => {
+                this.ensureResume();
+            }, false);
+
+            // 手机切后台恢复自愈 (接听电话、切出微信再返回时自动重连音频)
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    this.ensureResume();
+                }
+            });
         }
     }
 
     // 确保在用户交互后 AudioContext 处于 running 状态
     ensureResume() {
         if (!this.ctx) this.init();
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
+        if (this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
+            this.ctx.resume().catch(() => {});
         }
     }
 

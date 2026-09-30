@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#0a1017">
+    <meta name="screen-orientation" content="portrait">
+    <meta name="x5-orientation" content="portrait">
+    <meta name="x5-fullscreen" content="true">
     <title>3D 骰王争霸 - 微信手机版 (Dice Master)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
     <!-- Tailwind CSS (CDN) -->
@@ -261,13 +268,18 @@
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-end space-x-2 pt-1">
-                            <button id="liar-start-btn" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 active:bg-emerald-500 text-white font-bold text-xs rounded-xl">
-                                开始对决 (底注100)
+                        <div class="flex items-center justify-between space-x-2 pt-1">
+                            <button id="liar-peek-btn" class="px-3.5 py-2 bg-slate-800 active:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center space-x-1" title="半掀开 3D 骰盅偷瞄手牌">
+                                <span>👀</span><span id="liar-peek-text">偷瞄骰盅</span>
                             </button>
-                            <button id="liar-restart-btn" class="hidden w-full sm:w-auto px-4 py-2.5 bg-amber-500 active:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all">
-                                🔄 重新发牌 (下一局)
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button id="liar-start-btn" class="px-4 py-2 bg-emerald-600 active:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md">
+                                    开始对决 (底注100)
+                                </button>
+                                <button id="liar-restart-btn" class="hidden px-4 py-2 bg-amber-500 active:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all">
+                                    🔄 重新发牌 (下一局)
+                                </button>
+                            </div>
                         </div>
                     </div>
 

@@ -152,20 +152,20 @@ export const LifeTimeline: React.FC<LifeTimelineProps> = ({
         <div ref={bottomRef} />
       </div>
 
-      {/* 底部悬浮控制台 (支持手机全面屏安全区) */}
-      <div className="shrink-0 backdrop-blur-md bg-slate-900/95 border-t border-slate-800 px-3 sm:px-4 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-2 shadow-xl">
-        <div className="flex items-center gap-1.5 sm:gap-2">
+      {/* 底部悬浮控制台 (支持手机全面屏与微信小黑条安全区) */}
+      <div className="shrink-0 backdrop-blur-md bg-slate-900/95 border-t border-slate-800 px-3 sm:px-4 pt-2.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-1.5 sm:gap-2 shadow-xl">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button
             onClick={onRestart}
             title="重新开局"
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 border border-slate-700 transition-all cursor-pointer"
+            className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 border border-slate-700 transition-all cursor-pointer flex items-center justify-center"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
 
           <button
             onClick={onChangeSpeed}
-            className="px-2.5 sm:px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs font-semibold border border-slate-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+            className="px-2.5 sm:px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs font-semibold border border-slate-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
           >
             <FastForward className="w-3.5 h-3.5" />
             <span>{playSpeedMs === 1000 ? '1x' : playSpeedMs === 500 ? '2x' : '3x'}</span>
@@ -175,7 +175,7 @@ export const LifeTimeline: React.FC<LifeTimelineProps> = ({
           {age >= 18 && onOpenBusiness && !isDead && (
             <button
               onClick={onOpenBusiness}
-              className="px-2.5 sm:px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600/30 to-teal-600/30 hover:from-emerald-600/40 hover:to-teal-600/40 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all active:scale-95 flex items-center gap-1 cursor-pointer shrink-0"
+              className="px-2.5 sm:px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600/30 to-teal-600/30 hover:from-emerald-600/40 hover:to-teal-600/40 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all active:scale-95 flex items-center gap-1 cursor-pointer shrink-0"
             >
               <Zap className="w-3.5 h-3.5 text-emerald-400" />
               <span>商海</span>
@@ -183,15 +183,15 @@ export const LifeTimeline: React.FC<LifeTimelineProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-1 justify-end max-w-[240px] sm:max-w-none">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 justify-end max-w-[240px] sm:max-w-none">
           <button
             onClick={onToggleAutoPlay}
             disabled={isDead}
-            className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer ${
+            className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer ${
               autoPlay
                 ? 'bg-amber-600/30 border-amber-500 text-amber-300 animate-pulse'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-            } disabled:opacity-30 disabled:cursor-not-allowed`}
+            } disabled:opacity-30 disabled:cursor-not-allowed shrink-0`}
           >
             {autoPlay ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
             <span className="hidden xs:inline">{autoPlay ? '暂停' : '自动'}</span>
@@ -200,7 +200,7 @@ export const LifeTimeline: React.FC<LifeTimelineProps> = ({
           <button
             onClick={onNextYear}
             disabled={isDead || autoPlay}
-            className="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-indigo-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95 text-center"
+            className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-indigo-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95 text-center min-w-[90px]"
           >
             下一年 ➔
           </button>

@@ -135,6 +135,82 @@ class SoundEngine {
     osc.start(now);
     osc.stop(now + 0.5);
   }
+
+  // 🌟 抽卡出金专属震撼华美金戈和弦 (五星神将降临)
+  playGachaGold() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const chords = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // 大三和弦加高八度
+    chords.forEach((freq, idx) => {
+      const now = this.ctx.currentTime + idx * 0.08;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.8);
+    });
+  }
+
+  // 💜 抽卡出紫专属灵动紫霞琴音 (四星良将降临)
+  playGachaPurple() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const notes = [440.00, 554.37, 659.25, 880.00];
+    notes.forEach((freq, idx) => {
+      const now = this.ctx.currentTime + idx * 0.07;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.6);
+    });
+  }
+
+  // 🃏 卡牌 3D 翻开轻快破空/纸牌脆响
+  playCardFlip() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(750, now + 0.1);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.14);
+  }
 }
 
 export const sound = new SoundEngine();

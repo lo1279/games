@@ -51,17 +51,20 @@ export const DiceChallengeModal: React.FC<DiceChallengeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in overscroll-contain">
-      <div className="w-full max-w-md flex flex-col bg-slate-900 border border-indigo-500/40 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl shadow-indigo-500/15 space-y-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in overscroll-contain">
+      <div className="w-full sm:max-w-md max-h-[92dvh] sm:max-h-[90dvh] flex flex-col bg-slate-900 border-t sm:border border-indigo-500/40 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 pb-[max(1.2rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-2xl shadow-indigo-500/15 space-y-3.5 sm:space-y-4 overflow-hidden animate-drawer-up sm:animate-scale-up">
+        {/* 移动端顶部把手条 */}
+        <div className="w-10 h-1 bg-slate-700/80 rounded-full mx-auto sm:hidden -mt-1 mb-1 shrink-0" />
+
         {/* 顶部标题与分类 */}
-        <div className="text-center space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold animate-pulse">
+        <div className="text-center space-y-1.5 shrink-0">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold animate-pulse">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>【命运交错 · D20 奇遇检定】</span>
           </div>
 
-          <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">{challenge.title}</h2>
-          <p className="text-xs text-slate-300 leading-relaxed px-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
+          <h2 className="text-base sm:text-xl font-black text-white tracking-tight leading-snug">{challenge.title}</h2>
+          <p className="text-xs text-slate-300 leading-relaxed px-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 break-words">
             {challenge.description}
           </p>
         </div>

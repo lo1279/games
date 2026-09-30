@@ -11,11 +11,12 @@
 
 html, body {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  height: 100dvh;
   background-color: #0d1117;
   color: #ecf0f1;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
   touch-action: manipulation;
   overscroll-behavior: none;
 }
@@ -24,8 +25,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding: 10px 6px;
+  justify-content: space-between;
+  padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
 }
 
 /* 顶部标题栏 */
@@ -433,22 +434,42 @@ body {
    ======================================================== */
 @media (max-width: 900px) {
   body {
-    padding: 6px 4px;
-    justify-content: flex-start;
+    padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+    justify-content: space-between;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .game-header {
+    margin-bottom: 2px;
   }
 
   .game-title {
-    font-size: 18px;
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+
+  .game-subtitle {
+    display: none;
   }
 
   .arcade-container {
     flex-direction: column;
     align-items: center;
-    padding: 8px;
+    padding: 4px;
     border-width: 2px;
     width: 100%;
-    max-width: 460px;
-    gap: 8px;
+    max-width: 440px;
+    gap: 4px;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+  }
+
+  .canvas-wrapper {
+    /* 保证在竖屏下：画布最大宽度为 94vw，高度不超过一屏可用空间，杜绝滚动 */
+    max-width: min(94vw, calc(100dvh - 245px), 400px);
+    border-width: 2px;
   }
 
   /* 隐藏桌面端侧边栏，开启移动端顶部 HUD */
@@ -458,15 +479,132 @@ body {
 
   .mobile-top-hud {
     display: flex;
+    margin-bottom: 2px;
+    padding: 4px 8px;
   }
 
   /* 开启手机掌机触控面板 */
   .touch-controls {
     display: flex;
+    margin-top: 4px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .dpad-container {
+    width: 116px;
+    height: 116px;
+  }
+
+  .dpad-cross {
+    width: 100px;
+    height: 100px;
+  }
+
+  .d-up { top: 0; left: 34px; width: 32px; height: 34px; }
+  .d-down { bottom: 0; left: 34px; width: 32px; height: 34px; }
+  .d-left { top: 34px; left: 0; width: 34px; height: 32px; }
+  .d-right { top: 34px; right: 0; width: 34px; height: 32px; }
+  .d-center { top: 34px; left: 34px; width: 32px; height: 32px; }
+
+  .btn-fire-a {
+    width: 58px;
+    height: 58px;
+    font-size: 15px;
+  }
+
+  .btn-fire-b {
+    width: 48px;
+    height: 48px;
+    font-size: 12px;
   }
 
   /* 隐藏桌面长条说明 */
   .instructions-panel {
     display: none;
+  }
+}
+
+/* ========================================================
+   🕹️ 横屏掌机沉浸模式 (Landscape Handheld Mode)
+   针对手机横屏：左手十字键、中间战场画布、右手开火按钮
+   ======================================================== */
+@media (orientation: landscape) and (max-height: 550px) {
+  body {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: max(2px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .game-header, .mobile-top-hud, .hud-sidebar, .instructions-panel {
+    display: none !important;
+  }
+
+  .arcade-container {
+    order: 2;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    max-width: none;
+    width: auto;
+  }
+
+  .canvas-wrapper {
+    /* 充满横屏高度 */
+    width: calc(100dvh - 12px);
+    max-width: calc(100dvh - 12px);
+    height: calc(100dvh - 12px);
+    aspect-ratio: 1 / 1;
+    border-width: 2px;
+    margin: 0;
+  }
+
+  .touch-controls {
+    display: contents !important; /* 允许子元素分别排布到左右两侧 */
+  }
+
+  .gamepad-main {
+    display: contents !important;
+  }
+
+  /* 左侧：十字方向键 */
+  .dpad-container {
+    order: 1;
+    width: 124px;
+    height: 124px;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  /* 中间功能区：悬浮在屏幕正上方或隐藏，精简布局 */
+  .gamepad-middle {
+    display: none !important;
+  }
+
+  /* 右侧：开火按键群 */
+  .action-pad {
+    order: 3;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 14px;
+    margin-left: 12px;
+    flex-shrink: 0;
+  }
+
+  .btn-fire-a {
+    width: 62px;
+    height: 62px;
+    font-size: 16px;
+  }
+
+  .btn-fire-b {
+    width: 50px;
+    height: 50px;
+    font-size: 13px;
   }
 }

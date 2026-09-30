@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeTabs = document.querySelectorAll('.mode-tab');
     const modePanels = document.querySelectorAll('.mode-panel');
 
-    const switchMode = (mode) => {
+    const switchMode = (mode, playSound = false) => {
         currentMode = mode;
 
         // 样式切换
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (mode === 'liar') {
             diceEngine.setDiceCount(5);
             liar.initUI();
-            liar.startNewGame();
+            // 不再自动强制开局扣款，由玩家点击【开始对决】自主开局
         } else if (mode === 'yahtzee') {
             diceEngine.setDiceCount(5);
             yahtzee.startNewGame();
@@ -115,11 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
             diceEngine.setDiceCount(free.diceCount);
         }
 
-        if (window.soundEngine) window.soundEngine.playClick();
+        if (playSound && window.soundEngine) window.soundEngine.playClick();
     };
 
     modeTabs.forEach(tab => {
-        tab.onclick = () => switchMode(tab.dataset.mode);
+        tab.onclick = () => switchMode(tab.dataset.mode, true);
     });
 
     // 绑定骰宝操作按钮
@@ -138,6 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('liar-restart-btn').onclick = () => liar.startNewGame();
     document.getElementById('liar-call-btn').onclick = () => liar.playerCall();
     document.getElementById('liar-open-btn').onclick = () => liar.playerOpen();
+    const liarPeekBtn = document.getElementById('liar-peek-btn');
+    if (liarPeekBtn) {
+        liarPeekBtn.onclick = () => liar.togglePeek();
+    }
 
     // 绑定快艇操作按钮
     document.getElementById('yahtzee-roll-btn').onclick = () => yahtzee.roll();

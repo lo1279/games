@@ -165,15 +165,33 @@
             📚 传承战法研习阁 (Lv.1~10)
           </button>
         </div>
-        <div id="generalsActionBar" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <button class="upgrade-btn" id="btnQuickAutoPromote" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding:4px 12px; font-size:12px;">
-            🌟 一键同名升星进阶
+        <div id="generalsActionBar" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <!-- 阵营筛选 -->
+          <div style="display:flex; gap:4px; align-items:center; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:6px; border:1px solid #374151;">
+            <span style="font-size:11px; color:#9ca3af; margin-right:2px;">阵营:</span>
+            <button class="nav-tab-btn active btn-filter-camp" data-camp="all" style="padding:2px 8px; font-size:11px;">全部</button>
+            <button class="nav-tab-btn btn-filter-camp" data-camp="wei" style="padding:2px 8px; font-size:11px;">魏</button>
+            <button class="nav-tab-btn btn-filter-camp" data-camp="shu" style="padding:2px 8px; font-size:11px;">蜀</button>
+            <button class="nav-tab-btn btn-filter-camp" data-camp="wu" style="padding:2px 8px; font-size:11px;">吴</button>
+            <button class="nav-tab-btn btn-filter-camp" data-camp="qun" style="padding:2px 8px; font-size:11px;">群</button>
+          </div>
+
+          <!-- 星级筛选 -->
+          <div style="display:flex; gap:4px; align-items:center; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:6px; border:1px solid #374151;">
+            <span style="font-size:11px; color:#9ca3af; margin-right:2px;">品质:</span>
+            <button class="nav-tab-btn active btn-filter-star" data-star="all" style="padding:2px 8px; font-size:11px;">全部</button>
+            <button class="nav-tab-btn btn-filter-star" data-star="5" style="padding:2px 8px; font-size:11px; color:#fbbf24;">5★神将</button>
+            <button class="nav-tab-btn btn-filter-star" data-star="4" style="padding:2px 8px; font-size:11px; color:#c084fc;">4★良将</button>
+            <button class="nav-tab-btn btn-filter-star" data-star="3" style="padding:2px 8px; font-size:11px; color:#9ca3af;">3★偏将</button>
+          </div>
+
+          <!-- 快捷操作按钮 -->
+          <button class="upgrade-btn" id="btnQuickAutoPromote" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding:4px 10px; font-size:11px;">
+            🌟 一键进阶
           </button>
-          <button class="upgrade-btn" id="btnQuickSellThreeStars" style="background:#4b5563; padding:4px 12px; font-size:12px;">
-            🪙 一键解甲全部3星将
+          <button class="upgrade-btn" id="btnQuickSellThreeStars" style="background:#4b5563; padding:4px 10px; font-size:11px;">
+            🪙 解甲3星
           </button>
-          <button class="nav-tab-btn active" id="btnFilterAllGen" style="padding:4px 10px; border:1px solid #374151;">全部武将</button>
-          <button class="nav-tab-btn" id="btnFilterFiveStar" style="padding:4px 10px; border:1px solid #374151;">五星神将</button>
         </div>
       </div>
 
@@ -320,9 +338,12 @@
 
   <!-- ✨ 抽卡开箱展示浮层 -->
   <div class="gacha-showcase-mask" id="gachaShowcase" style="display: none;">
-    <h2 style="font-size:24px; color:#fbbf24; margin-bottom:20px; font-weight:900;">🎉 英雄集结！恭获名将</h2>
+    <div class="gacha-title-banner" id="gachaShowcaseTitle">🎉 英雄集结 · 恭获名将</div>
     <div class="gacha-cards-display" id="gachaCardsContainer"></div>
-    <button class="gacha-btn" id="btnGachaShowcaseConfirm" style="max-width:200px; width:100%;">收归麾下</button>
+    <button class="gacha-confirm-seal-btn" id="btnGachaShowcaseConfirm">
+      <span>📜</span>
+      <span>遵命 · 收归麾下</span>
+    </button>
   </div>
 
   <!-- 核心逻辑调度入口 -->

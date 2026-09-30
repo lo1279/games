@@ -29,24 +29,27 @@ export const CardUpgradeModal: React.FC<CardUpgradeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-amber-500/60 rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-fade-in safe-area-container select-none">
+      <div className="relative w-full max-w-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-amber-500/60 rounded-2xl p-3 sm:p-5 shadow-2xl flex flex-col max-h-[92dvh]">
         {/* 关闭按钮 */}
         <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800/60 border border-slate-700"
+          onClick={() => {
+            sounds.playClick();
+            onClose();
+          }}
+          className="absolute top-2.5 right-2.5 text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800/80 border border-slate-700 active:scale-95 cursor-pointer z-20"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
         {/* 头部标题 */}
-        <div className="text-center mb-3">
-          <div className="inline-flex items-center gap-2 text-amber-400 font-black text-lg sm:text-xl">
-            <Sparkles className="w-5 h-5 text-amber-400 animate-spin" />
+        <div className="text-center mb-2 sm:mb-3 pr-6">
+          <div className="inline-flex items-center gap-1.5 text-amber-400 font-black text-base sm:text-lg">
+            <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
             <span>神术熔炉 · 淬火强化</span>
-            <Sparkles className="w-5 h-5 text-amber-400 animate-spin" />
+            <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
           </div>
-          <p className="text-xs text-slate-300 mt-1">
+          <p className="text-[10px] sm:text-xs text-slate-300 mt-0.5">
             选择牌组中的一张卡牌注入天地灵力，大幅跃升其攻防与神通！
           </p>
         </div>

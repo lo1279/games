@@ -200,9 +200,13 @@ class Player {
             }
         }
 
-        // 3. 对 Boss 造成巨量削减
+        // 3. 对 Boss 造成巨量削减，并过载驱散其主炮激光
         if (boss && boss.alive) {
             boss.takeDamage(1500);
+            if (boss.laser) {
+                boss.laser.alive = false;
+                boss.laser = null;
+            }
         }
 
         // 赋予玩家短暂无敌

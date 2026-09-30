@@ -6,28 +6,39 @@ class SoundEngine {
     constructor() {
         this.ctx = null;
         this.enabled = true;
+        this.hasUserInteracted = false;
         this.init();
     }
 
     init() {
-        // 用户首次交互时激活 AudioContext
+        // 用户首次手势交互时激活 AudioContext 并开启触觉振动许可
         const resumeAudio = () => {
-            if (!this.ctx) {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (AudioCtx) {
-                    this.ctx = new AudioCtx();
-                }
-            }
-            if (this.ctx && this.ctx.state === 'suspended') {
-                this.ctx.resume();
-            }
+            this.hasUserInteracted = true;
+            this.ensureContext();
             window.removeEventListener('click', resumeAudio);
             window.removeEventListener('keydown', resumeAudio);
             window.removeEventListener('touchstart', resumeAudio);
+            window.removeEventListener('touchend', resumeAudio);
         };
         window.addEventListener('click', resumeAudio);
         window.addEventListener('keydown', resumeAudio);
         window.addEventListener('touchstart', resumeAudio);
+        window.addEventListener('touchend', resumeAudio);
+
+        // 针对微信小程序 web-view 与微信内置浏览器的自动预热
+        if (typeof window.WeixinJSBridge !== 'undefined') {
+            try {
+                window.WeixinJSBridge.invoke('getNetworkType', {}, () => {
+                    this.hasUserInteracted = true;
+                    this.ensureContext();
+                });
+            } catch (e) {}
+        } else {
+            document.addEventListener('WeixinJSBridgeReady', () => {
+                this.hasUserInteracted = true;
+                this.ensureContext();
+            }, false);
+        }
     }
 
     ensureContext() {
@@ -38,9 +49,37 @@ class SoundEngine {
             }
         }
         if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
+            this.ctx.resume().catch(() => {});
         }
         return this.ctx;
+    }
+
+    /**
+     * 手机真机触感振动反馈 (Haptic Feedback)
+     * 支持 Android、各类移动浏览器及微信端环境；不支持或未产生用户手势时静默跳过
+     */
+    triggerHaptic(type = 'click') {
+        if (!this.enabled || !this.hasUserInteracted) return;
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try {
+                switch (type) {
+                    case 'shake':
+                        navigator.vibrate([15, 20, 15]); // 摇晃微震颤
+                        break;
+                    case 'hit':
+                        navigator.vibrate(22);           // 落地坚硬撞击清脆短顿挫
+                        break;
+                    case 'win':
+                        navigator.vibrate([30, 45, 35, 55]); // 中奖节奏震颤
+                        break;
+                    case 'click':
+                        navigator.vibrate(10);           // 触控按键微反馈
+                        break;
+                }
+            } catch (e) {
+                // 忽略非受控环境震动权限异常
+            }
+        }
     }
 
     toggle() {
@@ -53,6 +92,7 @@ class SoundEngine {
      */
     playShake() {
         if (!this.enabled) return;
+        this.triggerHaptic('shake');
         const ctx = this.ensureContext();
         if (!ctx) return;
 
@@ -127,6 +167,7 @@ class SoundEngine {
      */
     playDiceHit(intensity = 0.5) {
         if (!this.enabled) return;
+        this.triggerHaptic('hit');
         const ctx = this.ensureContext();
         if (!ctx) return;
         const now = ctx.currentTime;
@@ -203,6 +244,7 @@ class SoundEngine {
      */
     playWin() {
         if (!this.enabled) return;
+        this.triggerHaptic('win');
         const ctx = this.ensureContext();
         if (!ctx) return;
         const now = ctx.currentTime;
@@ -264,6 +306,7 @@ class SoundEngine {
      */
     playClick() {
         if (!this.enabled) return;
+        this.triggerHaptic('click');
         const ctx = this.ensureContext();
         if (!ctx) return;
         const now = ctx.currentTime;

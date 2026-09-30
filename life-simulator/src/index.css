@@ -23,8 +23,23 @@ html, body, #root {
   color: #f1f5f9;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   overscroll-behavior: none;
   touch-action: manipulation;
+}
+
+/* 输入框允许选中与输入文字 */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 移动端平滑滚动容器 */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
 }
 
 /* 移动端安全区实用类 */
@@ -54,7 +69,7 @@ html, body, #root {
   scrollbar-width: none;
 }
 
-/* 自定义移动端滚动条 */
+/* 移动端轻巧滚动条 */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -72,4 +87,21 @@ html, body, #root {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.6);
 }
+
+/* 移动端抽屉升起动效 */
+@keyframes slideUpDrawer {
+  from {
+    transform: translateY(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-drawer-up {
+  animation: slideUpDrawer 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 

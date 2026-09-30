@@ -11,7 +11,13 @@
 html, body {
     width: 100%;
     height: 100%;
+    position: fixed; /* 彻底钉死iOS/微信下拉橡皮筋露白 */
+    top: 0;
+    left: 0;
     overflow: hidden;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: auto;
     background-color: #030712;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     color: #f1f5f9;
@@ -19,7 +25,11 @@ html, body {
 }
 
 #game-container {
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100vw;
     height: 100vh;
     height: 100dvh; /* 适配移动端动态地址栏高度 */

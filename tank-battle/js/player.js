@@ -82,13 +82,28 @@ class PlayerTank extends Tank {
   }
 
   /**
-   * 重生复活
+   * 阵亡掉命后重新复活 (等级降回1级)
    */
   respawn() {
     this.x = this.spawnX;
     this.y = this.spawnY;
     this.dir = CONFIG.DIR.UP;
     this.level = 1;
+    this.applyLevelStats();
+    this.hp = 1;
+    this.destroyed = false;
+    this.shieldTimer = CONFIG.DURATION.PLAYER_SPAWN_SHIELD;
+    this.activeBullets = 0;
+  }
+
+  /**
+   * 关卡胜利后进入下一防区复位 (完美继承当前的坦克强化等级与火力)
+   */
+  resetForNextStage() {
+    this.x = this.spawnX;
+    this.y = this.spawnY;
+    this.dir = CONFIG.DIR.UP;
+    // 保持当前 this.level 不变，重新应用属性
     this.applyLevelStats();
     this.hp = 1;
     this.destroyed = false;

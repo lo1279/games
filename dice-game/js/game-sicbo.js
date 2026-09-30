@@ -43,6 +43,7 @@ class SicBoGame {
     initUI() {
         this.renderRoadMap();
         this.updateTotalBetDisplay();
+        this.state.on('sicboHistory', () => this.renderRoadMap());
     }
 
     setSelectedChip(amount) {
@@ -265,7 +266,7 @@ class SicBoGame {
             badge.className = 'w-7 h-7 rounded-full flex flex-col items-center justify-center text-[10px] font-black shadow-inner flex-shrink-0 ';
             if (item.isTriple) {
                 badge.className += 'bg-purple-600 text-white ring-2 ring-purple-300 animate-pulse';
-                badge.innerHTML = `<span>豹</span>`;
+                badge.innerHTML = `<span>豹</span><span class="text-[8px] leading-none">${item.sum}</span>`;
             } else if (item.isBig) {
                 badge.className += 'bg-rose-600 text-white';
                 badge.innerHTML = `<span>大</span><span class="text-[8px] leading-none">${item.sum}</span>`;

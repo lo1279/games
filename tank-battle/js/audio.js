@@ -14,6 +14,21 @@ class SoundEngine {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioContext();
       this.initialized = true;
+
+      // 移动端/微信专属：切回前台时自动复活恢复音频上下文
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          this.resume();
+        }
+      });
+      window.addEventListener('pageshow', () => this.resume());
+
+      // 微信浏览器专属桥接预热
+      if (typeof window.WeixinJSBridge !== 'undefined') {
+        this.resume();
+      } else {
+        document.addEventListener('WeixinJSBridgeReady', () => this.resume(), { once: true });
+      }
     } catch (e) {
       console.warn('Web Audio API not supported', e);
     }
@@ -26,7 +41,7 @@ class SoundEngine {
 
   resume() {
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
   }
 

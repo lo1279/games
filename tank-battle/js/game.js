@@ -137,9 +137,9 @@ class TankGame {
     this.spawnTimer = 0.5;
     this.nextSpawnIndex = 0;
 
-    // 复位玩家位置
+    // 复位玩家位置并保留当前武器强化等级
     if (this.player) {
-      this.player.respawn();
+      this.player.resetForNextStage();
     }
 
     // 播放关卡前奏与转场横幅
@@ -166,7 +166,8 @@ class TankGame {
    * 游戏主循环
    */
   loop(timestamp) {
-    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
+    // 物理步长限制在最大约 30FPS (0.033s)，彻底杜绝瞬移穿墙与穿隧效应
+    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.033);
     this.lastTime = timestamp;
 
     this.update(dt);
@@ -430,11 +431,29 @@ class TankGame {
       CONFIG.POWERUP.HELMET,
       CONFIG.POWERUP.TANK
     ];
-    const pickedType = types[Math.floor(Math.random() * types.length)];
+    // 智能寻找可通行的合法地面 (彻底避免刷在水中央或实心铁墙中)
+    let px = 10 * CONFIG.TILE_SIZE;
+    let py = 18 * CONFIG.TILE_SIZE;
+    let isValid = false;
+    let attempts = 0;
 
-    // 随机挑选合理的瓦片坐标
-    let px = Math.floor(Math.random() * (CONFIG.MAP_COLS - 4) + 2) * CONFIG.TILE_SIZE;
-    let py = Math.floor(Math.random() * (CONFIG.MAP_ROWS - 6) + 2) * CONFIG.TILE_SIZE;
+    while (!isValid && attempts < 30) {
+      attempts++;
+      const col = Math.floor(Math.random() * (CONFIG.MAP_COLS - 4) + 2);
+      const row = Math.floor(Math.random() * (CONFIG.MAP_ROWS - 6) + 2);
+      const tile = this.mapManager.grid[row][col];
+      // 排除水面、铁墙、老鹰基地
+      if (
+        tile !== CONFIG.TILE.WATER &&
+        tile !== CONFIG.TILE.STEEL &&
+        tile !== CONFIG.TILE.EAGLE &&
+        tile !== CONFIG.TILE.EAGLE_DEAD
+      ) {
+        px = col * CONFIG.TILE_SIZE;
+        py = row * CONFIG.TILE_SIZE;
+        isValid = true;
+      }
+    }
 
     this.powerups.push(new PowerUp(px, py, pickedType));
     soundEngine.playPowerup();
@@ -522,8 +541,10 @@ class TankGame {
   }
 
   triggerGameOver() {
+    if (this.state === this.STATE.GAME_OVER) return;
     this.state = this.STATE.GAME_OVER;
     this.gameOverTimer = 0;
+    soundEngine.playGameOver();
   }
 
   /**

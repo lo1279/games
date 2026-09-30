@@ -9,7 +9,7 @@ import { TowerPanel } from './components/TowerPanel';
 import { BottomControls } from './components/BottomControls';
 import { GameOverModal } from './components/GameOverModal';
 import { sound } from './core/SoundEffects';
-import { Compass, X, Zap } from 'lucide-react';
+import { Compass, X, Zap, Smartphone } from 'lucide-react';
 
 export const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -59,6 +59,25 @@ export const App: React.FC = () => {
     percent: 0,
     isReady: false,
   });
+
+  // 移动端横竖屏状态智能检测
+  const [showRotatePrompt, setShowRotatePrompt] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = window.innerWidth < 768;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setShowRotatePrompt(isMobile && isPortrait);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
 
   // 初始化引擎
   useEffect(() => {
@@ -355,13 +374,14 @@ export const App: React.FC = () => {
       return;
     }
 
-    // 2. 否则检测点击场上的武将
+    // 2. 否则检测点击场上的武将（移动端大幅提升触控容错范围至 42 逻辑像素，最近优先吸附）
     let clickedTower: PlacedTower | null = null;
+    let closestDist = 42;
     for (const t of engine.towers) {
       const dist = Math.hypot(t.x - coords.x, t.y - coords.y);
-      if (dist <= 26) {
+      if (dist < closestDist) {
+        closestDist = dist;
         clickedTower = t;
-        break;
       }
     }
     engine.selectTower(clickedTower);
@@ -382,7 +402,21 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-stone-950 select-none overflow-hidden text-stone-100">
+    <div className="flex flex-col h-full h-[100dvh] w-screen bg-stone-950 select-none overflow-hidden text-stone-100 relative">
+      {/* 移动端竖屏建议横屏轻量提示条 */}
+      {showRotatePrompt && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-50 bg-stone-900/95 border border-amber-500/80 rounded-full px-3 py-1 shadow-2xl flex items-center gap-2 backdrop-blur-md animate-in fade-in slide-in-from-top-1 text-amber-200 text-[11px] pointer-events-auto">
+          <Smartphone size={13} className="text-amber-400 rotate-90 animate-pulse" />
+          <span>建议横屏体验全景古战场</span>
+          <button
+            onClick={() => setShowRotatePrompt(false)}
+            className="ml-1 p-0.5 hover:bg-stone-800 rounded-full text-stone-400 hover:text-white transition"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
       {/* 顶部导航控制栏 */}
       <TopBar
         currentStage={currentStage}
@@ -401,10 +435,10 @@ export const App: React.FC = () => {
       />
 
       {/* 主工作区：移动端上下分层 (flex-col)，桌面端左右分层 (md:flex-row) */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative min-h-0 h-full">
         {/* 游戏战场 Canvas 区域 */}
-        <div className="flex-1 flex items-center justify-center bg-stone-950 p-1 sm:p-2 md:p-3 relative overflow-hidden min-h-0">
-          <div className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-900/60 bg-stone-900 max-w-full max-h-full flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center bg-stone-950 p-0.5 sm:p-2 md:p-3 relative overflow-hidden min-h-0 h-full">
+          <div className="relative rounded-lg sm:rounded-2xl overflow-hidden shadow-2xl border sm:border-2 border-amber-900/50 bg-stone-900 max-w-full max-h-full flex items-center justify-center">
             <canvas
               ref={canvasRef}
               width={1000}
@@ -492,7 +526,7 @@ export const App: React.FC = () => {
                 onSell={handleSellTower}
                 onCastSkill={(t) => engineRef.current?.startAimingSkill(t)}
                 onRelocate={(t) => engineRef.current?.startRelocateTower(t)}
-                isAiming={aimingSkillTower?.id === selectedTower?.id}
+                isAiming={false}
                 isRelocating={false}
                 onClose={() => {
                   if (engineRef.current) {

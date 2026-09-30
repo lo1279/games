@@ -94,12 +94,15 @@ class HomingMissile extends Bullet {
     }
 
     update(bounds, enemies) {
-        // 动态索敌：若目标已死亡或离开，重新寻找最近存活敌机
-        if (!this.target || !this.target.alive) {
+        // 目标有效性判定辅助：存活且未处于无敌进场或濒死爆炸中
+        const isValid = (e) => Boolean(e && e.alive && !e.isEntering && !e.isDying && e.y > 0 && e.y < bounds.height);
+
+        // 动态索敌：若目标无效或已离开，重新寻找最近存活敌机
+        if (!isValid(this.target)) {
             let minDist = Infinity;
             let closest = null;
             for (let e of enemies) {
-                if (e.alive && e.y > 0 && e.y < bounds.height) {
+                if (isValid(e)) {
                     const dist = Math.hypot(e.x - this.x, e.y - this.y);
                     if (dist < minDist) {
                         minDist = dist;
@@ -111,7 +114,7 @@ class HomingMissile extends Bullet {
         }
 
         // 导弹向目标偏转
-        if (this.target && this.target.alive) {
+        if (isValid(this.target)) {
             const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
             let diff = targetAngle - this.angle;
             // 归一化角差到 [-PI, PI]

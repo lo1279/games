@@ -39,7 +39,8 @@ class Dice3DEngine {
         // 渲染器 (启用色彩空间转换与软阴影)
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
         this.renderer.setSize(width, height);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // 手机端 DPR 限制在 1.75 内，在保证视网膜视效的同时大幅降低 GPU 功耗与发热
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         if (THREE.ACESFilmicToneMapping) {
@@ -47,6 +48,27 @@ class Dice3DEngine {
             this.renderer.toneMappingExposure = 1.15;
         }
         this.container.appendChild(this.renderer.domElement);
+
+        // WebGL 移动端上下文丢失与恢复防御 (针对微信切出后台与锁屏回收)
+        this.isContextLost = false;
+        this.paused = false;
+        this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            this.isContextLost = true;
+            console.warn('WebGL context lost, pausing render loop...');
+        }, false);
+        this.renderer.domElement.addEventListener('webglcontextrestored', () => {
+            console.log('WebGL context restored, reloading scene shaders and textures...');
+            this.isContextLost = false;
+            this.materials = this.createDiceMaterials();
+            this.setupEnvironment();
+            this.onResize();
+        }, false);
+
+        // 手机端可见性监听：切出微信/切入后台时暂停动画循环，节约手机电量
+        document.addEventListener('visibilitychange', () => {
+            this.paused = document.hidden;
+        });
 
         // 创建程序化 Studio 环境反射贴图
         this.setupEnvironment();
@@ -66,8 +88,15 @@ class Dice3DEngine {
         // 几何体缓存 (细分圆角长方体)
         this.diceGeometry = this.createRoundedBoxGeometry(1.0, 0.14, 12);
 
-        // 窗口尺寸监听
+        // 窗口与精准容器尺寸监听 (ResizeObserver 适配键盘弹出与微信工具栏伸缩)
         window.addEventListener('resize', () => this.onResize());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.onResize(), 150);
+        });
+        if (window.ResizeObserver && this.container) {
+            this.resizeObserver = new ResizeObserver(() => this.onResize());
+            this.resizeObserver.observe(this.container);
+        }
 
         // 启动主渲染循环
         this.animate = this.animate.bind(this);
@@ -628,18 +657,24 @@ class Dice3DEngine {
             return;
         }
 
+        const wasVisible = this.cup.visible;
         this.cup.visible = true;
-        const startY = this.cup.position.y;
+
+        let startY = this.cup.position.y;
         let targetY = 0;
 
         if (action === 'cover') {
-            this.cup.position.set(0, 7, 0);
+            // 如果原本不可见或已经完全揭开，从上方降落；如果正在偷瞄中，直接从当前高度扣回桌面
+            if (!wasVisible || startY >= 6.0) {
+                this.cup.position.set(0, 7, 0);
+                startY = 7;
+            }
             targetY = 0;
         } else if (action === 'lift') {
-            this.cup.position.set(0, 0, 0);
+            // 揭开骰盅升入高空
             targetY = 7;
         } else if (action === 'peek') {
-            this.cup.position.set(0, 0, 0);
+            // 半掀开偷瞄 (升起到 2.2)
             targetY = 2.2;
         }
 
@@ -668,6 +703,11 @@ class Dice3DEngine {
      */
     animate(time) {
         requestAnimationFrame(this.animate);
+
+        // 手机后台节电或 WebGL 上下文丢失时跳过渲染计算
+        if (this.isContextLost || this.paused) {
+            return;
+        }
 
         let anyRolling = false;
 

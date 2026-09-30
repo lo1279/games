@@ -52,8 +52,8 @@ class YahtzeeGame {
         this.held = [false, false, false, false, false];
         this.diceValues = [1, 2, 3, 4, 5];
 
+        // 仅静态摆放 5 颗骰子，待玩家点击【掷骰子】才进行第 1 次投掷
         this.diceEngine.setDiceCount(5);
-        this.diceEngine.roll(this.diceValues, null, () => {});
 
         this.renderScoreTable();
         this.renderHoldDices();

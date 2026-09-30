@@ -26,6 +26,9 @@ html, body {
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
+    /* 屏蔽微信与移动端橡皮筋下拉黑底 */
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
 }
 
 /* 微信小程序安全区内边距辅助类 */
@@ -52,6 +55,8 @@ html, body {
     box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.9), 0 6px 20px rgba(0, 0, 0, 0.6);
     border: 4px solid #2d2417;
     outline: 1.5px solid var(--gold-primary);
+    /* 隔离 3D 托盘触摸手势，杜绝在画布上误触发滚动 */
+    touch-action: none;
 }
 
 @media (min-width: 640px) {
@@ -157,4 +162,21 @@ html, body {
 ::-webkit-scrollbar-thumb {
     background: #334155;
     border-radius: 2px;
+}
+
+/* 针对极限超小屏手机 (<360px 如折叠屏外屏、老旧小屏机) 紧凑适配 */
+@media (max-width: 360px) {
+    .bet-cell {
+        padding: 4px 1px !important;
+        font-size: 10px !important;
+    }
+    .chip-btn {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 10px !important;
+    }
+    .mode-tab {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+    }
 }

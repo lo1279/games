@@ -183,6 +183,34 @@ export class Board {
     }
 
     /**
+     * 触发变异方块变形时的脉冲彩虹粒子特效
+     */
+    spawnMorphParticles(piece) {
+        for (let r = 0; r < piece.shape.length; r++) {
+            for (let c = 0; c < piece.shape[r].length; c++) {
+                if (piece.shape[r][c]) {
+                    const px = (piece.x + c) * BLOCK_SIZE + BLOCK_SIZE / 2;
+                    const py = (piece.y + r) * BLOCK_SIZE + BLOCK_SIZE / 2;
+                    for (let i = 0; i < 4; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 1.0 + Math.random() * 3.5;
+                        this.particles.push({
+                            x: px,
+                            y: py,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            size: 2.5 + Math.random() * 2.5,
+                            alpha: 1,
+                            decay: 0.03 + Math.random() * 0.02,
+                            color: piece.getDisplayColor ? piece.getDisplayColor() : '#00ffff'
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * 渲染完整游戏底板、背景网格、活动方块及粒子
      */
     draw(activePiece = null) {
@@ -224,6 +252,9 @@ export class Board {
 
         // 3. 绘制幽灵方块投影（Ghost Piece）
         if (activePiece) {
+            const pieceColor = activePiece.getDisplayColor ? activePiece.getDisplayColor() : activePiece.color;
+            const pieceGlow = activePiece.getDisplayGlow ? activePiece.getDisplayGlow() : activePiece.glow;
+
             const ghostY = activePiece.getGhostY(this);
             for (let r = 0; r < activePiece.shape.length; r++) {
                 for (let c = 0; c < activePiece.shape[r].length; c++) {
@@ -231,7 +262,7 @@ export class Board {
                         const drawY = ghostY + r;
                         const drawX = activePiece.x + c;
                         if (drawY >= 0) {
-                            this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, activePiece.color, activePiece.glow, true);
+                            this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, pieceColor, pieceGlow, true);
                         }
                     }
                 }
@@ -244,7 +275,7 @@ export class Board {
                         const drawY = activePiece.y + r;
                         const drawX = activePiece.x + c;
                         if (drawY >= 0) {
-                            this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, activePiece.color, activePiece.glow, false);
+                            this.drawBlock(ctx, drawX, drawY, BLOCK_SIZE, pieceColor, pieceGlow, false);
                         }
                     }
                 }

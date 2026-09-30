@@ -25,6 +25,7 @@ class MapManager {
     // 铁锹加固基地计时器 (秒)
     this.shovelTimer = 0;
     this.isShovelActive = false;
+    this.shovelBlinkVisual = false;
     // 基地周边护墙瓦片坐标
     this.baseWallCoords = [
       { x: 11, y: 23 }, { x: 12, y: 23 }, { x: 13, y: 23 }, { x: 14, y: 23 },
@@ -109,17 +110,19 @@ class MapManager {
     // 水纹流动动画
     this.waterFrame = (this.waterFrame + dt * 2.5) % 2;
 
-    // 铁锹倒计时逻辑
+    // 铁锹倒计时逻辑 (解耦视觉与物理，根治无限满血Bug)
     if (this.isShovelActive) {
       this.shovelTimer -= dt;
       if (this.shovelTimer <= 0) {
         this.isShovelActive = false;
         this.shovelTimer = 0;
+        this.shovelBlinkVisual = false;
         this.setBaseWalls(CONFIG.TILE.BRICK);
       } else if (this.shovelTimer <= 3.0) {
-        // 快结束时高频闪烁警示
-        const blink = Math.floor(this.shovelTimer * 4) % 2 === 0;
-        this.setBaseWalls(blink ? CONFIG.TILE.STEEL : CONFIG.TILE.BRICK);
+        // 快结束时高频闪烁警示 (纯视觉标志交替，不改动物理数据)
+        this.shovelBlinkVisual = Math.floor(this.shovelTimer * 5) % 2 === 0;
+      } else {
+        this.shovelBlinkVisual = false;
       }
     }
   }
@@ -324,7 +327,12 @@ class MapManager {
         if (type === CONFIG.TILE.BRICK) {
           this.renderBrickTile(ctx, x, y, this.brickMask[r][c]);
         } else if (type === CONFIG.TILE.STEEL) {
-          this.renderSteelTile(ctx, x, y);
+          // 若处于铁壁即将结束的闪烁状态，且为基地护墙，视觉上交替呈现砖块质感
+          if (this.isShovelActive && this.shovelBlinkVisual && this.isBaseWallCoord(c, r)) {
+            this.renderBrickTile(ctx, x, y, 0b1111);
+          } else {
+            this.renderSteelTile(ctx, x, y);
+          }
         } else if (type === CONFIG.TILE.WATER) {
           this.renderWaterTile(ctx, x, y);
         } else if (type === CONFIG.TILE.ICE) {
@@ -335,6 +343,10 @@ class MapManager {
 
     // 渲染老鹰基地 (2x2)
     this.renderEagle(ctx);
+  }
+
+  isBaseWallCoord(c, r) {
+    return this.baseWallCoords.some(pos => pos.x === c && pos.y === r);
   }
 
   /**

@@ -283,7 +283,7 @@
       safeSet.add(`${firstClickR},${firstClickC}`);
       const neighbors = this.getNeighbors(firstClickR, firstClickC);
       
-      if (totalCells - 9 >= this.mines) {
+      if (totalCells - (neighbors.length + 1) >= this.mines) {
         neighbors.forEach(n => safeSet.add(`${n.row},${n.col}`));
       }
 
@@ -565,8 +565,10 @@
       this.game = null;
       this.timerInterval = null;
       this.mouseButtonsState = 0;
+      this.suppressNextClick = false;
       this.longPressTimer = null;
       this.isTouchMoved = false;
+      this.isLongPressTriggered = false;
       this.touchMode = 'REVEAL';
 
       this.dom = {
@@ -620,9 +622,14 @@
     }
 
     setTheme(theme) {
-      document.body.className = `theme-${theme}`;
+      this.currentTheme = theme;
+      this.updateBodyClasses();
       localStorage.setItem('minesweeper_theme', theme);
       this.dom.themeToggle.textContent = theme === 'classic' ? '🎨 复古风格' : '✨ 现代暗色';
+    }
+
+    updateBodyClasses() {
+      document.body.className = `theme-${this.currentTheme || 'modern'} diff-${this.currentDifficulty || 'beginner'}`;
     }
 
     initSoundState() {
@@ -637,6 +644,7 @@
     startNewGame() {
       this.stopTimer();
       this.resetTimerDisplay();
+      this.updateBodyClasses();
 
       let rows, cols, mines;
       if (this.currentDifficulty === 'custom') {
@@ -667,8 +675,8 @@
     renderBoard() {
       const board = this.dom.board;
       board.innerHTML = '';
-      board.style.gridTemplateRows = `repeat(${this.game.rows}, 1fr)`;
-      board.style.gridTemplateColumns = `repeat(${this.game.cols}, 1fr)`;
+      board.style.gridTemplateRows = `repeat(${this.game.rows}, var(--cell-size))`;
+      board.style.gridTemplateColumns = `repeat(${this.game.cols}, var(--cell-size))`;
 
       const frag = document.createDocumentFragment();
 
@@ -709,9 +717,13 @@
 
         if (cellData.isMine) {
           el.classList.add('cell-mine');
-          el.textContent = '💣';
           if (cellData.isExploded) {
             el.classList.add('cell-exploded');
+            el.textContent = '💥';
+            el.title = '触发爆炸点';
+          } else {
+            el.textContent = '💣';
+            el.title = '地雷';
           }
         } else {
           const count = cellData.adjacentMines;
@@ -727,6 +739,7 @@
       if (cellData.isFalseFlag) {
         el.classList.add('cell-false-flag');
         el.textContent = '❌';
+        el.title = '标错的旗子（此处不是雷）';
       }
     }
 
@@ -880,6 +893,7 @@
       if (won) {
         this.setSmiley('won');
         sounds.playWin();
+        if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
         this.updateMineDisplay(0);
         this.saveRecord(this.currentDifficulty, elapsed);
         this.showWinModal(elapsed);
@@ -887,6 +901,7 @@
       } else {
         this.setSmiley('lost');
         sounds.playExplode();
+        if (navigator.vibrate) navigator.vibrate([60, 60, 140]);
         this.shakeBoard();
       }
     }
@@ -1104,6 +1119,7 @@
         this.mouseButtonsState = e.buttons;
 
         if (e.buttons === 3) {
+          this.suppressNextClick = true;
           const cellEl = e.target.closest('.cell');
           if (cellEl) {
             const r = parseInt(cellEl.dataset.row);
@@ -1121,6 +1137,10 @@
       });
 
       board.addEventListener('click', (e) => {
+        if (this.suppressNextClick) {
+          this.suppressNextClick = false;
+          return;
+        }
         const cellEl = e.target.closest('.cell');
         if (!cellEl) return;
         const r = parseInt(cellEl.dataset.row);
@@ -1149,6 +1169,7 @@
 
       board.addEventListener('touchstart', (e) => {
         this.isTouchMoved = false;
+        this.isLongPressTriggered = false;
         const cellEl = e.target.closest('.cell');
         if (!cellEl) return;
 
@@ -1157,6 +1178,8 @@
 
         this.longPressTimer = setTimeout(() => {
           if (!this.isTouchMoved) {
+            this.isLongPressTriggered = true;
+            this.suppressNextClick = true;
             this.handleCellRightClick(r, c);
           }
         }, 350);
@@ -1174,6 +1197,12 @@
         if (this.longPressTimer) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
+        }
+        if (this.isLongPressTriggered) {
+          setTimeout(() => {
+            this.suppressNextClick = false;
+            this.isLongPressTriggered = false;
+          }, 100);
         }
       }, { passive: true });
     }

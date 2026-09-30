@@ -335,13 +335,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           </div>
         )}
 
-        {/* 手牌排列滑动区 (横向滑动 + 触屏紧凑模式) */}
-        <div className="w-full flex items-end justify-start sm:justify-center gap-1.5 overflow-x-auto no-scrollbar px-2 py-1 min-h-[165px]">
+        {/* 手牌排列滑动区 (横向平滑吸附 + 触屏紧凑模式) */}
+        <div className="w-full flex items-end justify-start sm:justify-center gap-1.5 overflow-x-auto no-scrollbar snap-x-mandatory px-3 py-1 min-h-[160px]">
           {hand.map((card, idx) => {
             const canAfford = hero.energy >= card.cost;
             const isSelected = selectedCardIdx === idx;
             return (
-              <div key={`${card.id}_${idx}`} className="flex-shrink-0">
+              <div key={`${card.id}_${idx}`} className="shrink-0 snap-center pb-1">
                 <CardComponent
                   card={card}
                   compact={true}

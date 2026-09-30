@@ -174,10 +174,27 @@ export function loadGameState() {
     if (!data.resources.stone) data.resources.stone = 10000;
     if (!data.resources.grain) data.resources.grain = 8000;
 
-    // 保证武将 level 与 exp 兼容
+    // 保证武将 level 与 exp 兼容，并清洗历史重复装配战法的脏数据
+    const seenTactics = new Set();
     (data.ownedGenerals || []).forEach(g => {
       if (!g.level) g.level = 1;
       if (g.exp === undefined || g.exp === null) g.exp = 0;
+
+      if (g.equippedTactic1) {
+        if (seenTactics.has(g.equippedTactic1)) {
+          g.equippedTactic1 = null; // 重复占用，清空
+        } else {
+          seenTactics.add(g.equippedTactic1);
+        }
+      }
+
+      if (g.equippedTactic2) {
+        if (seenTactics.has(g.equippedTactic2) || g.equippedTactic2 === g.equippedTactic1) {
+          g.equippedTactic2 = null; // 重复占用，清空
+        } else {
+          seenTactics.add(g.equippedTactic2);
+        }
+      }
     });
 
     data.lastSavedTime = now;

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HEROES } from '../config/heroes';
 import { HeroConfig } from '../types/game';
-import { Coins, ShieldAlert, Sparkles, UserPlus, Info } from 'lucide-react';
+import { Coins, ShieldAlert, Sparkles, UserPlus, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { HeroDetailModal } from './HeroDetailModal';
 
 interface TowerShopProps {
@@ -19,20 +19,58 @@ export const TowerShop: React.FC<TowerShopProps> = ({
 }) => {
   // 当前正在查看全量属性详情的武将
   const [inspectingHero, setInspectingHero] = useState<HeroConfig | null>(null);
+  // 移动端折叠状态（默认展开；当选中布阵武将时自动折叠释放视野）
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
+  // 当进入布阵状态时，在移动端自动收起抽屉
+  useEffect(() => {
+    if (placingHeroId && window.innerWidth < 768) {
+      setIsCollapsed(true);
+    }
+  }, [placingHeroId]);
+
+  const placingHero = placingHeroId ? HEROES.find((h) => h.id === placingHeroId) : null;
 
   return (
-    <div className="w-full md:w-72 bg-stone-900/95 border-t md:border-t-0 md:border-l border-amber-900/40 flex flex-col shadow-2xl z-20 shrink-0 max-h-[35vh] md:max-h-full">
-      {/* 头部标题 */}
-      <div className="p-2 sm:p-3 border-b border-amber-900/30 flex items-center justify-between bg-stone-950/60 shrink-0">
-        <div className="flex items-center gap-2">
-          <UserPlus size={15} className="text-amber-400" />
+    <div
+      className={`w-full md:w-64 lg:w-72 bg-stone-900/95 border-t md:border-t-0 md:border-l border-amber-900/40 flex flex-col shadow-2xl z-20 shrink-0 transition-all duration-300 min-h-0 h-full ${
+        isCollapsed ? 'max-h-10 md:max-h-full' : 'max-h-[35vh] md:max-h-full'
+      }`}
+    >
+      {/* 头部标题 / 移动端折叠把手 */}
+      <div
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="p-1.5 sm:p-2.5 border-b border-amber-900/30 flex items-center justify-between bg-stone-950/80 shrink-0 cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-1.5">
+          <UserPlus size={14} className="text-amber-400" />
           <span className="text-xs font-bold tracking-wider text-amber-200">主公点将台</span>
+          {isCollapsed && placingHero && (
+            <span className="text-[10px] text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/50 animate-pulse font-medium">
+              布阵中: {placingHero.name} (轻点地图安放)
+            </span>
+          )}
         </div>
-        <span className="text-[10px] text-stone-400">点击招募 / 属性</span>
+        <div className="flex items-center gap-1 text-[10px] text-stone-400">
+          <span className="hidden md:inline">点击招募 / 属性</span>
+          <div className="md:hidden flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-stone-800 text-stone-300 font-semibold border border-stone-700">
+            {isCollapsed ? (
+              <>
+                <span>展开将台</span>
+                <ChevronUp size={12} className="text-amber-400" />
+              </>
+            ) : (
+              <>
+                <span>收起战场</span>
+                <ChevronDown size={12} className="text-stone-400" />
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 武将列表：小屏幕下支持横向滑动，大屏纵向排列 */}
-      <div className="flex-1 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto p-2 space-x-2 md:space-x-0 md:space-y-2 flex flex-row md:flex-col no-scrollbar">
+      <div className="flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto p-2 space-x-2 md:space-x-0 md:space-y-2 flex flex-row md:flex-col no-scrollbar">
         {HEROES.map((hero: HeroConfig) => {
           const isDeployed = deployedHeroIds.includes(hero.id);
           const isAffordable = gold >= hero.cost;

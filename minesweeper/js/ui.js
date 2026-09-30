@@ -19,8 +19,10 @@ class MinesweeperUI {
     this.game = null;
     this.timerInterval = null;
     this.mouseButtonsState = 0; // 记录鼠标同时按下的键位（左右键双击检测）
+    this.suppressNextClick = false; // 防止双键和弦或长按触发后误触发普通点击
     this.longPressTimer = null;
     this.isTouchMoved = false;
+    this.isLongPressTriggered = false; // 标记本次触摸是否已触发长按插旗
 
     this.touchMode = 'REVEAL'; // 'REVEAL' (挖掘) 或 'FLAG' (插旗)
 
@@ -77,9 +79,14 @@ class MinesweeperUI {
   }
 
   setTheme(theme) {
-    document.body.className = `theme-${theme}`;
+    this.currentTheme = theme;
+    this.updateBodyClasses();
     localStorage.setItem('minesweeper_theme', theme);
     this.dom.themeToggle.textContent = theme === 'classic' ? '🎨 复古风格' : '✨ 现代暗色';
+  }
+
+  updateBodyClasses() {
+    document.body.className = `theme-${this.currentTheme || 'modern'} diff-${this.currentDifficulty || 'beginner'}`;
   }
 
   // 初始化声音按钮状态
@@ -96,6 +103,7 @@ class MinesweeperUI {
   startNewGame() {
     this.stopTimer();
     this.resetTimerDisplay();
+    this.updateBodyClasses();
 
     let rows, cols, mines;
     if (this.currentDifficulty === 'custom') {
@@ -128,8 +136,8 @@ class MinesweeperUI {
   renderBoard() {
     const board = this.dom.board;
     board.innerHTML = '';
-    board.style.gridTemplateRows = `repeat(${this.game.rows}, 1fr)`;
-    board.style.gridTemplateColumns = `repeat(${this.game.cols}, 1fr)`;
+    board.style.gridTemplateRows = `repeat(${this.game.rows}, var(--cell-size))`;
+    board.style.gridTemplateColumns = `repeat(${this.game.cols}, var(--cell-size))`;
 
     const frag = document.createDocumentFragment();
 
@@ -173,9 +181,13 @@ class MinesweeperUI {
 
       if (cellData.isMine) {
         el.classList.add('cell-mine');
-        el.textContent = '💣';
         if (cellData.isExploded) {
           el.classList.add('cell-exploded');
+          el.textContent = '💥';
+          el.title = '触发爆炸点';
+        } else {
+          el.textContent = '💣';
+          el.title = '地雷';
         }
       } else {
         const count = cellData.adjacentMines;
@@ -191,6 +203,7 @@ class MinesweeperUI {
     if (cellData.isFalseFlag) {
       el.classList.add('cell-false-flag');
       el.textContent = '❌';
+      el.title = '标错的旗子（此处不是雷）';
     }
   }
 
@@ -354,6 +367,7 @@ class MinesweeperUI {
     if (won) {
       this.setSmiley('won');
       sounds.playWin();
+      if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
       this.updateMineDisplay(0);
       this.saveRecord(this.currentDifficulty, elapsed);
       this.showWinModal(elapsed);
@@ -361,6 +375,7 @@ class MinesweeperUI {
     } else {
       this.setSmiley('lost');
       sounds.playExplode();
+      if (navigator.vibrate) navigator.vibrate([60, 60, 140]);
       this.shakeBoard();
     }
   }
@@ -592,6 +607,7 @@ class MinesweeperUI {
 
       // 左右键同时按下检测（buttons === 3 表示左右键均被按下）
       if (e.buttons === 3) {
+        this.suppressNextClick = true;
         const cellEl = e.target.closest('.cell');
         if (cellEl) {
           const r = parseInt(cellEl.dataset.row);
@@ -611,6 +627,10 @@ class MinesweeperUI {
 
     // 左键点击
     board.addEventListener('click', (e) => {
+      if (this.suppressNextClick) {
+        this.suppressNextClick = false;
+        return;
+      }
       const cellEl = e.target.closest('.cell');
       if (!cellEl) return;
       const r = parseInt(cellEl.dataset.row);
@@ -642,6 +662,7 @@ class MinesweeperUI {
     // 移动端长按插旗支持
     board.addEventListener('touchstart', (e) => {
       this.isTouchMoved = false;
+      this.isLongPressTriggered = false;
       const cellEl = e.target.closest('.cell');
       if (!cellEl) return;
 
@@ -650,6 +671,8 @@ class MinesweeperUI {
 
       this.longPressTimer = setTimeout(() => {
         if (!this.isTouchMoved) {
+          this.isLongPressTriggered = true;
+          this.suppressNextClick = true;
           this.handleCellRightClick(r, c);
         }
       }, 350);
@@ -667,6 +690,13 @@ class MinesweeperUI {
       if (this.longPressTimer) {
         clearTimeout(this.longPressTimer);
         this.longPressTimer = null;
+      }
+      // 若已触发长按，微任务后重置，确保吞掉紧随其后的合成 click 事件
+      if (this.isLongPressTriggered) {
+        setTimeout(() => {
+          this.suppressNextClick = false;
+          this.isLongPressTriggered = false;
+        }, 100);
       }
     }, { passive: true });
   }
