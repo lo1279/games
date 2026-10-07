@@ -9,6 +9,9 @@ import { checkActiveBonds } from '../data/bonds.js';
 
 const TACTICS_MAP = new Map(TACTICS_DATA.map(t => [t.id, t]));
 
+// 模块级最近一次伤害上下文（供 applyDamageToTarget 与 log 跨作用域安全共享）
+let lastDamageContext = null;
+
 /**
  * 兵种克制判定
  * 骑克盾、盾克弓、弓克枪、枪克骑；器械被四大常规兵种克制
@@ -145,6 +148,9 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
   const playerHeroes = playerTroop.heroes.map((h, i) => createBattleHero(h, pArm, i === 0, true, options.tacticLevels || {}));
   const enemyHeroes = enemyTroop.heroes.map((h, i) => createBattleHero(h, eArm, i === 0, false, options.enemyTacticLevels || {}));
 
+  // 每次推演前清空最近伤害上下文
+  lastDamageContext = null;
+
   const battleLogs = [];
   const log = (round, text, type = 'normal', meta = {}) => {
     let processedText = text;
@@ -166,6 +172,21 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         processedText = processedText.replaceAll(`【${tgt.name}】`, `【${tgt.label}】`);
       });
     }
+
+    // 🎯 增伤与减伤加成智能注入：若该日志为伤害类日志，且上一次结算存在增减伤加成
+    if (lastDamageContext && lastDamageContext.modTags && /(造成|受到|承受|造成了)\s*\d+\s*点(?:兵刃|谋略|溃逃|叛逃|火攻|水攻|稳定|致命|反弹)?伤害/.test(processedText)) {
+      if (!processedText.includes('【增伤+') && !processedText.includes('【减伤') && !processedText.includes('【易伤+') && !processedText.includes('【伤害-')) {
+        // 在伤害数字语句之后或在余兵说明之前，自然追加增减伤加成标签
+        if (processedText.includes('(余兵:')) {
+          processedText = processedText.replace('(余兵:', `${lastDamageContext.modTags} (余兵:`);
+        } else {
+          processedText = `${processedText} ${lastDamageContext.modTags}`;
+        }
+      }
+      // 消费完毕后重置上下文，避免误附加到后续治疗或其他状态日志中
+      lastDamageContext = null;
+    }
+
     battleLogs.push({ round, text: processedText, type, meta });
   };
 
@@ -786,6 +807,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
     playerArm: pArm,
     enemyArm: eArm,
     playerHeroStats: playerHeroes.map(h => ({
+      id: h.id,
       name: h.name,
       avatar: h.avatar,
       camp: h.camp,
@@ -806,6 +828,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       }))
     })),
     enemyHeroStats: enemyHeroes.map(h => ({
+      id: h.id,
       name: h.name,
       avatar: h.avatar,
       camp: h.camp,
@@ -915,6 +938,37 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
   // 基础伤害结算
   let finalDmg = Math.max(1, Math.round(rawDmg * actorDealtMod * effectiveReceivedMod * floatMod));
 
+  // 🎯 增伤与减伤标签计算 (精准展示加成数值)
+  let modTags = '';
+  // 1) 攻击方输出增减伤
+  if (Math.abs(actorDealtMod - 1.0) >= 0.01) {
+    const dealtPct = Math.round((actorDealtMod - 1.0) * 100);
+    if (dealtPct > 0) {
+      modTags += `【增伤+${dealtPct}%】`;
+    } else if (dealtPct < 0) {
+      modTags += `【伤害${dealtPct}%】`;
+    }
+  }
+  // 2) 受击方防御减伤 / 易伤
+  if (Math.abs(effectiveReceivedMod - 1.0) >= 0.01) {
+    const receivedPct = Math.round((1.0 - effectiveReceivedMod) * 100);
+    if (receivedPct > 0) {
+      modTags += `【减伤${receivedPct}%】`;
+    } else if (receivedPct < 0) {
+      modTags += `【易伤+${Math.abs(receivedPct)}%】`;
+    }
+  }
+
+  // 记录最近一次伤害结算的增减伤加成与目标信息，供战报 log 自动提取联动
+  lastDamageContext = {
+    actor,
+    target,
+    finalDmg,
+    modTags,
+    actorDealtMod,
+    effectiveReceivedMod
+  };
+
   // 貂蝉【闭月】伤害分担机制 (受击时将一定比例伤害转移给敌军替身目标承受)
   if (finalDmg > 0 && target.buffs.shareDamageTarget && target.buffs.shareDamageTarget.currentSoldiers > 0 && target.buffs.shareDamageRate > 0) {
     const proxy = target.buffs.shareDamageTarget;
@@ -934,6 +988,9 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     damage: finalDmg,
     wasHit: true,
     shielded: false,
+    modTags,
+    actorDealtMod,
+    effectiveReceivedMod,
     valueOf() { return this.damage; },
     toString() { return String(this.damage); }
   };

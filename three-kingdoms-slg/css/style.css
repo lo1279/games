@@ -450,16 +450,55 @@ body {
 
 .general-card .avatar-box {
   width: 100%;
-  height: 85px;
-  background: #0f1217;
+  height: 92px;
+  background: radial-gradient(circle at 50% 30%, #1c222c 0%, #0d1016 100%);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 42px;
   margin-bottom: 6px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
 }
+
+.general-avatar-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f1217;
+}
+
+/* 🎯 智能自适应立绘：抗拉伸、自动聚焦头部上半身、底部渐隐融合 */
+.general-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 15%;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.general-card:hover .general-avatar-img {
+  transform: scale(1.06);
+}
+
+/* 底部微暗渐变：避免立绘硬切，与卡片底部属性自然接壤 */
+.general-avatar-wrapper::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28%;
+  background: linear-gradient(to bottom, transparent 0%, rgba(13, 16, 22, 0.75) 100%);
+  pointer-events: none;
+}
+
 
 .general-card .hero-name {
   font-size: 14px;
@@ -1171,7 +1210,7 @@ body {
   50% { opacity: 1; transform: scale(1.05); }
 }
 
-/* 🌟 金卡金光特效 (5星神将) - 严格绑定在已翻开状态，未翻开前绝不透光！ */
+/* 🌟 金卡金光特效 (5星名将) - 严格绑定在已翻开状态，未翻开前绝不透光！ */
 .gacha-card-gold {
   border: 2px solid #fbbf24 !important;
   background: linear-gradient(145deg, #2b1f06 0%, #151004 100%) !important;
@@ -1179,7 +1218,7 @@ body {
   animation: none !important;
 }
 
-/* 翻开后立即点燃五星神将金光与呼吸 */
+/* 翻开后立即点燃五星名将金光与呼吸 */
 .gacha-card-wrapper.flipped .gacha-card-gold {
   box-shadow: 0 0 25px rgba(251, 191, 36, 0.6), 0 0 50px rgba(217, 119, 6, 0.4), inset 0 0 15px rgba(251, 191, 36, 0.3) !important;
   animation: goldenPulse 2.4s infinite ease-in-out 0.3s !important;
@@ -2023,6 +2062,35 @@ body {
   background: rgba(127, 29, 29, 0.25);
   border: 1px solid #991b1b;
   color: #fca5a5;
+}
+
+/* 🎯 伤害乘区修正徽章 (增伤/减伤/易伤/削弱) */
+.buff-badge.buff-dmg-boost {
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.buff-badge.buff-dmg-reduce {
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid #10b981;
+  color: #34d399;
+  font-weight: 700;
+}
+
+.buff-badge.debuff-dmg-taken {
+  background: rgba(239, 68, 68, 0.22);
+  border: 1px solid #ef4444;
+  color: #f87171;
+  font-weight: 700;
+}
+
+.buff-badge.debuff-dmg-nerf {
+  background: rgba(156, 163, 175, 0.22);
+  border: 1px solid #9ca3af;
+  color: #d1d5db;
+  font-weight: 600;
 }
 
 

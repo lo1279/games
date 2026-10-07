@@ -3,6 +3,8 @@
  * 涵盖 魏、蜀、吴、群 四大阵营名将，完整属性、成长值、兵种适性与专属自带战法
  */
 
+import { THREE_STAR_GENERALS } from './generals-three.js';
+
 export const GENERAL_APTITUDE_MODIFIERS = {
   S: 1.20,
   A: 1.00,
@@ -10,7 +12,7 @@ export const GENERAL_APTITUDE_MODIFIERS = {
   C: 0.70
 };
 
-export const GENERALS_DATA = [
+const FOUR_AND_FIVE_STARS = [
   // ================= 蜀国 (SHU) =================
   {
     id: 'gen_liu_bei',
@@ -1068,7 +1070,7 @@ export const GENERALS_DATA = [
     speedGrowth: 0.88,
     aptitude: { cavalry: 'A', shield: 'A', bow: 'C', spear: 'A', siege: 'B' },
     builtInTacticId: 'tac_fen_fa',
-    bio: '关羽长子，忠义勇敢，开荒高性价比平民神将。'
+    bio: '关羽长子，忠义勇敢，开荒高性价比平民名将。'
   },
   {
     id: 'gen_guo_huai',
@@ -1387,6 +1389,10 @@ export const GENERALS_DATA = [
   }
 ];
 
+// 聚合主武将库 (4★良将、5★名将 + 独立的3★裨将宿将)
+export const GENERALS_DATA = [...FOUR_AND_FIVE_STARS, ...THREE_STAR_GENERALS];
+export { THREE_STAR_GENERALS };
+
 export const CAMPS = {
   shu: { name: '蜀汉', color: '#10b981', badge: '蜀', desc: '桃园义结，汉室正统' },
   wei: { name: '曹魏', color: '#3b82f6', badge: '魏', desc: '唯才是举，虎狼之师' },
@@ -1457,4 +1463,69 @@ export function addGeneralExp(hero, expGain) {
     newLevel: hero.level,
     expGain
   };
+}
+
+/**
+ * 获取武将头像 HTML (优先加载 assets/generals/ 本地高清立绘图片，失败时自动平滑回退为 Emoji)
+ * @param {Object} hero 武将对象
+ * @param {Object} options 配置项 { size, borderRadius, fontSize, className, style }
+ */
+/**
+ * 智能解析武将的基础模板 ID (剥离抽卡/存档生成的实例时间戳与防重后缀)
+ * @param {Object} hero 武将对象
+ * @returns {string} 标准武将模板ID (如 gen_cao_cao)
+ */
+export function getGeneralBaseId(hero) {
+  if (!hero) return '';
+  // 1. 若对象自带 templateId 则优先使用
+  if (hero.templateId) return hero.templateId;
+  // 2. 优先通过武将名称（智能去除称号括号）从主武将库精准映射匹配（所有81位武将名称唯一）
+  if (hero.name && typeof GENERALS_DATA !== 'undefined') {
+    const cleanName = typeof hero.name === 'string' ? hero.name.replace(/[\(（].*?[\)）]/g, '').trim() : hero.name;
+    const matched = GENERALS_DATA.find(g => g.name === cleanName || g.name === hero.name);
+    if (matched && matched.id) return matched.id;
+  }
+  // 3. 兜底通过实例ID正则截取标准模板ID (如 gen_liu_bei_1728394829384_xxx -> gen_liu_bei)
+  if (hero.id && typeof hero.id === 'string') {
+    const m = hero.id.match(/^(gen_[a-z]+(?:_[a-z0-9]+)?)/);
+    if (m) return m[1];
+  }
+  // 4. 未能命中合法名将模板时安全返回空字符串，杜绝发起任何未知图片的 404 网络请求
+  return '';
+}
+
+/**
+ * 获取武将头像 HTML (优先加载 assets/generals/ 本地高清立绘图片，失败时自动平滑回退为 Emoji)
+ * @param {Object} hero 武将对象
+ * @param {Object} options 配置项 { size, borderRadius, fontSize, className, style }
+ */
+export function getGeneralAvatarHtml(hero, options = {}) {
+  if (!hero) return '';
+  const size = options.size || null;
+  const radius = options.borderRadius || '6px';
+  const fontSize = options.fontSize || 'inherit';
+  const bg = hero.avatarBg || '#1e293b';
+  const extraStyle = options.style || '';
+  const sizeStyle = size ? `width:${size}px; height:${size}px;` : 'width:100%; height:100%;';
+
+  // 智能解析标准武将基础ID
+  const baseId = getGeneralBaseId(hero);
+  const primarySrc = hero.image || (baseId ? `assets/generals/${baseId}.png` : '');
+
+  // 简练稳健的逐级平滑回退脚本
+  const onerrorScript = `
+    this.style.display = 'none';
+    if (this.nextElementSibling) this.nextElementSibling.style.display = 'flex';
+  `.replace(/\s+/g, ' ').trim();
+
+  return `
+    <div class="general-avatar-wrapper ${options.className || ''}" style="${sizeStyle} position:relative; overflow:hidden; border-radius:${radius}; background:${bg}; display:flex; align-items:center; justify-content:center; ${extraStyle}">
+      ${primarySrc ? `<img src="${primarySrc}" alt="${hero.name || ''}" class="general-avatar-img"
+           style="width:100%; height:100%; object-fit:cover; display:block; position:absolute; inset:0;"
+           onerror="${onerrorScript}" />` : ''}
+      <span class="general-avatar-emoji" style="${primarySrc ? 'display:none;' : 'display:flex;'} width:100%; height:100%; align-items:center; justify-content:center; font-size:${fontSize}; line-height:1; user-select:none;">
+        ${hero.avatar || '⚔️'}
+      </span>
+    </div>
+  `.trim();
 }

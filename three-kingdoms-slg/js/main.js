@@ -2,7 +2,7 @@
  * 三国志·战略版 - 主应用调度控制引擎 (App Controller - 路线B纯轻量战术卡牌模式)
  */
 
-import { CAMPS, ARMS, GENERAL_APTITUDE_MODIFIERS, GENERALS_DATA, addGeneralExp, getExpRequiredForLevel, MAX_GENERAL_LEVEL } from './data/generals.js';
+import { CAMPS, ARMS, GENERAL_APTITUDE_MODIFIERS, GENERALS_DATA, addGeneralExp, getExpRequiredForLevel, MAX_GENERAL_LEVEL, getGeneralAvatarHtml } from './data/generals.js';
 import { TACTICS_DATA, TACTIC_UPGRADE_COSTS, MAX_TACTIC_LEVEL, getTacticEffectiveProps, TACTIC_INHERIT_SOURCES, getHeroInheritTacticId } from './data/tactics.js';
 import { CAMPAIGNS_DATA, TRIALS_DATA } from './data/campaigns.js';
 import { simulateBattle } from './engine/battle.js';
@@ -23,7 +23,7 @@ class GameApp {
     this.battleSubTab = 'campaigns'; // 'campaigns' | 'trials'
     this.generalSubTab = 'generals'; // 'generals' | 'tactics'
     this.generalFilter = { camp: 'all', star: 'all' }; // 武将多维筛选状态
-    this.tacticFilter = { level: 'all', type: 'all', damageType: 'all' }; // 战法多维筛选状态 (等级、机制类型、伤害性质)
+    this.tacticFilter = { quality: 'all', level: 'all', type: 'all', damageType: 'all' }; // 战法多维筛选状态 (品阶、等级、机制类型、伤害性质)
     this.initDOM();
     this.bindEvents();
     this.renderAll();
@@ -291,6 +291,17 @@ class GameApp {
     });
 
     // ========== 战法研习多维筛选事件绑定 ==========
+    // 0. 战法品阶筛选 (S级 / A级 / 全部)
+    document.querySelectorAll('.btn-filter-tac-quality').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-filter-tac-quality').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.tacticFilter.quality = btn.getAttribute('data-tac-quality');
+        sound.playDrum();
+        this.renderTacticsUpgrade();
+      });
+    });
+
     // 1. 战法等级筛选
     document.querySelectorAll('.btn-filter-tac-level').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -434,7 +445,7 @@ class GameApp {
     if (this.cityStatsBanner) {
       const palaceLvl = this.state.buildings?.palace || 1;
       const barracksLvl = this.state.buildings?.barracks || 0;
-      this.cityStatsBanner.innerHTML = `部队统御上限: <b style="color:#fde047;">Cost ${14 + palaceLvl}</b> · 兵营加成: <b style="color:#6ee7b7;">+${barracksLvl * 300} 兵/将</b>`;
+      this.cityStatsBanner.innerHTML = `部队统御上限: <b style="color:#fde047;">统御 ${14 + palaceLvl}</b> · 兵营加成: <b style="color:#6ee7b7;">+${barracksLvl * 300} 兵/将</b>`;
     }
   }
 
@@ -1434,7 +1445,7 @@ class GameApp {
                   <span style="font-size:11px; color:#fbbf24;">${'★'.repeat(g.star)}</span>
                 </div>
                 <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
-                  自带战法: <b style="color:#fde047;">${bTactic?.name || '自带战法'}</b> · 统御: Cost ${g.cost}
+                  自带战法: <b style="color:#fde047;">${bTactic?.name || '自带战法'}</b> · 统御: ${g.cost}御
                 </div>
               </div>
             </div>
@@ -1678,8 +1689,10 @@ class GameApp {
             <div style="font-size:12px; color:#fbbf24; font-weight:bold; margin-bottom:4px;">${slotIdx===0?'★ 主将位 (核心) ★':`副将位 ${slotIdx}`}</div>
             
             <!-- 可点击查看详情的武将核心主体 -->
-            <div class="hero-click-area" data-slot="${slotIdx}" title="点击查看【${hero.name}】军略全息详情">
-              <div style="font-size:40px;">${hero.avatar}</div>
+            <div class="hero-click-area" data-slot="${slotIdx}" title="点击查看【${hero.name}】军略全息详情" style="display:flex; flex-direction:column; align-items:center;">
+              <div style="width:58px; height:58px; margin-bottom:4px;">
+                ${getGeneralAvatarHtml(hero, { size: 58, borderRadius: '10px', fontSize: '38px' })}
+              </div>
               <div style="font-size:15px; font-weight:bold; margin-top:2px; color:#fff; display:flex; align-items:center; gap:6px;">
                 <span>${hero.name}</span>
                 <span class="hero-level-badge">Lv.${hLvl}</span>
@@ -1788,6 +1801,10 @@ class GameApp {
     const tac2 = TACTICS_MAP.get(realHero.equippedTactic2);
     const inheritTacId = getHeroInheritTacticId(realHero);
     const inheritTac = TACTICS_MAP.get(inheritTacId);
+    const isInherited = this.state.ownedTactics.includes(inheritTacId);
+    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
+    const isInTroop = currentTroopHeroIds.has(realHero.id);
+    const isOwned = (this.state.ownedGenerals || []).some(g => g.id === realHero.id || (g.name === realHero.name && g.star === realHero.star));
 
     const hLvl = realHero.level || 1;
     const hExp = realHero.exp || 0;
@@ -1806,154 +1823,201 @@ class GameApp {
     const modal = document.createElement('div');
     modal.className = 'modal-mask';
     modal.innerHTML = `
-      <div class="modal-content" style="max-width:580px;">
+      <div class="modal-content" style="max-width:880px; width:95%; max-height:88vh;">
         <div class="modal-header">
-          <div class="modal-title">🎴 武将全息军略档案 · ${realHero.name}</div>
+          <div class="modal-title">🎴 名将全息军略档案 · ${realHero.name}</div>
           <button class="modal-close-btn" id="btnHeroDetailClose">✕</button>
         </div>
-        <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
-          
-          <!-- 基础信息卡片 -->
-          <div class="hero-detail-section" style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 100%);">
-            <div style="display:flex; align-items:center; gap:14px;">
-              <div style="font-size:46px; background:#0f1217; padding:6px 12px; border-radius:10px; border:1px solid #374151;">${realHero.avatar}</div>
-              <div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="font-size:18px; font-weight:bold; color:#fff;">${realHero.name}</span>
-                  <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}国</span>
-                  <span class="cost-badge" style="font-size:12px;">Cost ${realHero.cost}</span>
-                  <span class="hero-level-badge">Lv.${hLvl}</span>
-                </div>
-                <div style="margin:4px 0;">${starsHtml}</div>
-                <div style="font-size:12px; color:#9ca3af;">${realHero.title || '三国名宿'}</div>
-              </div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:12px; color:#9ca3af;">带兵上限</div>
-              <div style="font-size:16px; font-weight:bold; color:#34d399;">${(realHero.maxSoldiers || 3000).toLocaleString()}</div>
-            </div>
-          </div>
+        <div class="modal-body" style="padding:16px; overflow-y:auto;">
+          <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
 
-          <!-- 历练等级与经验进度 -->
-          <div class="hero-detail-section">
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
-              <span style="color:#fbbf24; font-weight:bold;">⚔️ 历练等级进度</span>
-              <span style="color:#9ca3af;">${hLvl>=MAX_GENERAL_LEVEL?'已达最高境界 (Lv.50 满级)':`当前经验: ${hExp} / ${reqExp} (${expPct}%)`}</span>
-            </div>
-            <div class="hero-exp-track" style="height:6px;">
-              <div class="hero-exp-progress" style="width:${expPct}%;"></div>
-            </div>
-            <div style="font-size:10px; color:#6b7280; margin-top:4px;">提示：通过开荒攻打沙盘领地、征战历史名役或演武试炼可积攒历练经验提升等级。</div>
-          </div>
-
-          <!-- 四维核心战斗属性与成长率 -->
-          <div class="hero-detail-section">
-            <div class="hero-detail-title">📊 四维实战属性与成长</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
-                <span>🗡️ 武力: <b style="color:#fde047; font-size:14px;">${realHero.force}</b></span>
-                <span class="hero-growth-tag">(+${realHero.forceGrowth || 1.0}/级)</span>
-              </div>
-              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
-                <span>🧠 智力: <b style="color:#60a5fa; font-size:14px;">${realHero.intel}</b></span>
-                <span class="hero-growth-tag">(+${realHero.intelGrowth || 1.0}/级)</span>
-              </div>
-              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
-                <span>🛡️ 统率: <b style="color:#34d399; font-size:14px;">${realHero.command}</b></span>
-                <span class="hero-growth-tag">(+${realHero.commandGrowth || 1.0}/级)</span>
-              </div>
-              <div style="background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between;">
-                <span>⚡ 速度: <b style="color:#f472b6; font-size:14px;">${realHero.speed}</b></span>
-                <span class="hero-growth-tag">(+${realHero.speedGrowth || 1.0}/级)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 五大兵种适性面板 -->
-          <div class="hero-detail-section">
-            <div class="hero-detail-title">🛡️ 兵种统领适性</div>
-            <div class="apt-row" style="padding:8px 12px; font-size:12px;">
-              <span>骑兵 <b class="apt-tag ${realHero.aptitude.cavalry}">${realHero.aptitude.cavalry}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.cavalry]||1)*100)}%)</span>
-              <span>盾兵 <b class="apt-tag ${realHero.aptitude.shield}">${realHero.aptitude.shield}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.shield]||1)*100)}%)</span>
-              <span>弓兵 <b class="apt-tag ${realHero.aptitude.bow}">${realHero.aptitude.bow}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.bow]||1)*100)}%)</span>
-              <span>枪兵 <b class="apt-tag ${realHero.aptitude.spear}">${realHero.aptitude.spear}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.spear]||1)*100)}%)</span>
-              <span>器械 <b class="apt-tag ${realHero.aptitude.siege || 'B'}">${realHero.aptitude.siege || 'B'}</b></span>
-            </div>
-            <div style="font-size:10px; color:#9ca3af; margin-top:4px;">适性加成说明：S级 120% 全属性 · A级 100% · B级 85% · C级 70%</div>
-          </div>
-
-          <!-- 三大战法配置槽位 -->
-          <div class="hero-detail-section">
-            <div class="hero-detail-title">📚 战法装配与研习</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
+            <!-- 左侧：名将全息战卡 (300px 大画幅沉浸卡面) -->
+            <div style="width:300px; flex-shrink:0; background:linear-gradient(180deg, #181d26 0%, #0d1016 100%); border:1px solid #374151; border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,0.6);">
               
-              <!-- 自带战法 -->
-              <div style="background:rgba(0,0,0,0.3); border:1px solid #d97706; padding:8px 12px; border-radius:6px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="color:#fbbf24; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
-                  <span style="font-size:10px; color:#fde047; background:rgba(217,119,6,0.2); border:1px solid #d97706; padding:1px 5px; border-radius:3px;">
-                    ${builtInTac?.type || '被动'}
-                  </span>
+              <!-- 纵向高清大画幅立绘卡面 (高 380px，悬浮国标与名牌) -->
+              <div style="width:100%; height:380px; position:relative; border-radius:8px; overflow:hidden; border:1px solid #475569; background:#0b0f19; box-shadow:inset 0 0 20px rgba(0,0,0,0.8);">
+                <!-- 完整大画幅立绘主体 -->
+                ${getGeneralAvatarHtml(realHero, { borderRadius: '6px', fontSize: '80px', style: 'width:100%; height:100%;' })}
+                
+                <!-- 顶部悬浮：阵营与统御、等级 -->
+                <div style="position:absolute; top:8px; left:8px; right:8px; display:flex; justify-content:space-between; align-items:center; z-index:2; pointer-events:none;">
+                  <span class="camp-tag" style="background:${campInfo.color}; font-size:12px; padding:2px 8px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,0.6);">${campInfo.badge}国</span>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="cost-badge" style="font-size:11px; padding:2px 6px; background:rgba(0,0,0,0.6); border:1px solid rgba(251,191,36,0.4); border-radius:4px; backdrop-filter:blur(2px);">统御 ${realHero.cost}</span>
+                    <span class="hero-level-badge" style="font-size:11px; padding:2px 6px; background:rgba(0,0,0,0.6); border:1px solid rgba(251,191,36,0.4); border-radius:4px; backdrop-filter:blur(2px);">Lv.${hLvl}</span>
+                  </div>
                 </div>
-                <div style="font-size:11px; color:#cbd5e1; margin-top:3px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
+
+                <!-- 底部悬浮：姓名、称号与星级磨砂名牌 -->
+                <div style="position:absolute; bottom:0; left:0; right:0; padding:22px 10px 10px 10px; background:linear-gradient(to top, rgba(13,16,22,0.95) 0%, rgba(13,16,22,0.7) 60%, transparent 100%); z-index:2; text-align:center; pointer-events:none;">
+                  <div style="font-size:22px; font-weight:900; color:#fff; letter-spacing:1px; text-shadow:0 2px 6px rgba(0,0,0,0.9);">${realHero.name}</div>
+                  <div style="margin:3px 0;">${starsHtml}</div>
+                  <div style="font-size:11px; color:#cbd5e1; text-shadow:0 1px 3px rgba(0,0,0,0.8);">${realHero.title || '三国名宿'}</div>
+                </div>
               </div>
 
-              <!-- 战法槽位 1 -->
-              <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <span style="color:#fbbf24; font-weight:bold; font-size:12px;">[传承战法①]</span>
-                    <span style="color:#fff; font-size:12px;">${tac1 ? tac1.name : '<span style="color:#9ca3af;">未装配</span>'}</span>
-                    ${tac1 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px;">Lv.${this.state.tacticLevels?.[tac1.id] || 1}</span>` : ''}
-                  </div>
-                  <div style="font-size:11px; color:#9ca3af; margin-top:2px;">${tac1 ? tac1.desc.substring(0, 36) + '...' : '点击右侧按钮装配传承战法'}</div>
+              <!-- 带兵上限与历练进度 -->
+              <div style="background:rgba(0,0,0,0.4); border:1px solid #2d3340; border-radius:6px; padding:8px 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+                  <span style="color:#9ca3af;">带兵上限</span>
+                  <span style="font-size:15px; font-weight:bold; color:#34d399;">${(realHero.maxSoldiers || 3000).toLocaleString()}</span>
                 </div>
-                <button class="upgrade-btn btn-modal-change-tac1" style="padding:4px 10px; font-size:11px; white-space:nowrap;">换配</button>
+                <div style="margin-top:6px;">
+                  <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
+                    <span style="color:#fbbf24;">⚔️ 历练经验</span>
+                    <span style="color:#9ca3af;">${hLvl>=MAX_GENERAL_LEVEL?'Lv.50 (满级)':`${hExp}/${reqExp} (${expPct}%)`}</span>
+                  </div>
+                  <div class="hero-exp-track" style="height:5px;">
+                    <div class="hero-exp-progress" style="width:${expPct}%;"></div>
+                  </div>
+                </div>
               </div>
 
-              <!-- 战法槽位 2 -->
-              <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <span style="color:#60a5fa; font-weight:bold; font-size:12px;">[传承战法②]</span>
-                    <span style="color:#fff; font-size:12px;">${tac2 ? tac2.name : '<span style="color:#9ca3af;">未装配</span>'}</span>
-                    ${tac2 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px;">Lv.${this.state.tacticLevels?.[tac2.id] || 1}</span>` : ''}
-                  </div>
-                  <div style="font-size:11px; color:#9ca3af; margin-top:2px;">${tac2 ? tac2.desc.substring(0, 36) + '...' : '点击右侧按钮装配第二战法'}</div>
+              <!-- 快捷军务管理（传承与解甲 / 未招募预览提示） -->
+              ${!isOwned ? `
+                <div style="text-align:center; font-size:11px; color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:4px; padding:6px 0; margin-top:2px;">
+                  🔍 卡池图鉴预览 · 招募后可出征与配装
                 </div>
-                <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; background:#2563eb; white-space:nowrap;">换配</button>
+              ` : `
+                <div style="display:flex; gap:6px; margin-top:2px;">
+                  ${isInherited ? `
+                    <div style="flex:1; text-align:center; font-size:11px; color:#10b981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:4px; padding:5px 0;">
+                      ✔ 战法已传承
+                    </div>
+                  ` : `
+                    <button class="upgrade-btn btn-modal-inherit" style="flex:1; padding:5px 0; font-size:11px; background:linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);" ${isInTroop ? 'disabled title="已在出征阵容中，不可传承"' : ''}>
+                      📖 传承战法
+                    </button>
+                  `}
+                  <button class="upgrade-btn btn-modal-sell" style="padding:5px 12px; font-size:11px; background:${isInTroop ? '#374151' : (realHero.star >= 5 ? 'linear-gradient(135deg, #b45309 0%, #78350f 100%)' : '#4b5563')};" ${isInTroop ? 'disabled title="出征军团中不可解甲"' : `title="解甲可得 ${realHero.star >= 5 ? '5,000' : (realHero.star === 4 ? '1,000' : '300')} 铜币"`}>
+                    ${isInTroop ? '出征中' : `解甲(${realHero.star >= 5 ? '5千' : (realHero.star === 4 ? '1千' : '3百')})`}
+                  </button>
+                </div>
+              `}
+
+            </div>
+
+            <!-- 右侧：军略属性与战法面板 -->
+            <div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:10px;">
+              
+              <!-- 四维核心战斗属性与成长率 -->
+              <div class="hero-detail-section">
+                <div class="hero-detail-title">📊 四维实战属性与成长</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                    <span>🗡️ 武力: <b style="color:#fde047; font-size:15px;">${realHero.force}</b></span>
+                    <span class="hero-growth-tag" style="color:#fbbf24;">(+${realHero.forceGrowth || 1.0}/级)</span>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                    <span>🧠 智力: <b style="color:#60a5fa; font-size:15px;">${realHero.intel}</b></span>
+                    <span class="hero-growth-tag" style="color:#93c5fd;">(+${realHero.intelGrowth || 1.0}/级)</span>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                    <span>🛡️ 统率: <b style="color:#34d399; font-size:15px;">${realHero.command}</b></span>
+                    <span class="hero-growth-tag" style="color:#6ee7b7;">(+${realHero.commandGrowth || 1.0}/级)</span>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                    <span>⚡ 速度: <b style="color:#f472b6; font-size:15px;">${realHero.speed}</b></span>
+                    <span class="hero-growth-tag" style="color:#f9a8d4;">(+${realHero.speedGrowth || 1.0}/级)</span>
+                  </div>
+                </div>
               </div>
+
+              <!-- 五大兵种适性面板 -->
+              <div class="hero-detail-section">
+                <div class="hero-detail-title">🛡️ 兵种统领适性</div>
+                <div class="apt-row" style="padding:6px 10px; font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                  <span>骑兵 <b class="apt-tag ${realHero.aptitude.cavalry}">${realHero.aptitude.cavalry}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.cavalry]||1)*100)}%)</span>
+                  <span>盾兵 <b class="apt-tag ${realHero.aptitude.shield}">${realHero.aptitude.shield}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.shield]||1)*100)}%)</span>
+                  <span>弓兵 <b class="apt-tag ${realHero.aptitude.bow}">${realHero.aptitude.bow}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.bow]||1)*100)}%)</span>
+                  <span>枪兵 <b class="apt-tag ${realHero.aptitude.spear}">${realHero.aptitude.spear}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.spear]||1)*100)}%)</span>
+                  <span>器械 <b class="apt-tag ${realHero.aptitude.siege || 'B'}">${realHero.aptitude.siege || 'B'}</b></span>
+                </div>
+                <div style="font-size:10px; color:#9ca3af; margin-top:4px;">适性加成说明：S级 120% 全属性 · A级 100% · B级 85% · C级 70%</div>
+              </div>
+
+              <!-- 三大战法配置槽位 -->
+              <div class="hero-detail-section">
+                <div class="hero-detail-title">📚 战法装配与研习</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  
+                  <!-- 自带战法 -->
+                  <div style="background:rgba(0,0,0,0.3); border:1px solid #d97706; padding:8px 12px; border-radius:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="color:#fbbf24; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
+                      <span style="font-size:10px; color:#fde047; background:rgba(217,119,6,0.2); border:1px solid #d97706; padding:1px 5px; border-radius:3px;">
+                        ${builtInTac?.type || '被动'}
+                      </span>
+                    </div>
+                    <div style="font-size:11px; color:#cbd5e1; margin-top:3px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
+                  </div>
+
+                  <!-- 战法槽位 1 -->
+                  <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <div style="flex:1; min-width:0;">
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法①]</span>
+                        <span style="color:#fff; font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac1 ? tac1.name : '<span style="color:#9ca3af; font-weight:normal;">未装配</span>'}</span>
+                        ${tac1 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac1.id] || 1}</span>` : ''}
+                      </div>
+                      <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac1 ? (tac1.desc.length > 38 ? tac1.desc.substring(0, 38) + '...' : tac1.desc) : '点击右侧按钮装配传承战法'}</div>
+                    </div>
+                    ${isOwned ? `
+                      <button class="upgrade-btn btn-modal-change-tac1" style="padding:4px 10px; font-size:11px; white-space:nowrap; flex-shrink:0;">换配</button>
+                    ` : `
+                      <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
+                    `}
+                  </div>
+
+                  <!-- 战法槽位 2 -->
+                  <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <div style="flex:1; min-width:0;">
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:#60a5fa; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法②]</span>
+                        <span style="color:#fff; font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac2 ? tac2.name : '<span style="color:#9ca3af; font-weight:normal;">未装配</span>'}</span>
+                        ${tac2 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac2.id] || 1}</span>` : ''}
+                      </div>
+                      <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac2 ? (tac2.desc.length > 38 ? tac2.desc.substring(0, 38) + '...' : tac2.desc) : '点击右侧按钮装配第二战法'}</div>
+                    </div>
+                    ${isOwned ? `
+                      <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; background:#2563eb; white-space:nowrap; flex-shrink:0;">换配</button>
+                    ` : `
+                      <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
+                    `}
+                  </div>
+                </div>
+              </div>
+
+              <!-- 武将天命缘分羁绊展示 -->
+              ${(() => {
+                const heroBonds = getBondsForHero(realHero.name);
+                if (heroBonds.length === 0) return '';
+                const bondsListHtml = heroBonds.map(b => `
+                  <div style="background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:6px; padding:6px 10px; margin-top:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="color:#fde047; font-weight:bold; font-size:12px;">✨【${b.name}】</span>
+                      <span style="font-size:10px; color:#cbd5e1;">缘分同僚: ${b.heroNames.join('、')}</span>
+                    </div>
+                    <div style="font-size:11px; color:#d1d5db; margin-top:2px; line-height:1.4;">${b.desc}</div>
+                  </div>
+                `).join('');
+                return `
+                  <div class="hero-detail-section">
+                    <div class="hero-detail-title">👑 天命武将缘分</div>
+                    ${bondsListHtml}
+                  </div>
+                `;
+              })()}
+
+              <!-- 生平列传 -->
+              ${realHero.bio ? `
+                <div class="hero-detail-section" style="font-size:11px; color:#9ca3af; line-height:1.5;">
+                  <span style="color:#fbbf24; font-weight:bold;">📜 将领列传：</span>${realHero.bio}
+                </div>
+              ` : ''}
+
             </div>
           </div>
-
-          <!-- 武将天命缘分羁绊展示 -->
-          ${(() => {
-            const heroBonds = getBondsForHero(realHero.name);
-            if (heroBonds.length === 0) return '';
-            const bondsListHtml = heroBonds.map(b => `
-              <div style="background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:6px; padding:6px 10px; margin-top:4px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="color:#fde047; font-weight:bold; font-size:12px;">✨【${b.name}】</span>
-                  <span style="font-size:10px; color:#cbd5e1;">缘分同僚: ${b.heroNames.join('、')}</span>
-                </div>
-                <div style="font-size:11px; color:#d1d5db; margin-top:2px; line-height:1.4;">${b.desc}</div>
-              </div>
-            `).join('');
-            return `
-              <div class="hero-detail-section">
-                <div class="hero-detail-title">👑 天命武将缘分</div>
-                ${bondsListHtml}
-              </div>
-            `;
-          })()}
-
-          <!-- 生平列传 -->
-          ${realHero.bio ? `
-            <div class="hero-detail-section" style="font-size:11px; color:#9ca3af; line-height:1.5;">
-              <span style="color:#fbbf24; font-weight:bold;">📜 将领列传：</span>${realHero.bio}
-            </div>
-          ` : ''}
-
         </div>
       </div>
     `;
@@ -1973,6 +2037,24 @@ class GameApp {
       modal.remove();
       this.openEquipTacticModal(realHero, 2);
     });
+
+    // 绑定模态框中的传承
+    const btnModalInherit = modal.querySelector('.btn-modal-inherit');
+    if (btnModalInherit && !isInTroop) {
+      btnModalInherit.addEventListener('click', () => {
+        modal.remove();
+        this.inheritTacticFromHero(realHero);
+      });
+    }
+
+    // 绑定模态框中的解甲
+    const btnModalSell = modal.querySelector('.btn-modal-sell');
+    if (btnModalSell && !isInTroop) {
+      btnModalSell.addEventListener('click', () => {
+        modal.remove();
+        this.sellHero(realHero);
+      });
+    }
   }
 
   // 选拔上阵弹窗 (支持 5 支军团共存全局排重)
@@ -1992,29 +2074,66 @@ class GameApp {
 
     const modal = document.createElement('div');
     modal.className = 'modal-mask';
+
+    // 筛选状态
+    const filterState = {
+      camp: 'all',
+      star: 'all',
+      aptitude: 'all' // 'all' | 'sa' (仅S/A适性)
+    };
+
+    const currentArm = troop.arm || 'spear';
+    const currentArmMeta = ARMS[currentArm] || { name: '枪兵', icon: '🗡️' };
+
     modal.innerHTML = `
-      <div class="modal-content" style="max-width:560px;">
-        <div class="modal-header">
-          <div class="modal-title">选拔上阵 · ${slotIdx===0?'★ 主将位 ★':`副将位 ${slotIdx}`}</div>
+      <div class="modal-content" style="max-width:720px; width:95%; max-height:88vh;">
+        <div class="modal-header" style="flex-wrap:wrap; gap:8px;">
+          <div>
+            <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
+              <span>选拔上阵 · ${slotIdx===0?'★ 主将位 ★':`副将位 ${slotIdx}`}</span>
+              <span id="assignModalTotalBadge" style="font-size:11px; background:#d97706; color:#fff; padding:1px 8px; border-radius:4px; font-weight:normal;"></span>
+            </div>
+            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
+              当前军团兵种：<b style="color:#6ee7b7;">${currentArmMeta.icon} ${currentArmMeta.name}</b> · 支持按阵营、品质及适性精准筛选
+            </div>
+          </div>
           <button class="modal-close-btn" id="btnAssignModalClose">✕</button>
         </div>
-        <div class="modal-body" style="display:flex; flex-direction:column; gap:10px;">
-          ${candidates.map(c => `
-            <div style="background:#11141a; border:1px solid #374151; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-size:32px;">${c.avatar}</span>
-                <div>
-                  <div style="font-weight:bold; color:#fff; font-size:15px;">
-                    ${c.name} (${'★'.repeat(c.star)}) · <span style="color:#fbbf24;">${CAMPS[c.camp].name}</span>
-                  </div>
-                  <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
-                    武力:${c.force} 智力:${c.intel} 统率:${c.command} 速度:${c.speed}
-                  </div>
-                </div>
-              </div>
-              <button class="upgrade-btn btn-choose-candidate" data-id="${c.id}" style="padding:6px 14px;">上阵出征</button>
+
+        <!-- 多维快捷筛选控制栏 -->
+        <div style="padding:10px 18px; background:rgba(0,0,0,0.3); border-bottom:1px solid #2d3340; display:flex; flex-direction:column; gap:8px;">
+          <!-- 1. 阵营与适性筛选 -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span style="font-size:12px; color:#9ca3af;">阵营:</span>
+              <button class="nav-tab-btn active btn-assign-filter-camp" data-camp="all" style="padding:2px 8px; font-size:11px;">全部</button>
+              <button class="nav-tab-btn btn-assign-filter-camp" data-camp="wei" style="padding:2px 8px; font-size:11px; color:#60a5fa;">魏国</button>
+              <button class="nav-tab-btn btn-assign-filter-camp" data-camp="shu" style="padding:2px 8px; font-size:11px; color:#34d399;">蜀汉</button>
+              <button class="nav-tab-btn btn-assign-filter-camp" data-camp="wu" style="padding:2px 8px; font-size:11px; color:#f87171;">东吴</button>
+              <button class="nav-tab-btn btn-assign-filter-camp" data-camp="qun" style="padding:2px 8px; font-size:11px; color:#c084fc;">群雄</button>
             </div>
-          `).join('')}
+
+            <!-- 当前兵种适性筛选 -->
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span style="font-size:12px; color:#9ca3af;">${currentArmMeta.name}适性:</span>
+              <button class="nav-tab-btn active btn-assign-filter-apt" data-apt="all" style="padding:2px 8px; font-size:11px;">全部</button>
+              <button class="nav-tab-btn btn-assign-filter-apt" data-apt="sa" style="padding:2px 8px; font-size:11px; color:#fbbf24;">仅优选 S·A</button>
+            </div>
+          </div>
+
+          <!-- 2. 品质筛选 -->
+          <div style="display:flex; gap:6px; align-items:center;">
+            <span style="font-size:12px; color:#9ca3af;">品质:</span>
+            <button class="nav-tab-btn active btn-assign-filter-star" data-star="all" style="padding:2px 8px; font-size:11px;">全部</button>
+            <button class="nav-tab-btn btn-assign-filter-star" data-star="5" style="padding:2px 8px; font-size:11px; color:#fbbf24;">5★名将</button>
+            <button class="nav-tab-btn btn-assign-filter-star" data-star="4" style="padding:2px 8px; font-size:11px; color:#c084fc;">4★良将</button>
+            <button class="nav-tab-btn btn-assign-filter-star" data-star="3" style="padding:2px 8px; font-size:11px; color:#9ca3af;">3★偏将</button>
+          </div>
+        </div>
+
+        <!-- 候选武将网格列表 -->
+        <div class="modal-body" id="assignCandidatesContainer" style="max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:14px 18px;">
+          <!-- 动态渲染候选武将卡片 -->
         </div>
       </div>
     `;
@@ -2022,19 +2141,140 @@ class GameApp {
     document.body.appendChild(modal);
     modal.querySelector('#btnAssignModalClose').addEventListener('click', () => modal.remove());
 
-    modal.querySelectorAll('.btn-choose-candidate').forEach(b => {
-      b.addEventListener('click', () => {
-        const id = b.getAttribute('data-id');
-        const chosen = this.state.ownedGenerals.find(g => g.id === id);
-        if (chosen) {
-          troop.heroes[slotIdx] = chosen;
-          sound.playDrum();
-          this.renderTroops();
-          this.save();
+    const container = modal.querySelector('#assignCandidatesContainer');
+    const badgeEl = modal.querySelector('#assignModalTotalBadge');
+
+    // 动态渲染候选列表函数
+    const renderFilteredCandidates = () => {
+      container.innerHTML = '';
+
+      const filtered = candidates.filter(c => {
+        // 阵营筛选
+        if (filterState.camp !== 'all' && c.camp !== filterState.camp) return false;
+        // 品质星级筛选
+        if (filterState.star !== 'all' && c.star !== parseInt(filterState.star, 10)) return false;
+        // 适性筛选
+        if (filterState.aptitude === 'sa') {
+          const apt = c.aptitude?.[currentArm] || 'C';
+          if (apt !== 'S' && apt !== 'A') return false;
         }
-        modal.remove();
+        return true;
+      });
+
+      // 排序规则：适性优先(S->A->B->C) -> 星级优先(5->4->3) -> 等级与属性优先
+      const aptOrder = { S: 4, A: 3, B: 2, C: 1 };
+      const sorted = [...filtered].sort((a, b) => {
+        const aptA = aptOrder[a.aptitude?.[currentArm] || 'C'] || 0;
+        const aptB = aptOrder[b.aptitude?.[currentArm] || 'C'] || 0;
+        if (aptA !== aptB) return aptB - aptA;
+        if (a.star !== b.star) return b.star - a.star;
+        if ((b.level || 1) !== (a.level || 1)) return (b.level || 1) - (a.level || 1);
+        return (b.force + b.intel) - (a.force + a.intel);
+      });
+
+      if (badgeEl) {
+        badgeEl.textContent = `候选名将: ${sorted.length} / ${candidates.length} 位`;
+      }
+
+      if (sorted.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:36px 10px; color:#9ca3af; background:rgba(0,0,0,0.2); border-radius:8px; border:1px dashed #374151;">
+            <div style="font-size:30px; margin-bottom:6px;">🔍</div>
+            <div style="font-size:14px; font-weight:bold; color:#e5e7eb;">未找到符合筛选条件的名将</div>
+            <div style="font-size:11px; color:#6b7280; margin-top:2px;">可尝试切换阵营、品质或适性筛选选项</div>
+          </div>
+        `;
+        return;
+      }
+
+      sorted.forEach(c => {
+        const campMeta = CAMPS[c.camp] || { name: '群', color: '#a855f7', badge: '群' };
+        const apt = c.aptitude?.[currentArm] || 'C';
+        const aptMod = GENERAL_APTITUDE_MODIFIERS[apt] || 1.0;
+        const aptModPct = Math.round(aptMod * 100);
+        const starStr = '★'.repeat(c.star);
+        const starColor = c.star === 5 ? '#fbbf24' : (c.star === 4 ? '#c084fc' : '#9ca3af');
+        const cLvl = c.level || 1;
+
+        // 自带战法简要
+        const builtInTac = TACTICS_MAP.get(c.builtInTacticId);
+        const tacName = builtInTac ? builtInTac.name : '军略';
+
+        const card = document.createElement('div');
+        card.style.cssText = `background:#11141a; border:1px solid ${c.star===5?'#d97706':'#374151'}; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; gap:12px; transition:border-color 0.2s;`;
+        card.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+            ${getGeneralAvatarHtml(c, { size: 42, borderRadius: '8px', fontSize: '28px' })}
+            <div style="min-width:0; flex:1;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="font-weight:bold; color:#fff; font-size:14px;">${c.name}</span>
+                <span class="hero-level-badge" style="font-size:10px;">Lv.${cLvl}</span>
+                <span style="font-size:10px; background:${campMeta.color}; color:#fff; padding:1px 5px; border-radius:3px;">${campMeta.name}</span>
+                <span style="font-size:11px; color:${starColor};">${starStr}</span>
+                <span style="font-size:10px; color:#fbbf24;">${c.cost}御</span>
+              </div>
+              <div style="font-size:11px; color:#9ca3af; margin-top:2px; display:flex; gap:10px; flex-wrap:wrap;">
+                <span>${currentArmMeta.name}适性: <b class="apt-tag ${apt}">${apt}</b> <span style="color:#6ee7b7; font-size:10px;">(${aptModPct}%)</span></span>
+                <span>武:${c.force} 智:${c.intel} 统:${c.command} 速:${c.speed}</span>
+                <span style="color:#e2e8f0;">[战法] <b style="color:#fde047;">${tacName}</b></span>
+              </div>
+            </div>
+          </div>
+          <button class="upgrade-btn btn-choose-candidate" data-id="${c.id}" style="padding:6px 14px; font-size:12px; white-space:nowrap; background:${apt==='S'?'linear-gradient(135deg, #059669 0%, #047857 100%)':'linear-gradient(135deg, #d97706 0%, #b45309 100%)'};">
+            ${slotIdx===0?'命为主将':'选拔上阵'}
+          </button>
+        `;
+
+        card.querySelector('.btn-choose-candidate').addEventListener('click', () => {
+          const chosen = this.state.ownedGenerals.find(g => g.id === c.id);
+          if (chosen) {
+            troop.heroes[slotIdx] = chosen;
+            sound.playDrum();
+            this.renderTroops();
+            this.save();
+          }
+          modal.remove();
+        });
+
+        container.appendChild(card);
+      });
+    };
+
+    // 绑定阵营筛选事件
+    modal.querySelectorAll('.btn-assign-filter-camp').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll('.btn-assign-filter-camp').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        filterState.camp = btn.getAttribute('data-camp');
+        sound.playDrum();
+        renderFilteredCandidates();
       });
     });
+
+    // 绑定适性筛选事件
+    modal.querySelectorAll('.btn-assign-filter-apt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll('.btn-assign-filter-apt').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        filterState.aptitude = btn.getAttribute('data-apt');
+        sound.playDrum();
+        renderFilteredCandidates();
+      });
+    });
+
+    // 绑定品质星级筛选事件
+    modal.querySelectorAll('.btn-assign-filter-star').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll('.btn-assign-filter-star').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        filterState.star = btn.getAttribute('data-star');
+        sound.playDrum();
+        renderFilteredCandidates();
+      });
+    });
+
+    // 初始渲染
+    renderFilteredCandidates();
   }
 
   // ================= 3. 武将图鉴、升星进阶与双战法装配 =================
@@ -2105,9 +2345,14 @@ class GameApp {
       card.innerHTML = `
         <div class="card-header">
           <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}</span>
-          <span class="cost-badge">Cost ${g.cost}</span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            ${isInTroop ? `<span style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:0 4px; border-radius:3px;">出征</span>` : ''}
+            <span class="cost-badge">${g.cost}御</span>
+          </div>
         </div>
-        <div class="avatar-box">${g.avatar}</div>
+        <div class="avatar-box">
+          ${getGeneralAvatarHtml(g, { fontSize: '42px' })}
+        </div>
         <div class="hero-name">
           <span>${g.name}</span>
           <span class="hero-level-badge">Lv.${gLvl}</span>
@@ -2131,112 +2376,37 @@ class GameApp {
           <span>弓<b class="apt-tag ${g.aptitude.bow}">${g.aptitude.bow}</b></span>
           <span>枪<b class="apt-tag ${g.aptitude.spear}">${g.aptitude.spear}</b></span>
         </div>
-        <div class="stats-grid">
-          <div>武力: <b style="color:#fde047;">${g.force}</b></div>
-          <div>智力: <b style="color:#fde047;">${g.intel}</b></div>
-          <div>统率: <b style="color:#fde047;">${g.command}</b></div>
-          <div>速度: <b style="color:#fde047;">${g.speed}</b></div>
-        </div>
-        <div class="tactic-desc" style="margin-bottom:4px;">
-          <b>[自带] ${builtInTac ? builtInTac.name : '军略'}</b><br>
-          ${builtInTac ? builtInTac.desc.substring(0, 32) + '...' : ''}
-        </div>
 
-        <!-- 双配装战法槽位 -->
-        <div style="font-size:10px; color:#fbbf24; background:rgba(0,0,0,0.3); padding:3px 6px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-          <span>[战法①] ${tac1 ? `${tac1.name} <b style="color:#6ee7b7;">(Lv.${this.state.tacticLevels?.[tac1.id] || 1})</b>` : '<span style="color:#9ca3af;">空置</span>'}</span>
-          <button class="upgrade-btn btn-equip-tactic1" style="padding:1px 5px; font-size:9px;">换配</button>
-        </div>
-        <div style="font-size:10px; color:#60a5fa; background:rgba(0,0,0,0.3); padding:3px 6px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-          <span>[战法②] ${tac2 ? `${tac2.name} <b style="color:#6ee7b7;">(Lv.${this.state.tacticLevels?.[tac2.id] || 1})</b>` : '<span style="color:#9ca3af;">空置</span>'}</span>
-          <button class="upgrade-btn btn-equip-tactic2" style="padding:1px 5px; font-size:9px; background:#2563eb;">换配</button>
-        </div>
-
-        <!-- 武将传承战法栏 -->
-        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:3px 6px; border-radius:4px; margin-bottom:5px; font-size:10px;">
-          <span style="color:#d8b4fe;">传承: <b>${inheritTac ? inheritTac.name : '未知'}</b></span>
-          ${isInherited ? `
-            <span style="color:#10b981; font-weight:bold; font-size:9px;">✔已领悟</span>
-          ` : `
-            <button class="upgrade-btn btn-inherit-hero" style="padding:1px 6px; font-size:9px; background:linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);" ${isInTroop?'disabled title="已在出征阵容中，不可传承"':''}>
-              📖传承
-            </button>
-          `}
-        </div>
-
-        <!-- 进阶升星与解甲操作 -->
-        <div style="display:flex; gap:4px; width:100%;">
+        <!-- 极简辅助行 -->
+        <div style="margin-top:2px; display:flex; justify-content:center;">
           ${canPromote ? `
-            <button class="upgrade-btn btn-promote-hero" style="flex:1; padding:3px 0; font-size:10px; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+            <button class="upgrade-btn btn-promote-hero" style="width:100%; padding:2px 0; font-size:10px; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
               🌟 升星(${duplicateCards.length})
             </button>
           ` : isFullRed ? `
-            <span style="flex:1; text-align:center; font-size:10px; color:#ef4444; font-weight:bold; padding:3px 0; background:rgba(239,68,68,0.1); border-radius:4px;">
-              👑 已达满红
-            </span>
+            <span style="font-size:10px; color:#ef4444; font-weight:bold; padding:2px 0;">👑 满红名宿</span>
           ` : `
-            <span style="flex:1; text-align:center; font-size:10px; color:#6b7280; padding:3px 0;">
-              暂无同名卡
-            </span>
+            <span style="font-size:10px; color:#6b7280; padding:2px 0;">点击查看军略</span>
           `}
-          <button class="upgrade-btn btn-sell-hero" style="padding:3px 8px; font-size:10px; background:${isInTroop ? '#374151' : (g.star >= 5 ? 'linear-gradient(135deg, #b45309 0%, #78350f 100%)' : (g.star === 4 ? '#5b21b6' : '#4b5563'))};" ${isInTroop ? 'disabled title="已在出征军团中，不可解甲"' : `title="解甲归田可获 ${g.star === 5 ? '5,000' : (g.star === 4 ? '1,000' : '300')} 铜币"`}>
-            ${isInTroop ? '出征中' : `解甲(${g.star === 5 ? '5千' : (g.star === 4 ? '1千' : '3百')})`}
-          </button>
         </div>
       `;
 
-        // 绑定第1战法槽更换
-        card.querySelector('.btn-equip-tactic1').addEventListener('click', (e) => {
+      // 绑定进阶升星
+      const btnPromote = card.querySelector('.btn-promote-hero');
+      if (btnPromote) {
+        btnPromote.addEventListener('click', (e) => {
           e.stopPropagation();
-          this.openEquipTacticModal(g, 1);
+          this.promoteHero(g, duplicateCards[0]);
         });
+      }
 
-        // 绑定第2战法槽更换
-        card.querySelector('.btn-equip-tactic2').addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.openEquipTacticModal(g, 2);
-        });
-
-        // 绑定传承战法
-        const btnInherit = card.querySelector('.btn-inherit-hero');
-        if (btnInherit && !isInTroop) {
-          btnInherit.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.inheritTacticFromHero(g);
-          });
-        }
-
-        // 绑定进阶升星
-        const btnPromote = card.querySelector('.btn-promote-hero');
-        if (btnPromote) {
-          btnPromote.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.promoteHero(g, duplicateCards[0]);
-          });
-        }
-
-        // 绑定售出
-        const btnSell = card.querySelector('.btn-sell-hero');
-        if (btnSell && !isInTroop) {
-          btnSell.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.sellHero(g);
-          });
-        }
-
-        // 绑定点击头像/名字直接查看全息档案详情
-        card.querySelector('.avatar-box').style.cursor = 'pointer';
-        card.querySelector('.avatar-box').title = `点击查看【${g.name}】全息军略档案`;
-        card.querySelector('.avatar-box').addEventListener('click', () => {
-          sound.playDrum();
-          this.openHeroDetailModal(g);
-        });
-        card.querySelector('.hero-name').style.cursor = 'pointer';
-        card.querySelector('.hero-name').title = `点击查看【${g.name}】全息军略档案`;
-        card.querySelector('.hero-name').addEventListener('click', () => {
-          sound.playDrum();
-          this.openHeroDetailModal(g);
-        });
+      // 绑定整张卡片点击直接查看全息档案详情
+      card.style.cursor = 'pointer';
+      card.title = `点击查看【${g.name}】全息军略档案`;
+      card.addEventListener('click', () => {
+        sound.playDrum();
+        this.openHeroDetailModal(g);
+      });
 
         this.ownedGeneralsGrid.appendChild(card);
       });
@@ -2426,7 +2596,7 @@ class GameApp {
     });
 
     modal.innerHTML = `
-      <div class="modal-content" style="max-width:560px;">
+      <div class="modal-content" style="max-width:620px;">
         <div class="modal-header">
           <div class="modal-title">换配传承战法 · ${hero.name} (槽位 ${slot})</div>
           <button class="modal-close-btn" id="btnTacModalClose">✕</button>
@@ -2434,17 +2604,62 @@ class GameApp {
         <div class="modal-body" style="display:flex; flex-direction:column; gap:10px;">
           
           <!-- 卸下当前战法选项 -->
-          <div style="background:rgba(239, 68, 68, 0.08); border:1px dashed #ef4444; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="background:rgba(239, 68, 68, 0.08); border:1px dashed #ef4444; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div style="font-weight:bold; color:#fca5a5; font-size:13px;">🚫 卸下当前战法</div>
-              <div style="font-size:11px; color:#9ca3af; margin-top:2px;">卸下后槽位空置，可供其他武将研习装配该战法。</div>
+              <div style="font-weight:bold; color:#fca5a5; font-size:12px;">🚫 卸下当前战法</div>
+              <div style="font-size:11px; color:#9ca3af;">卸下后槽位空置，可供其他武将研习装配该战法。</div>
             </div>
-            <button class="upgrade-btn btn-unequip-tactic" style="background:#4b5563; padding:5px 14px; font-size:11px;" ${!currentEquippedId ? 'disabled' : ''}>
+            <button class="upgrade-btn btn-unequip-tactic" style="background:#4b5563; padding:4px 12px; font-size:11px;" ${!currentEquippedId ? 'disabled' : ''}>
               ${currentEquippedId ? '立即卸下' : '当前已空置'}
             </button>
           </div>
 
+          <!-- 📚 多维战法综合筛选面板 -->
+          <div style="background:rgba(0,0,0,0.35); padding:10px 12px; border-radius:8px; border:1px solid #374151; display:flex; flex-direction:column; gap:7px;">
+            <!-- 搜索与空闲状态 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:180px;">
+                <span style="font-size:11px; color:#9ca3af; font-weight:bold;">🔍 搜索:</span>
+                <input type="text" id="modalTacticSearchInput" placeholder="输入战法名称查找..." style="flex:1; background:#11141a; border:1px solid #4b5563; border-radius:4px; padding:3px 8px; font-size:11px; color:#fff; outline:none;" />
+              </div>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <span style="font-size:11px; color:#9ca3af;">状态:</span>
+                <button class="nav-tab-btn active btn-modal-filter-status" data-status="all" style="padding:2px 7px; font-size:11px;">全部</button>
+                <button class="nav-tab-btn btn-modal-filter-status" data-status="idle" style="padding:2px 7px; font-size:11px; color:#34d399;">仅空闲</button>
+              </div>
+            </div>
+
+            <!-- 品阶等级筛选 -->
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:11px; color:#9ca3af; font-weight:bold; width:45px;">品阶:</span>
+              <button class="nav-tab-btn active btn-modal-filter-quality" data-quality="all" style="padding:2px 8px; font-size:11px;">全部</button>
+              <button class="nav-tab-btn btn-modal-filter-quality" data-quality="S" style="padding:2px 8px; font-size:11px; color:#fbbf24; border:1px solid rgba(251,191,36,0.3);">🌟 S级名将战法</button>
+              <button class="nav-tab-btn btn-modal-filter-quality" data-quality="A" style="padding:2px 8px; font-size:11px; color:#c084fc; border:1px solid rgba(192,132,252,0.3);">💜 A级良将战法</button>
+            </div>
+
+            <!-- 机制类型筛选 -->
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:11px; color:#9ca3af; font-weight:bold; width:45px;">机制:</span>
+              <button class="nav-tab-btn active btn-modal-filter-type" data-type="all" style="padding:2px 7px; font-size:11px;">全部</button>
+              <button class="nav-tab-btn btn-modal-filter-type" data-type="command" style="padding:2px 7px; font-size:11px; color:#3b82f6;">指挥</button>
+              <button class="nav-tab-btn btn-modal-filter-type" data-type="passive" style="padding:2px 7px; font-size:11px; color:#10b981;">被动</button>
+              <button class="nav-tab-btn btn-modal-filter-type" data-type="active" style="padding:2px 7px; font-size:11px; color:#f59e0b;">主动</button>
+              <button class="nav-tab-btn btn-modal-filter-type" data-type="assault" style="padding:2px 7px; font-size:11px; color:#ef4444;">突击</button>
+            </div>
+
+            <!-- 伤害性质筛选 -->
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:11px; color:#9ca3af; font-weight:bold; width:45px;">性质:</span>
+              <button class="nav-tab-btn active btn-modal-filter-damage" data-damage="all" style="padding:2px 7px; font-size:11px;">全部</button>
+              <button class="nav-tab-btn btn-modal-filter-damage" data-damage="physical" style="padding:2px 7px; font-size:11px; color:#f87171;">⚔️兵刃</button>
+              <button class="nav-tab-btn btn-modal-filter-damage" data-damage="tactical" style="padding:2px 7px; font-size:11px; color:#60a5fa;">🔮谋略</button>
+              <button class="nav-tab-btn btn-modal-filter-damage" data-damage="heal" style="padding:2px 7px; font-size:11px; color:#34d399;">🩹急救</button>
+              <button class="nav-tab-btn btn-modal-filter-damage" data-damage="buff" style="padding:2px 7px; font-size:11px; color:#e879f9;">🛡️增益控制</button>
+            </div>
+          </div>
+
           <!-- 可装配战法列表 -->
+          <div id="modalTacticItemsContainer" style="display:flex; flex-direction:column; gap:8px; max-height:48vh; overflow-y:auto; padding-right:4px;">
           ${this.state.ownedTactics.map(tId => {
             const tac = TACTICS_MAP.get(tId);
             if (!tac) return '';
@@ -2454,6 +2669,8 @@ class GameApp {
             const occupier = tacticOccupiedMap.get(tId);
             const isOccupiedByOther = occupier && occupier.heroId !== hero.id;
             const currentTacticLvl = this.state.tacticLevels?.[tId] || 1;
+            const dmgType = tac.damageType || (tac.damageRate ? 'physical' : (tac.healRate ? 'heal' : 'buff'));
+            const typeNameMap = { command: '指挥', passive: '被动', active: '主动', assault: '突击' };
 
             let btnText = '装配此战法';
             let btnStyle = 'background:linear-gradient(135deg, #10b981 0%, #059669 100%);';
@@ -2476,12 +2693,19 @@ class GameApp {
             }
 
             return `
-              <div style="background:#11141a; border:1px solid ${isCurrentSlot?'#059669':'#374151'}; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+              <div class="modal-tactic-row" 
+                   data-tac-name="${tac.name || ''}"
+                   data-tac-quality="${tac.quality || 'A'}" 
+                   data-tac-type="${tac.type || 'active'}" 
+                   data-tac-damage="${dmgType}" 
+                   data-tac-occupied="${isOccupiedByOther ? '1' : '0'}"
+                   style="background:#11141a; border:1px solid ${isCurrentSlot?'#059669':'#374151'}; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
                 <div style="flex:1; padding-right:12px;">
                   <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span style="font-weight:bold; color:#fbbf24; font-size:14px;">${tac.name}</span>
+                    <span style="font-size:10px; font-weight:bold; color:${tac.quality==='S'?'#fbbf24':'#c084fc'}; border:1px solid currentColor; padding:0 4px; border-radius:3px;">${tac.quality || 'A'}级</span>
+                    <span style="font-size:10px; color:#93c5fd; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); padding:0 4px; border-radius:3px;">${typeNameMap[tac.type] || tac.type}</span>
                     <span style="font-size:11px; color:#6ee7b7; background:rgba(110,231,183,0.15); border:1px solid #059669; padding:0 4px; border-radius:3px; font-weight:bold;">Lv.${currentTacticLvl}</span>
-                    <span style="font-size:11px; color:#9ca3af;">(${tac.type})</span>
                     ${statusBadge}
                   </div>
                   <div style="font-size:11px; color:#9ca3af; margin-top:3px; line-height:1.4;">${tac.desc}</div>
@@ -2492,12 +2716,127 @@ class GameApp {
               </div>
             `;
           }).join('')}
+            <div id="modalTacticEmptyTip" style="display:none; text-align:center; padding:30px 10px; color:#9ca3af; background:rgba(0,0,0,0.2); border-radius:6px; border:1px dashed #374151;">
+              <div style="font-size:24px; margin-bottom:4px;">🔍</div>
+              <div style="font-size:13px; color:#d1d5db;">未找到符合当前多维筛选条件的战法</div>
+            </div>
+          </div>
         </div>
       </div>
     `;
 
     document.body.appendChild(modal);
     modal.querySelector('#btnTacModalClose').addEventListener('click', () => modal.remove());
+
+    // 多维联动筛选状态与逻辑
+    const modalFilters = {
+      keyword: '',
+      status: 'all',
+      quality: 'all',
+      type: 'all',
+      damage: 'all'
+    };
+
+    const applyModalFilters = () => {
+      let visibleCount = 0;
+      modal.querySelectorAll('.modal-tactic-row').forEach(row => {
+        const q = row.getAttribute('data-tac-quality');
+        const t = row.getAttribute('data-tac-type');
+        const d = row.getAttribute('data-tac-damage');
+        const occ = row.getAttribute('data-tac-occupied');
+        const name = (row.getAttribute('data-tac-name') || '').toLowerCase();
+
+        // 1. 关键词搜索
+        if (modalFilters.keyword && !name.includes(modalFilters.keyword)) {
+          row.style.display = 'none';
+          return;
+        }
+        // 2. 空闲状态
+        if (modalFilters.status === 'idle' && occ === '1') {
+          row.style.display = 'none';
+          return;
+        }
+        // 3. 品阶
+        if (modalFilters.quality !== 'all' && q !== modalFilters.quality) {
+          row.style.display = 'none';
+          return;
+        }
+        // 4. 机制类型
+        if (modalFilters.type !== 'all' && t !== modalFilters.type) {
+          row.style.display = 'none';
+          return;
+        }
+        // 5. 伤害性质
+        if (modalFilters.damage !== 'all') {
+          if (modalFilters.damage === 'buff') {
+            if (d !== 'buff' && d !== 'debuff') {
+              row.style.display = 'none';
+              return;
+            }
+          } else if (d !== modalFilters.damage) {
+            row.style.display = 'none';
+            return;
+          }
+        }
+
+        row.style.display = 'flex';
+        visibleCount++;
+      });
+
+      const emptyTip = modal.querySelector('#modalTacticEmptyTip');
+      if (emptyTip) {
+        emptyTip.style.display = (visibleCount === 0) ? 'block' : 'none';
+      }
+    };
+
+    // 绑定搜索输入框事件
+    const searchInput = modal.querySelector('#modalTacticSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        modalFilters.keyword = e.target.value.trim().toLowerCase();
+        applyModalFilters();
+      });
+    }
+
+    // 绑定状态筛选
+    modal.querySelectorAll('.btn-modal-filter-status').forEach(b => {
+      b.addEventListener('click', () => {
+        modal.querySelectorAll('.btn-modal-filter-status').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        modalFilters.status = b.getAttribute('data-status');
+        applyModalFilters();
+      });
+    });
+
+    // 绑定品阶筛选
+    modal.querySelectorAll('.btn-modal-filter-quality').forEach(b => {
+      b.addEventListener('click', () => {
+        modal.querySelectorAll('.btn-modal-filter-quality').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        modalFilters.quality = b.getAttribute('data-quality');
+        applyModalFilters();
+      });
+    });
+
+    // 绑定机制类型筛选
+    modal.querySelectorAll('.btn-modal-filter-type').forEach(b => {
+      b.addEventListener('click', () => {
+        modal.querySelectorAll('.btn-modal-filter-type').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        modalFilters.type = b.getAttribute('data-type');
+        applyModalFilters();
+      });
+    });
+
+    // 绑定伤害性质筛选
+    modal.querySelectorAll('.btn-modal-filter-damage').forEach(b => {
+      b.addEventListener('click', () => {
+        modal.querySelectorAll('.btn-modal-filter-damage').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        modalFilters.damage = b.getAttribute('data-damage');
+        applyModalFilters();
+      });
+    });
 
     // 卸下战法处理
     const btnUnequip = modal.querySelector('.btn-unequip-tactic');
@@ -2600,6 +2939,9 @@ class GameApp {
       const isUnlocked = ownedTacticsSet.has(tac.id);
       const currentLvl = this.state.tacticLevels[tac.id] || 1;
       const isMax = (currentLvl >= MAX_TACTIC_LEVEL);
+
+      // 0. 战法品阶筛选 (S级 / A级)
+      if (this.tacticFilter.quality !== 'all' && tac.quality !== this.tacticFilter.quality) return false;
 
       // 1. 等级筛选
       if (this.tacticFilter.level === 'max' && (!isUnlocked || !isMax)) return false;
@@ -2929,12 +3271,14 @@ class GameApp {
           <div class="gacha-card-face card-front general-card ${qualityClass}">
             <div class="card-header">
               <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}</span>
-              <span class="cost-badge">Cost ${c.cost}</span>
+              <span class="cost-badge">${c.cost}御</span>
             </div>
-            <div class="avatar-box" style="font-size:46px;">${c.avatar}</div>
+            <div class="avatar-box">
+              ${getGeneralAvatarHtml(c, { fontSize: '46px' })}
+            </div>
             <div class="hero-name" style="font-size:15px; margin:4px 0;">${c.name}</div>
             <div class="stars-row" style="${starClass} font-size:14px; letter-spacing:2px; margin-bottom:4px;">${starStr}</div>
-            ${isFive ? '<div class="gacha-gold-badge">5★神将</div>' : ''}
+            ${isFive ? '<div class="gacha-gold-badge">5★名将</div>' : ''}
             ${isFour ? '<div class="gacha-purple-badge">4★良将</div>' : ''}
           </div>
         </div>
@@ -2942,7 +3286,11 @@ class GameApp {
 
       // 翻开单张卡牌逻辑
       const flipCard = () => {
-        if (wrapper.classList.contains('flipped')) return;
+        if (wrapper.classList.contains('flipped')) {
+          sound.playDrum();
+          this.openHeroDetailModal(c);
+          return;
+        }
         wrapper.classList.add('flipped');
         sound.playCardFlip();
 
@@ -2953,7 +3301,7 @@ class GameApp {
             this.gachaShowcase.classList.add('has-gold');
             if (this.gachaShowcaseTitle) {
               this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
-              this.gachaShowcaseTitle.innerHTML = '🌟 华光万道 · 恭迎五星神将！';
+              this.gachaShowcaseTitle.innerHTML = '🌟 华光万道 · 恭迎五星名将！';
             }
           } else if (isFour && !this.gachaShowcase.classList.contains('has-gold')) {
             sound.playGachaPurple();
@@ -3001,7 +3349,7 @@ class GameApp {
     const fiveCount = famousPoolHeroes.filter(g => g.star === 5).length;
     const fourCount = famousPoolHeroes.filter(g => g.star === 4).length;
     if (this.previewPoolTotalBadge) {
-      this.previewPoolTotalBadge.innerHTML = `可抽取：5★神将 ${fiveCount}位 · 4★良将 ${fourCount}位`;
+      this.previewPoolTotalBadge.innerHTML = `可抽取：5★名将 ${fiveCount}位 · 4★良将 ${fourCount}位`;
     }
 
     // 多维过滤
@@ -3058,17 +3406,19 @@ class GameApp {
 
       const card = document.createElement('div');
       card.className = `pool-preview-card ${cardClass}`;
+      card.style.cursor = 'pointer';
+      card.title = `点击查阅【${hero.name}】全息军略大立绘档案`;
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="background: ${camp.color}; color: #fff; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px;">
             ${camp.badge} · ${camp.name}
           </span>
-          <span style="font-size: 11px; font-weight: bold; color: #fbbf24;">Cost ${hero.cost}</span>
+          <span style="font-size: 11px; font-weight: bold; color: #fbbf24;">${hero.cost}御</span>
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px; margin: 4px 0;">
-          <div style="font-size: 34px; background: ${hero.avatarBg || '#1e293b'}; width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0;">
-            ${hero.avatar}
+          <div style="width: 44px; height: 44px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); overflow: hidden; flex-shrink: 0;">
+            ${getGeneralAvatarHtml(hero, { size: 44, borderRadius: '8px', fontSize: '30px' })}
           </div>
           <div style="overflow: hidden;">
             <div style="font-weight: bold; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 4px;">
@@ -3098,7 +3448,16 @@ class GameApp {
             ${builtInTac?.desc || hero.bio}
           </div>
         </div>
+
+        <div style="text-align: right; font-size: 9px; color: #9ca3af; margin-top: 4px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 3px;">
+          点击查看军略档案 🎴
+        </div>
       `;
+
+      card.addEventListener('click', () => {
+        sound.playDrum();
+        this.openHeroDetailModal(hero);
+      });
 
       this.gachaPoolPreviewGrid.appendChild(card);
     });
@@ -3172,8 +3531,10 @@ class GameApp {
         return `
           <div class="lineup-hero-item ${h.isLeader ? 'leader' : ''}">
             <div class="lineup-hero-main">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:18px;">${h.avatar || '👤'}</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:28px; height:28px; border-radius:4px; overflow:hidden; flex-shrink:0;">
+                  ${getGeneralAvatarHtml(h, { size: 28, borderRadius: '4px', fontSize: '18px' })}
+                </div>
                 <div>
                   <div style="display:flex; align-items:center; gap:4px;">
                     <span style="font-weight:bold; font-size:13px; color:#fff;">${h.name}</span>
@@ -3243,6 +3604,12 @@ class GameApp {
       txt = txt.replace(/【灼烧】/g, '<span class="buff-badge debuff-burn">灼烧</span>');
       txt = txt.replace(/【水攻】/g, '<span class="buff-badge debuff-water">水攻</span>');
       txt = txt.replace(/【禁疗】/g, '<span class="buff-badge debuff-cannot-heal">禁疗</span>');
+
+      // 6. 🎯 三战原版战报核心：精准将【增伤 / 减伤 / 易伤】加成修饰标记为彩色胶囊徽章
+      txt = txt.replace(/【增伤\+(\d+)%】/g, '<span class="buff-badge buff-dmg-boost">增伤 +$1%</span>');
+      txt = txt.replace(/【减伤(\d+)%】/g, '<span class="buff-badge buff-dmg-reduce">减伤 $1%</span>');
+      txt = txt.replace(/【易伤\+(\d+)%】/g, '<span class="buff-badge debuff-dmg-taken">易伤 +$1%</span>');
+      txt = txt.replace(/【伤害-(\d+)%】/g, '<span class="buff-badge debuff-dmg-nerf">伤害 -$1%</span>');
 
       return `<div class="battle-log-item ${l.type}">${txt}</div>`;
     }).join('');

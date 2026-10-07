@@ -136,7 +136,7 @@ class SoundEngine {
     osc.stop(now + 0.5);
   }
 
-  // 🌟 抽卡出金专属震撼华美金戈和弦 (五星神将降临)
+  // 🌟 抽卡出金专属震撼华美金戈和弦 (五星名将降临)
   playGachaGold() {
     if (!this.enabled) return;
     this.init();

@@ -242,7 +242,7 @@
           <div style="display:flex; gap:4px; align-items:center; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:6px; border:1px solid #374151;">
             <span style="font-size:11px; color:#9ca3af; margin-right:2px;">品质:</span>
             <button class="nav-tab-btn active btn-filter-star" data-star="all" style="padding:2px 8px; font-size:11px;">全部</button>
-            <button class="nav-tab-btn btn-filter-star" data-star="5" style="padding:2px 8px; font-size:11px; color:#fbbf24;">5★神将</button>
+            <button class="nav-tab-btn btn-filter-star" data-star="5" style="padding:2px 8px; font-size:11px; color:#fbbf24;">5★名将</button>
             <button class="nav-tab-btn btn-filter-star" data-star="4" style="padding:2px 8px; font-size:11px; color:#c084fc;">4★良将</button>
             <button class="nav-tab-btn btn-filter-star" data-star="3" style="padding:2px 8px; font-size:11px; color:#9ca3af;">3★偏将</button>
           </div>
@@ -278,11 +278,19 @@
             当前可用铜币: <span id="tacticViewCopperVal" style="color: #6ee7b7; font-weight: 900;">0</span>
           </div>
         </div>
-        <!-- 战法研习多维筛选工具条 (等级、类型、伤害性质) -->
+        <!-- 战法研习多维筛选工具条 (品阶、强化等级、机制类型、伤害性质) -->
         <div id="tacticsFilterBar" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid #374151;">
-          <!-- 1. 战法等级筛选 -->
+          <!-- 1. 战法品阶筛选 -->
           <div style="display:flex; gap:4px; align-items:center;">
-            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">等级:</span>
+            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">品阶:</span>
+            <button class="nav-tab-btn active btn-filter-tac-quality" data-tac-quality="all" style="padding:2px 8px; font-size:11px;">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-quality" data-tac-quality="S" style="padding:2px 8px; font-size:11px; color:#fbbf24; border:1px solid rgba(251,191,36,0.3);">🌟 S级名将战法</button>
+            <button class="nav-tab-btn btn-filter-tac-quality" data-tac-quality="A" style="padding:2px 8px; font-size:11px; color:#c084fc; border:1px solid rgba(192,132,252,0.3);">💜 A级良将战法</button>
+          </div>
+
+          <!-- 2. 研习强化等级筛选 -->
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">强化:</span>
             <button class="nav-tab-btn active btn-filter-tac-level" data-tac-level="all" style="padding:2px 8px; font-size:11px;">全部</button>
             <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="max" style="padding:2px 8px; font-size:11px; color:#fbbf24;">Lv.10满级</button>
             <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="learning" style="padding:2px 8px; font-size:11px; color:#38bdf8;">研习中(Lv.1~9)</button>
@@ -349,7 +357,7 @@
             <div style="font-size:18px; font-weight:800; color:#f59e0b; margin-top:2px;" id="gachaTotalFiveCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
           </div>
           <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
-            <div style="font-size:11px; color:#9ca3af;">👑 核心神将产出</div>
+            <div style="font-size:11px; color:#9ca3af;">👑 核心名将产出</div>
             <div style="font-size:18px; font-weight:800; color:#ef4444; margin-top:2px;" id="gachaTotalCoreCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
           </div>
           <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
@@ -369,7 +377,7 @@
             </div>
             <div class="pool-rates" style="line-height:1.6; margin-top:8px;">
               • <b>综合概率</b>：5★名将 <b>5.6%</b> · 4★良将 <b>36.0%</b> · 3★裨将 <b>58.4%</b><br>
-              • <b>核心卡机制</b>：5星出货中，大核心神将（如诸葛亮、刘备、曹操、孙权、吕布等）权重为 12%，普通5星权重为 88%！<br>
+              • <b>核心卡机制</b>：5星出货中，大核心名将（如诸葛亮、刘备、曹操、孙权、吕布等）权重为 12%，普通5星权重为 88%！<br>
               • <b>保底承诺</b>：连续 29 抽未出 5 星，第 30 抽<b>必出 5 星名将</b>；每 5 抽必出紫卡或橙卡！
             </div>
             <div class="gacha-btn-group">
@@ -519,7 +527,7 @@
         <div style="display: flex; gap: 6px; align-items: center;">
           <span style="font-size: 12px; color: #9ca3af;">品质:</span>
           <button class="nav-tab-btn active btn-pool-filter-star" data-star="all" style="padding: 2px 10px; font-size: 11px;">全部</button>
-          <button class="nav-tab-btn btn-pool-filter-star" data-star="5" style="padding: 2px 10px; font-size: 11px; color: #fbbf24;">5★神将</button>
+          <button class="nav-tab-btn btn-pool-filter-star" data-star="5" style="padding: 2px 10px; font-size: 11px; color: #fbbf24;">5★名将</button>
           <button class="nav-tab-btn btn-pool-filter-star" data-star="4" style="padding: 2px 10px; font-size: 11px; color: #c084fc;">4★良将</button>
         </div>
       </div>

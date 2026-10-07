@@ -109,7 +109,7 @@ export function createInitialGameState() {
     totalGachaCount: 0, // 历史累计抽卡总次数
     totalFiveStarCount: 0, // 历史累计获得5星总数
     totalCoreCount: 0, // 历史累计获得大核心总数
-    customEnemyTroop: { // 自定义敌方演习阵容 (默认预设经典神将阵容：诸葛亮+刘备+关羽)
+    customEnemyTroop: { // 自定义敌方演习阵容 (默认预设经典名将阵容：诸葛亮+刘备+关羽)
       name: '演习假想敌·天王神武军',
       arm: 'spear',
       heroes: [
