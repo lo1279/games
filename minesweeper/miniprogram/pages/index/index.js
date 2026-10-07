@@ -265,6 +265,12 @@ Page({
     this.setData({
       formattedMines: this.formatDigits(res.remainingMines)
     });
+
+    if (res.status === GameState.WON) {
+      this.handleGameOver(true);
+      return;
+    }
+
     this.vibrate('light');
   },
 

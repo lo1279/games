@@ -187,28 +187,78 @@ export class MinesweeperGame {
       }
     }
 
-    // 胜利条件检测：已翻开非雷格数 == 总格数 - 总雷数
-    const totalCells = this.rows * this.cols;
-    if (this.revealedCount === totalCells - this.mines) {
-      this.status = GameState.WON;
-      this.endTime = Date.now();
-
-      // 自动给所有剩余地雷插上旗子
-      for (let row = 0; row < this.rows; row++) {
-        for (let col = 0; col < this.cols; col++) {
-          const item = this.grid[row][col];
-          if (item.isMine && item.state !== CellState.FLAGGED) {
-            item.state = CellState.FLAGGED;
-            this.flagCount++;
-            changedCells.push(item);
-          }
-        }
-      }
-
+    // 检查并执行胜利结算（支持双重判定：翻开所有非雷格子 或 准确标记全部地雷且无错旗）
+    const winResult = this.checkWinCondition();
+    if (winResult.won) {
+      changedCells.push(...winResult.additionalChangedCells);
       return { status: GameState.WON, changedCells };
     }
 
     return { status: GameState.PLAYING, changedCells };
+  }
+
+  // 统一胜利判定核心方法
+  checkWinCondition() {
+    if (this.status !== GameState.PLAYING) {
+      return { won: false, additionalChangedCells: [] };
+    }
+
+    const totalCells = this.rows * this.cols;
+    let nonMineUnrevealed = 0;
+    let allMinesFlaggedCorrectly = true;
+    let hasFalseFlag = false;
+    let actualFlagCount = 0;
+
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        const item = this.grid[r][c];
+        if (!item.isMine) {
+          if (item.state !== CellState.REVEALED) {
+            nonMineUnrevealed++;
+          }
+          if (item.state === CellState.FLAGGED) {
+            hasFalseFlag = true;
+          }
+        } else {
+          if (item.state !== CellState.FLAGGED) {
+            allMinesFlaggedCorrectly = false;
+          }
+        }
+        if (item.state === CellState.FLAGGED) {
+          actualFlagCount++;
+        }
+      }
+    }
+
+    // 判定条件1：所有非雷格子均已翻开 (经典主判据)
+    // 判定条件2：所有地雷均被准确插旗且棋盘上没有任何错旗 (插旗通关判据)
+    const isWin = (nonMineUnrevealed === 0) || (allMinesFlaggedCorrectly && !hasFalseFlag && actualFlagCount === this.mines);
+
+    if (isWin) {
+      this.status = GameState.WON;
+      this.endTime = Date.now();
+      const additionalChangedCells = [];
+
+      // 胜利时：自动给所有剩余未插旗的地雷插上旗子，并将未翻开的安全格自动翻开
+      for (let r = 0; r < this.rows; r++) {
+        for (let c = 0; c < this.cols; c++) {
+          const item = this.grid[r][c];
+          if (item.isMine && item.state !== CellState.FLAGGED) {
+            item.state = CellState.FLAGGED;
+            this.flagCount++;
+            additionalChangedCells.push(item);
+          } else if (!item.isMine && item.state !== CellState.REVEALED) {
+            item.state = CellState.REVEALED;
+            this.revealedCount++;
+            additionalChangedCells.push(item);
+          }
+        }
+      }
+
+      return { won: true, additionalChangedCells };
+    }
+
+    return { won: false, additionalChangedCells: [] };
   }
 
   // 切换旗子/问号状态
@@ -234,10 +284,15 @@ export class MinesweeperGame {
       cell.state = CellState.HIDDEN;
     }
 
+    // 插旗后实时检测是否达成通关
+    const winResult = this.checkWinCondition();
+
     return {
       cell,
       previousState,
-      remainingMines: this.mines - this.flagCount
+      remainingMines: this.mines - this.flagCount,
+      status: this.status,
+      additionalChangedCells: winResult.additionalChangedCells
     };
   }
 
@@ -331,22 +386,9 @@ export class MinesweeperGame {
     }
 
     // 检查是否达成胜利
-    const totalCells = this.rows * this.cols;
-    if (this.revealedCount === totalCells - this.mines) {
-      this.status = GameState.WON;
-      this.endTime = Date.now();
-
-      for (let row = 0; row < this.rows; row++) {
-        for (let col = 0; col < this.cols; col++) {
-          const item = this.grid[row][col];
-          if (item.isMine && item.state !== CellState.FLAGGED) {
-            item.state = CellState.FLAGGED;
-            this.flagCount++;
-            changedCells.push(item);
-          }
-        }
-      }
-
+    const winResult = this.checkWinCondition();
+    if (winResult.won) {
+      changedCells.push(...winResult.additionalChangedCells);
       return { status: GameState.WON, triggered: true, changedCells };
     }
 

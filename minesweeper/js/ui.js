@@ -333,6 +333,17 @@ class MinesweeperUI {
     this.updateCellDOM(res.cell);
     this.updateMineDisplay(res.remainingMines);
 
+    // 如果附带自动插旗或翻开的变化方格，批量刷新 DOM
+    if (res.additionalChangedCells && res.additionalChangedCells.length > 0) {
+      this.updateChangedCells(res.additionalChangedCells);
+    }
+
+    // 插旗后达成通关时的结算处理
+    if (res.status === GameState.WON) {
+      this.handleGameOver(true);
+      return;
+    }
+
     if (res.cell.state === CellState.FLAGGED) {
       sounds.playFlag();
       if (navigator.vibrate) navigator.vibrate(30);
