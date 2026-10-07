@@ -1945,46 +1945,78 @@ class GameApp {
                   <div style="background:rgba(0,0,0,0.3); border:1px solid #d97706; padding:8px 12px; border-radius:6px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                       <span style="color:#fbbf24; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
-                      <span style="font-size:10px; color:#fde047; background:rgba(217,119,6,0.2); border:1px solid #d97706; padding:1px 5px; border-radius:3px;">
-                        ${builtInTac?.type || '被动'}
+                      <span style="font-size:10px; color:#fde047; background:rgba(217,119,6,0.2); border:1px solid #d97706; padding:1px 6px; border-radius:3px;">
+                        🌟 S级 · ${{ command: '指挥', passive: '被动', active: '主动', assault: '突击' }[builtInTac?.type] || '被动'}
                       </span>
                     </div>
                     <div style="font-size:11px; color:#cbd5e1; margin-top:3px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
                   </div>
 
                   <!-- 战法槽位 1 -->
-                  <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                    <div style="flex:1; min-width:0;">
-                      <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法①]</span>
-                        <span style="color:#fff; font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac1 ? tac1.name : '<span style="color:#9ca3af; font-weight:normal;">未装配</span>'}</span>
-                        ${tac1 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac1.id] || 1}</span>` : ''}
+                  ${(() => {
+                    const q1 = tac1?.quality || 'A';
+                    const isS1 = q1 === 'S';
+                    const color1 = isS1 ? '#fbbf24' : '#c084fc';
+                    const typeZh1 = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[tac1?.type] || '战法';
+                    const borderColor1 = tac1 ? (isS1 ? 'rgba(217,119,6,0.45)' : 'rgba(147,51,234,0.45)') : '#374151';
+                    return `
+                      <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor1}; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div style="flex:1; min-width:0;">
+                          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法①]</span>
+                            ${tac1 ? `
+                              <span style="color:${color1}; font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac1.name}</span>
+                              <span style="font-size:10px; color:${color1}; background:${isS1 ? 'rgba(251,191,36,0.15)' : 'rgba(192,132,252,0.15)'}; border:1px solid ${isS1 ? '#d97706' : '#9333ea'}; padding:0 4px; border-radius:3px;">
+                                ${isS1 ? '🌟 S级' : '💜 A级'} · ${typeZh1}
+                              </span>
+                              <span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac1.id] || 1}</span>
+                            ` : `
+                              <span style="color:#9ca3af; font-size:12px;">未装配</span>
+                            `}
+                          </div>
+                          <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac1 ? (tac1.desc.length > 38 ? tac1.desc.substring(0, 38) + '...' : tac1.desc) : '点击右侧按钮装配传承战法'}</div>
+                        </div>
+                        ${isOwned ? `
+                          <button class="upgrade-btn btn-modal-change-tac1" style="padding:4px 10px; font-size:11px; white-space:nowrap; flex-shrink:0;">换配</button>
+                        ` : `
+                          <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
+                        `}
                       </div>
-                      <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac1 ? (tac1.desc.length > 38 ? tac1.desc.substring(0, 38) + '...' : tac1.desc) : '点击右侧按钮装配传承战法'}</div>
-                    </div>
-                    ${isOwned ? `
-                      <button class="upgrade-btn btn-modal-change-tac1" style="padding:4px 10px; font-size:11px; white-space:nowrap; flex-shrink:0;">换配</button>
-                    ` : `
-                      <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
-                    `}
-                  </div>
+                    `;
+                  })()}
 
                   <!-- 战法槽位 2 -->
-                  <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                    <div style="flex:1; min-width:0;">
-                      <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:#60a5fa; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法②]</span>
-                        <span style="color:#fff; font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac2 ? tac2.name : '<span style="color:#9ca3af; font-weight:normal;">未装配</span>'}</span>
-                        ${tac2 ? `<span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac2.id] || 1}</span>` : ''}
+                  ${(() => {
+                    const q2 = tac2?.quality || 'A';
+                    const isS2 = q2 === 'S';
+                    const color2 = isS2 ? '#fbbf24' : '#c084fc';
+                    const typeZh2 = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[tac2?.type] || '战法';
+                    const borderColor2 = tac2 ? (isS2 ? 'rgba(217,119,6,0.45)' : 'rgba(147,51,234,0.45)') : '#374151';
+                    return `
+                      <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor2}; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div style="flex:1; min-width:0;">
+                          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="color:#60a5fa; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法②]</span>
+                            ${tac2 ? `
+                              <span style="color:${color2}; font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac2.name}</span>
+                              <span style="font-size:10px; color:${color2}; background:${isS2 ? 'rgba(251,191,36,0.15)' : 'rgba(192,132,252,0.15)'}; border:1px solid ${isS2 ? '#d97706' : '#9333ea'}; padding:0 4px; border-radius:3px;">
+                                ${isS2 ? '🌟 S级' : '💜 A级'} · ${typeZh2}
+                              </span>
+                              <span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac2.id] || 1}</span>
+                            ` : `
+                              <span style="color:#9ca3af; font-size:12px;">未装配</span>
+                            `}
+                          </div>
+                          <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac2 ? (tac2.desc.length > 38 ? tac2.desc.substring(0, 38) + '...' : tac2.desc) : '点击右侧按钮装配第二战法'}</div>
+                        </div>
+                        ${isOwned ? `
+                          <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; background:#2563eb; white-space:nowrap; flex-shrink:0;">换配</button>
+                        ` : `
+                          <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
+                        `}
                       </div>
-                      <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac2 ? (tac2.desc.length > 38 ? tac2.desc.substring(0, 38) + '...' : tac2.desc) : '点击右侧按钮装配第二战法'}</div>
-                    </div>
-                    ${isOwned ? `
-                      <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; background:#2563eb; white-space:nowrap; flex-shrink:0;">换配</button>
-                    ` : `
-                      <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
-                    `}
-                  </div>
+                    `;
+                  })()}
                 </div>
               </div>
 
@@ -2702,8 +2734,8 @@ class GameApp {
                    style="background:#11141a; border:1px solid ${isCurrentSlot?'#059669':'#374151'}; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
                 <div style="flex:1; padding-right:12px;">
                   <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                    <span style="font-weight:bold; color:#fbbf24; font-size:14px;">${tac.name}</span>
-                    <span style="font-size:10px; font-weight:bold; color:${tac.quality==='S'?'#fbbf24':'#c084fc'}; border:1px solid currentColor; padding:0 4px; border-radius:3px;">${tac.quality || 'A'}级</span>
+                    <span style="font-weight:bold; color:${tac.quality==='S'?'#fbbf24':'#c084fc'}; font-size:14px;">${tac.name}</span>
+                    <span style="font-size:10px; font-weight:bold; color:${tac.quality==='S'?'#fbbf24':'#c084fc'}; background:${tac.quality==='S'?'rgba(251,191,36,0.15)':'rgba(192,132,252,0.15)'}; border:1px solid currentColor; padding:0 4px; border-radius:3px;">${tac.quality==='S'?'🌟 S级':'💜 A级'}</span>
                     <span style="font-size:10px; color:#93c5fd; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); padding:0 4px; border-radius:3px;">${typeNameMap[tac.type] || tac.type}</span>
                     <span style="font-size:11px; color:#6ee7b7; background:rgba(110,231,183,0.15); border:1px solid #059669; padding:0 4px; border-radius:3px; font-weight:bold;">Lv.${currentTacticLvl}</span>
                     ${statusBadge}
