@@ -180,13 +180,15 @@ class GameApp {
       this.battleDetailModal.style.display = 'none';
     });
 
-    // 确认并关闭抽卡开箱
-    document.getElementById('btnGachaShowcaseConfirm').addEventListener('click', () => {
+    // 确认并关闭抽卡开箱（支持底部大按钮与右上角快捷关闭按钮）
+    const closeGachaShowcase = () => {
       this.gachaShowcase.style.display = 'none';
       this.renderGenerals();
       this.renderTroops();
       this.renderHUD();
-    });
+    };
+    document.getElementById('btnGachaShowcaseConfirm')?.addEventListener('click', closeGachaShowcase);
+    document.getElementById('btnGachaShowcaseClose')?.addEventListener('click', closeGachaShowcase);
 
     // 清空战报历史
     document.getElementById('btnClearReports').addEventListener('click', () => {
