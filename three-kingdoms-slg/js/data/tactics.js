@@ -579,6 +579,7 @@ export const TACTICS_DATA = [
     damageType: 'physical',
     requiresPrep: true,
     damageRate: 1.58,
+    statDebuff: 80,
     desc: '【孙策专属传承】准备1回合，使敌军群体(2人)统率和智力削减80点，随后对其发动强力兵刃轰击(伤害率158%)！'
   },
   {
@@ -589,6 +590,8 @@ export const TACTICS_DATA = [
     target: 'self',
     quality: 'S',
     damageType: 'tactical',
+    damageRate: 1.80,
+    statBuff: 68,
     desc: '【吕蒙专属传承】前3回合无法进行普攻但获得30%规避几率；第4回合自身智力提高68点，并对敌军全体发动毁灭性谋略轰炸(伤害率180%)！'
   },
   {
@@ -644,6 +647,7 @@ export const TACTICS_DATA = [
     target: 'friendly_all',
     quality: 'S',
     damageType: 'buff',
+    damageReduction: 0.40,
     desc: '【兀突骨/群雄传承·盾兵专属】我军全体受到兵刃伤害降低40%(受统率影响)；但处于灼烧状态时，每回合受到大量火攻伤害！'
   },
   {
@@ -654,6 +658,8 @@ export const TACTICS_DATA = [
     target: 'friendly_all',
     quality: 'S',
     damageType: 'buff',
+    damageBonus: 0.30,
+    damageReduction: 0.15,
     desc: '【典韦传承·阵法】战斗中，使我军主将造成伤害提升30%，受到伤害提升20%；副将造成伤害降低15%，受到伤害降低25%！'
   },
   {
@@ -665,6 +671,7 @@ export const TACTICS_DATA = [
     quality: 'S',
     damageType: 'heal',
     healRate: 2.68,
+    statBuff: 42,
     desc: '【典韦专属传承】为自身恢复巨量兵力(治疗率268%)，并提高自身统率42点持续1回合！'
   },
   {
@@ -675,6 +682,7 @@ export const TACTICS_DATA = [
     target: 'enemy_leader',
     quality: 'S',
     damageType: 'debuff',
+    statBuff: 40,
     desc: '【程昱/程普传承】战斗开始前4回合，嘲讽敌军主将迫使其普通攻击自身，并提高自身统率40点！'
   },
   {
@@ -696,6 +704,7 @@ export const TACTICS_DATA = [
     target: 'self',
     quality: 'A',
     damageType: 'buff',
+    statBuff: 36,
     desc: '【甘宁专属传承】战斗中使自身武力、智力、统率、速度全部提升36点！'
   },
 
@@ -1036,6 +1045,8 @@ export const TACTICS_DATA = [
     target: 'self',
     quality: 'S',
     damageType: 'buff',
+    statBuff: 50,
+    damageRate: 0.70,
     desc: '【张飞专属传承】使自身武力提升50点，并使普通攻击获得群攻溅射效果(对敌军其余目标造成70%兵刃溅射伤害)，持续2回合！'
   },
   {
@@ -1046,6 +1057,8 @@ export const TACTICS_DATA = [
     target: 'enemy_active',
     quality: 'S',
     damageType: 'debuff',
+    statDebuff: 10,
+    activeRateBonus: 5,
     desc: '【诸葛亮专属传承】敌军试图发动主动战法时，降低其发动几率10%，并提升我军全体主动战法发动几率5%，持续1回合。'
   },
   {
@@ -1056,6 +1069,8 @@ export const TACTICS_DATA = [
     target: 'self',
     quality: 'S',
     damageType: 'buff',
+    statBuff: 40,
+    damageRate: 1.05,
     desc: '【曹操专属传承】战斗前2回合自身获得反击几率(受到普攻反击105%伤害)，并提高自身统率40点。'
   },
   {
@@ -1066,6 +1081,8 @@ export const TACTICS_DATA = [
     target: 'self',
     quality: 'S',
     damageType: 'physical',
+    damageRate: 2.80,
+    statBuff: 6,
     desc: '【夏侯惇专属传承】战斗中自身每次受到兵刃伤害提高武力6点(最多叠加10次)；第5回合根据层数对敌军全体发动致命反击爆发(最高280%伤害)！'
   },
   {
@@ -1076,6 +1093,7 @@ export const TACTICS_DATA = [
     target: 'enemy_all',
     quality: 'S',
     damageType: 'tactical',
+    damageRate: 1.65,
     desc: '【司马懿专属传承】战斗第2、4、6、8回合，依次对敌军群体施加稳定递增的谋略爆发(第2回合75%、第4回合105%、第6回合135%、第8回合165%)！'
   },
   {
@@ -1086,6 +1104,7 @@ export const TACTICS_DATA = [
     target: 'self',
     quality: 'S',
     damageType: 'buff',
+    damageBonus: 0.80,
     desc: '【张辽专属传承】普通攻击后使自身获得1次抵御(免疫伤害)，并使自身下一次主动战法造成的伤害大幅提升80%！'
   },
   {
@@ -1175,7 +1194,7 @@ export function getTacticEffectiveProps(tactic, level = 1) {
   const lvl = Math.max(1, Math.min(MAX_TACTIC_LEVEL, parseInt(level) || 1));
   const scale = 0.55 + 0.45 * ((lvl - 1) / 9); // Lv.1 为 55% 基础数值，Lv.10 达到 100% 满额
 
-  const effective = { ...tactic, level: lvl };
+  const effective = { ...tactic, level: lvl, scale };
 
   // 发动率成长：若指定 baseRate 与 rate (作为满级率)，按区间平滑成长；否则默认每级提升 +1%
   if (tactic.baseRate && tactic.rate && tactic.rate < 100) {
@@ -1200,6 +1219,29 @@ export function getTacticEffectiveProps(tactic, level = 1) {
   }
   if (tactic.disarmRate && tactic.disarmRate < 100) {
     effective.disarmRate = Math.min(100, Math.round(tactic.disarmRate * scale));
+  }
+
+  // 全维属性与战斗增减益成长 (四舍五入或保留两位小数)
+  if (tactic.statBuff) {
+    // 若基础数值较小(如绝地反击武力每层6点)，按保留1位小数计算，避免四舍五入过早失真
+    effective.statBuff = tactic.statBuff <= 10 
+      ? parseFloat((tactic.statBuff * scale).toFixed(1)) 
+      : Math.round(tactic.statBuff * scale);
+  }
+  if (tactic.statDebuff) {
+    effective.statDebuff = Math.round(tactic.statDebuff * scale);
+  }
+  if (tactic.damageBonus) {
+    effective.damageBonus = parseFloat((tactic.damageBonus * scale).toFixed(2));
+  }
+  if (tactic.activeRateBonus) {
+    effective.activeRateBonus = Math.round(tactic.activeRateBonus * scale);
+  }
+  if (tactic.statBoostForce) {
+    effective.statBoostForce = Math.round(tactic.statBoostForce * scale);
+  }
+  if (tactic.statBoostSpeed) {
+    effective.statBoostSpeed = Math.round(tactic.statBoostSpeed * scale);
   }
 
   return effective;

@@ -22,7 +22,7 @@ export function createInitialGameState() {
     version: 3,
     lastSavedTime: Date.now(),
     resources: {
-      gold: 999999, // 无限金铢 (支持随时畅抽5星名将)
+      gold: 3000, // 初始开局赠送金铢 (关闭无限金珠，支持模拟充值)
       copper: 20000, // 初始战法研习铜币基金
       wood: 8000,
       iron: 8000,
@@ -31,7 +31,12 @@ export function createInitialGameState() {
       reserveSoldiers: 3000, // 初始预备兵
       challengeOrders: 50 // 征战令
     },
-    infiniteGold: true,
+    rechargeStats: {
+      totalMoney: 0,
+      totalGold: 0,
+      count: 0,
+      history: []
+    },
     campaignProgress: {}, // 关卡ID -> { stars: 3, cleared: true }
     trialFloor: 1, // 当前演武层数
     mapTiles: generateWorldMap(), // 9x9沙盘大地图 (兼顾兼容)
@@ -106,6 +111,7 @@ export function createInitialGameState() {
     currentTroopIndex: 0, // 当前出征选中的军团索引 (0~4)
     gachaPity: 0, // 距离5星保底已抽次数
     gachaPityFour: 0, // 距离4星保底已抽次数
+    gachaCorePity: 0, // 连续获得普通5星橙卡计数 (用于7+1大核心暗保底)
     totalGachaCount: 0, // 历史累计抽卡总次数
     totalFiveStarCount: 0, // 历史累计获得5星总数
     totalCoreCount: 0, // 历史累计获得大核心总数
@@ -173,6 +179,12 @@ export function loadGameState() {
     if (data.totalFiveStarCount === undefined) data.totalFiveStarCount = 0;
     if (data.totalCoreCount === undefined) data.totalCoreCount = 0;
     if (data.gachaPityFour === undefined) data.gachaPityFour = 0;
+    if (data.gachaCorePity === undefined) data.gachaCorePity = 0;
+
+    // 确保模拟充值数据结构完整
+    if (!data.rechargeStats) {
+      data.rechargeStats = { totalMoney: 0, totalGold: 0, count: 0, history: [] };
+    }
 
     // 确保演习假想敌结构完整
     if (!data.customEnemyTroop) {

@@ -202,6 +202,10 @@ class GameApp {
     // 招募按钮绑定
     document.getElementById('btnGachaFamousSingle').addEventListener('click', () => this.doGacha('famous', 1));
     document.getElementById('btnGachaFamousFive').addEventListener('click', () => this.doGacha('famous', 5));
+    const btnFamousTen = document.getElementById('btnGachaFamousTen');
+    if (btnFamousTen) {
+      btnFamousTen.addEventListener('click', () => this.doGacha('famous', 10));
+    }
     document.getElementById('btnGachaCopperSingle').addEventListener('click', () => this.doGacha('copper', 1));
     document.getElementById('btnGachaCopperTen').addEventListener('click', () => this.doGacha('copper', 10));
 
@@ -243,21 +247,25 @@ class GameApp {
       });
     });
 
-    // 无限金铢特权按钮绑定
+    // 模拟充值金珠钱庄入口绑定
     const badgeGold = document.getElementById('badgeGold');
     if (badgeGold) {
-      badgeGold.addEventListener('click', () => this.fillInfiniteGold());
+      badgeGold.addEventListener('click', () => this.openRechargeModal());
     }
-    const btnFillGoldMax = document.getElementById('btnFillGoldMax');
-    if (btnFillGoldMax) {
-      btnFillGoldMax.addEventListener('click', () => this.fillInfiniteGold());
+    const btnOpenRechargeModal = document.getElementById('btnOpenRechargeModal');
+    if (btnOpenRechargeModal) {
+      btnOpenRechargeModal.addEventListener('click', () => this.openRechargeModal());
+    }
+    const btnRechargeModalClose = document.getElementById('btnRechargeModalClose');
+    if (btnRechargeModalClose) {
+      btnRechargeModalClose.addEventListener('click', () => this.closeRechargeModal());
     }
 
     // 重置存档按钮
     const btnResetGame = document.getElementById('btnResetGame');
     if (btnResetGame) {
       btnResetGame.addEventListener('click', () => {
-        if (confirm('⚠️【重置开局确认】\n\n主公，确认清除当前所有战绩、麾下武将与战法研习进度吗？\n将重置为初始开局（赠送【关平(主将)+郭淮+张宝+韩当】经典良将开荒团、999,999 无限金铢及 20,000 启动铜币）！')) {
+        if (confirm('⚠️【重置开局确认】\n\n主公，确认清除当前所有战绩、麾下武将与战法研习进度吗？\n将重置为初始开局（赠送【关平(主将)+郭淮+张宝+韩当】经典良将开荒团、3,000 启动金珠及 20,000 启动铜币）！')) {
           this.state = resetGameState();
           this.activeTab = 'tabBattle';
           this.battleSubTab = 'campaigns';
@@ -406,9 +414,16 @@ class GameApp {
     this.renderTacticsUpgrade();
     this.renderReports();
   }
-
   renderHUD() {
-    this.domRes.gold.textContent = (this.state.resources.gold || 999999).toLocaleString();
+    this.domRes.gold.textContent = (this.state.resources.gold ?? 0).toLocaleString();
+    const elGachaGoldBal = document.getElementById('gachaGoldBalanceVal');
+    if (elGachaGoldBal) {
+      elGachaGoldBal.textContent = (this.state.resources.gold ?? 0).toLocaleString();
+    }
+    const elGachaRechargeMoney = document.getElementById('gachaRechargeMoneyVal');
+    if (elGachaRechargeMoney) {
+      elGachaRechargeMoney.textContent = `¥${(this.state.rechargeStats?.totalMoney || 0).toLocaleString()}`;
+    }
     if (this.domRes.copper) {
       this.domRes.copper.textContent = (this.state.resources.copper || 0).toLocaleString();
     }
@@ -3227,7 +3242,8 @@ class GameApp {
 
         let statCompareHtml = '';
         if (tac.damageRate) {
-          statCompareHtml += `<div>伤害率: <b style="color:#fde047;">${(currentProps.damageRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${(nextProps.damageRate * 100).toFixed(0)}%</span>`}</div>`;
+          const label = tac.id === 'tac_jue_di_fan_ji' ? '反击爆发' : '伤害率';
+          statCompareHtml += `<div>${label}: <b style="color:#fde047;">${(currentProps.damageRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${(nextProps.damageRate * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.healRate) {
           statCompareHtml += `<div>治疗率: <b style="color:#6ee7b7;">${(currentProps.healRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${(nextProps.healRate * 100).toFixed(0)}%</span>`}</div>`;
@@ -3236,6 +3252,25 @@ class GameApp {
           const curRed = currentProps.damageReduction || currentProps.teamDamageReduction;
           const nextRed = nextProps ? (nextProps.damageReduction || nextProps.teamDamageReduction) : 0;
           statCompareHtml += `<div>减伤率: <b style="color:#60a5fa;">${(curRed * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${(nextRed * 100).toFixed(0)}%</span>`}</div>`;
+        }
+        if (tac.statBuff) {
+          if (tac.id === 'tac_jue_di_fan_ji') {
+            statCompareHtml += `<div>受击武力: <b style="color:#fde047;">+${currentProps.statBuff}/次</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${nextProps.statBuff}/次</span>`}</div>`;
+          } else {
+            statCompareHtml += `<div>属性提升: <b style="color:#38bdf8;">+${currentProps.statBuff}</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${nextProps.statBuff}</span>`}</div>`;
+          }
+        }
+        if (tac.statDebuff) {
+          statCompareHtml += `<div>属性削减: <b style="color:#f87171;">-${currentProps.statDebuff}</b> ${isMax ? '' : `<span style="color:#34d399;">➜ -${nextProps.statDebuff}</span>`}</div>`;
+        }
+        if (tac.damageBonus) {
+          statCompareHtml += `<div>伤害增幅: <b style="color:#fb923c;">+${(currentProps.damageBonus * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${(nextProps.damageBonus * 100).toFixed(0)}%</span>`}</div>`;
+        }
+        if (tac.activeRateBonus) {
+          statCompareHtml += `<div>主动几率加成: <b style="color:#a78bfa;">+${currentProps.activeRateBonus}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${nextProps.activeRateBonus}%</span>`}</div>`;
+        }
+        if (tac.disarmRate && tac.disarmRate < 100) {
+          statCompareHtml += `<div>缴械几率: <b style="color:#fb7185;">${currentProps.disarmRate}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${nextProps.disarmRate}%</span>`}</div>`;
         }
         if (tac.rate && tac.rate < 100) {
           statCompareHtml += `<div>发动几率: <b style="color:#f472b6;">${currentProps.rate}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${nextProps.rate}%</span>`}</div>`;
@@ -3371,37 +3406,201 @@ class GameApp {
     this.renderGenerals();
   }
 
-  // ================= 4. 无限金铢招募 =================
-  fillInfiniteGold() {
-    this.state.resources.gold = 999999;
-    this.state.infiniteGold = true;
+  // ================= 4. 金铢钱庄 · 模拟充值系统 (始终双倍金珠) =================
+  openRechargeModal() {
+    const modal = document.getElementById('rechargeModal');
+    if (!modal) return;
+    this.renderRechargeModal();
+    modal.style.display = 'flex';
+    sound.playDrum();
+  }
+
+  closeRechargeModal() {
+    const modal = document.getElementById('rechargeModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  renderRechargeModal() {
+    if (!this.state.rechargeStats) {
+      this.state.rechargeStats = { totalMoney: 0, totalGold: 0, count: 0, history: [] };
+    }
+
+    // 刷新统计看板数字
+    const elMoney = document.getElementById('modalTotalRechargeMoney');
+    const elGold = document.getElementById('modalTotalRechargeGold');
+    const elBal = document.getElementById('modalCurrentGoldBalance');
+    if (elMoney) elMoney.textContent = `¥${(this.state.rechargeStats.totalMoney || 0).toLocaleString()}`;
+    if (elGold) elGold.textContent = (this.state.rechargeStats.totalGold || 0).toLocaleString();
+    if (elBal) elBal.textContent = (this.state.resources.gold ?? 0).toLocaleString();
+
+    // 渲染各充值档位卡片 (始终双倍到账)
+    const container = document.getElementById('rechargeTiersContainer');
+    if (container) {
+      container.innerHTML = '';
+      const tiers = [
+        { id: 'tier_6', price: 6, baseGold: 60, title: '60 金珠', desc: '微光初绽 · 赠送体验', icon: '💰' },
+        { id: 'tier_30', price: 30, baseGold: 300, title: '300 金珠', desc: '烽火初聚 · 畅快招募', icon: '💰' },
+        { id: 'tier_68', price: 68, baseGold: 680, title: '680 金珠', desc: '将星璀璨 · 挥斥方遒', icon: '💎' },
+        { id: 'tier_128', price: 128, baseGold: 1280, title: '1,280 金珠', desc: '雄姿英发 · 群英并起', icon: '💎' },
+        { id: 'tier_328', price: 328, baseGold: 3280, title: '3,280 金珠', desc: '运筹帷幄 · 鼎足三分', icon: '👑' },
+        { id: 'tier_648', price: 648, baseGold: 6480, title: '6,480 金珠', desc: '镇国玉玺 · 唯我独尊', icon: '👑', isPopular: true },
+        { id: 'tier_1280', price: 1280, baseGold: 12800, title: '12,800 金珠', desc: '天下一统 · 至尊巨献', icon: '🌟' }
+      ];
+
+      tiers.forEach(tier => {
+        const doubleBonus = tier.baseGold; // 始终双倍：买多少送多少
+        const totalGet = tier.baseGold + doubleBonus;
+
+        const card = document.createElement('div');
+        card.className = `recharge-tier-card ${tier.isPopular ? 'popular' : ''}`;
+        card.style.cssText = `
+          background: ${tier.isPopular ? 'linear-gradient(145deg, #1f1a14 0%, #15110a 100%)' : '#141720'};
+          border: 1px solid ${tier.isPopular ? '#d97706' : '#2d3340'};
+          border-radius: 8px;
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          position: relative;
+          box-shadow: ${tier.isPopular ? '0 0 12px rgba(217,119,6,0.3)' : 'none'};
+        `;
+
+        card.innerHTML = `
+          <div>
+            ${tier.isPopular ? '<div style="position:absolute; top:-9px; right:10px; background:#dc2626; color:#fff; font-size:10px; padding:1px 6px; border-radius:3px; font-weight:bold;">👑 镇国尊选</div>' : ''}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:22px;">${tier.icon}</span>
+              <span style="font-size:11px; background:rgba(220,38,38,0.2); border:1px solid #dc2626; color:#fca5a5; padding:1px 6px; border-radius:3px; font-weight:bold;">
+                🔥 始终双倍
+              </span>
+            </div>
+            <div style="font-weight:bold; font-size:16px; color:#fbbf24;">${tier.title}</div>
+            <div style="font-size:11px; color:#9ca3af; margin:3px 0 8px 0;">${tier.desc}</div>
+            
+            <div style="background:rgba(0,0,0,0.35); border-radius:6px; padding:6px 8px; font-size:11px; margin-bottom:10px;">
+              <div style="color:#d1d5db;">基础金珠: <b>${tier.baseGold.toLocaleString()}</b></div>
+              <div style="color:#f87171;">双倍赠送: <b style="color:#34d399;">+${doubleBonus.toLocaleString()}</b></div>
+              <div style="color:#fde047; font-weight:bold; margin-top:2px; border-top:1px dashed #374151; padding-top:2px;">
+                实际到账: <span style="font-size:13px; color:#fbbf24;">${totalGet.toLocaleString()}</span> 金珠
+              </div>
+            </div>
+          </div>
+
+          <button class="upgrade-btn btn-do-recharge" data-id="${tier.id}" style="width:100%; padding:6px 0; font-size:12px; font-weight:bold; background:${tier.isPopular ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : 'linear-gradient(135deg, #059669 0%, #047857 100%)'}; cursor:pointer;">
+            💳 模拟充值 ¥${tier.price}
+          </button>
+        `;
+
+        card.querySelector('.btn-do-recharge').addEventListener('click', () => {
+          this.executeRecharge(tier);
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    // 渲染最近充值流水记录
+    const historyList = document.getElementById('rechargeHistoryList');
+    const historyCount = document.getElementById('rechargeHistoryCount');
+    if (historyList) {
+      const hist = this.state.rechargeStats.history || [];
+      if (historyCount) historyCount.textContent = `共 ${hist.length} 笔记录`;
+
+      if (hist.length === 0) {
+        historyList.innerHTML = '<div style="color:#6b7280; text-align:center; padding:8px;">暂无充值记录，点击上方档位即可模拟充值</div>';
+      } else {
+        historyList.innerHTML = hist.slice(0, 5).map(item => `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px; border:1px solid #374151;">
+            <span style="color:#9ca3af;">⏱️ ${item.time}</span>
+            <span style="color:#e5e7eb;">模拟支付: <b style="color:#34d399;">¥${item.price}</b></span>
+            <span style="color:#fbbf24; font-weight:bold;">到账 +${item.gold.toLocaleString()} 金珠</span>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  executeRecharge(tier) {
+    if (!this.state.rechargeStats) {
+      this.state.rechargeStats = { totalMoney: 0, totalGold: 0, count: 0, history: [] };
+    }
+
+    const doubleBonus = tier.baseGold;
+    const totalGet = tier.baseGold + doubleBonus;
+
+    // 充值金额与到账金珠累计
+    this.state.rechargeStats.totalMoney = (this.state.rechargeStats.totalMoney || 0) + tier.price;
+    this.state.rechargeStats.totalGold = (this.state.rechargeStats.totalGold || 0) + totalGet;
+    this.state.rechargeStats.count = (this.state.rechargeStats.count || 0) + 1;
+
+    // 当前账户金珠真实增加
+    this.state.resources.gold = (this.state.resources.gold || 0) + totalGet;
+
+    // 记录流水历史
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    this.state.rechargeStats.history.unshift({
+      time: timeStr,
+      price: tier.price,
+      gold: totalGet,
+      tierName: tier.title
+    });
+    if (this.state.rechargeStats.history.length > 30) {
+      this.state.rechargeStats.history.pop();
+    }
+
     sound.playGoldChime();
     this.renderHUD();
+    this.renderRechargeModal();
     this.save();
-    alert('👑【GM特权】999,999 无限金铢已注入！拜将台随心畅抽！');
+
+    alert(`🎉【模拟充值到账】\n\n主公，已成功模拟支付 ¥${tier.price} 元！\n始终双倍特权生效：获得 ${tier.baseGold.toLocaleString()} + ${doubleBonus.toLocaleString()}(双倍赠送) = ${totalGet.toLocaleString()} 金珠！\n\n当前金珠余额：${this.state.resources.gold.toLocaleString()} 金珠`);
   }
 
   doGacha(poolType, count) {
     const isFamous = (poolType === 'famous');
     const cost = isFamous 
-      ? (count === 1 ? GACHA_CONFIG.goldSingleCost : GACHA_CONFIG.goldFiveCost)
+      ? (count === 1 ? GACHA_CONFIG.goldSingleCost : (count === 10 ? GACHA_CONFIG.goldTenCost : GACHA_CONFIG.goldFiveCost))
       : (count === 1 ? GACHA_CONFIG.copperSingleCost : GACHA_CONFIG.copperTenCost);
 
-    // 无限金铢加持
-    this.state.resources.gold = 999999;
+    // 严谨校验与扣减资源 (关闭无限金珠)
+    if (isFamous) {
+      const curGold = this.state.resources.gold || 0;
+      if (curGold < cost) {
+        sound.playDrum();
+        if (confirm(`⚠️ 金铢不足！\n\n招募 ${count} 次需要 ${cost} 金铢，当前拥有 ${curGold.toLocaleString()} 金铢。\n是否立即前往【金铢钱庄】模拟充值？(享受始终双倍金珠)`)) {
+          this.openRechargeModal();
+        }
+        return;
+      }
+      this.state.resources.gold -= cost;
+    } else {
+      const curCopper = this.state.resources.copper || 0;
+      if (curCopper < cost) {
+        sound.playDrum();
+        alert(`⚠️ 铜币不足！良将招募 ${count} 次需要 ${cost} 铜币，当前拥有 ${curCopper.toLocaleString()} 铜币。\n可通过解甲武将或通关战役赚取铜币！`);
+        return;
+      }
+      this.state.resources.copper -= cost;
+    }
+
     const pulledCards = [];
 
     for (let i = 0; i < count; i++) {
       this.state.totalGachaCount = (this.state.totalGachaCount || 0) + 1;
       const pityFive = this.state.gachaPity || 0;
       const pityFour = this.state.gachaFourPity || 0;
-      const res = pullGeneral(poolType, pityFive, pityFour);
+      const pityCore = this.state.gachaCorePity || 0;
+      const res = pullGeneral(poolType, pityFive, pityFour, pityCore);
 
       if (isFamous) {
         if (res.general.star >= 5) {
           this.state.totalFiveStarCount = (this.state.totalFiveStarCount || 0) + 1;
           if (res.isCore) {
             this.state.totalCoreCount = (this.state.totalCoreCount || 0) + 1;
+            this.state.gachaCorePity = 0; // 获得大核心名将，7+1暗保底计数清零
+          } else {
+            this.state.gachaCorePity = pityCore + 1; // 获得普通5星，连续普通橙计数+1 (满7张后第8张必出大核心)
           }
         }
 
@@ -3495,8 +3694,6 @@ class GameApp {
             </div>
             <div class="hero-name" style="font-size:15px; margin:4px 0;">${c.name}</div>
             <div class="stars-row" style="${starClass} font-size:14px; letter-spacing:2px; margin-bottom:4px;">${starStr}</div>
-            ${isFive ? '<div class="gacha-gold-badge">5★名将</div>' : ''}
-            ${isFour ? '<div class="gacha-purple-badge">4★良将</div>' : ''}
           </div>
         </div>
       `;

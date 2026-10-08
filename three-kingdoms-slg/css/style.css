@@ -2165,6 +2165,32 @@ body {
     margin-bottom: 50px !important;
   }
 }
+/* ================= 🏦 金铢钱庄 · 模拟充值样式 ================= */
+.recharge-tier-card {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
+.recharge-tier-card:hover {
+  transform: translateY(-3px);
+  border-color: #fbbf24 !important;
+  box-shadow: 0 6px 18px rgba(251, 191, 36, 0.25) !important;
+}
 
+.recharge-tier-card.popular {
+  animation: rechargeGlow 3s infinite ease-in-out;
+}
 
+@keyframes rechargeGlow {
+  0%, 100% {
+    border-color: #d97706;
+    box-shadow: 0 0 10px rgba(217, 119, 6, 0.25);
+  }
+  50% {
+    border-color: #fbbf24;
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.45);
+  }
+}
+
+.btn-do-recharge:active {
+  transform: scale(0.97);
+}

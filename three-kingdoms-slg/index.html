@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>三国志·鼎立战略版 (战役对决·无限金铢版)</title>
+  <title>三国志·鼎立战略版 (历史战役 · 策略对决)</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -21,10 +21,10 @@
 
     <!-- 实时资源显示栏 -->
     <div class="res-items">
-      <div class="res-badge gold" id="badgeGold" title="✨ 点击一键充盈 999,999 无限金铢" style="cursor: pointer; border: 1px solid #fbbf24; box-shadow: 0 0 10px rgba(251,191,36,0.4);">
+      <div class="res-badge gold" id="badgeGold" title="点击打开【金铢钱庄】· 模拟充值金铢 (始终双倍)" style="cursor: pointer; border: 1px solid #fbbf24;">
         <span>👑 金铢:</span>
-        <span class="val" id="resGold">999,999</span>
-        <span style="font-size:9px; background:#d97706; color:#fff; border-radius:3px; padding:0 3px; margin-left:2px;">无限</span>
+        <span class="val" id="resGold">0</span>
+        <span style="font-size:9px; background:linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color:#fff; border-radius:3px; padding:1px 4px; margin-left:3px; font-weight:bold;">充值</span>
       </div>
       <div class="res-badge" title="用于研习战法升级(Lv.1~10)，通过解甲武将或通关战役获得" style="border: 1px solid #059669; background: rgba(5, 150, 105, 0.15);">
         <span>🪙 铜币:</span>
@@ -332,17 +332,20 @@
           <p style="font-size:12px; color:#9ca3af;">天下大乱，英雄辈出，起用良将辅佐社稷！</p>
         </div>
 
-        <!-- ✨ 无限金铢特权控制台 -->
-        <div style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.2) 0%, rgba(180, 83, 9, 0.08) 100%); border: 1px solid #d97706; border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 704px; box-shadow: 0 0 15px rgba(217,119,6,0.25);">
+        <!-- 💰 模拟充值金铢钱庄控制台 -->
+        <div style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.2) 0%, rgba(180, 83, 9, 0.08) 100%); border: 1px solid #d97706; border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 704px; box-shadow: 0 0 15px rgba(217,119,6,0.25); flex-wrap: wrap; gap: 10px;">
           <div>
             <div style="font-weight: bold; color: #fbbf24; font-size: 14px; display: flex; align-items: center; gap: 6px;">
-              <span>👑 GM无限金铢特权已启用</span>
-              <span style="font-size: 11px; background: #059669; color: #fff; border-radius: 4px; padding: 1px 6px;">无限畅抽</span>
+              <span>🏦 金铢钱庄 · 模拟充值</span>
+              <span style="font-size: 11px; background: #dc2626; color: #fff; border-radius: 4px; padding: 1px 6px; font-weight: bold;">🔥 始终双倍到账</span>
             </div>
-            <div style="font-size: 12px; color: #d1d5db; margin-top: 2px;">招募无需顾虑金铢消耗，抽空卡池，五星全图鉴随心收集！</div>
+            <div style="font-size: 12px; color: #d1d5db; margin-top: 3px;">
+              金铢余额: <b id="gachaGoldBalanceVal" style="color:#fbbf24; font-size:13px;">0</b> 金铢 · 累计已充值: <b id="gachaRechargeMoneyVal" style="color:#34d399;">¥0</b>
+            </div>
           </div>
-          <button class="upgrade-btn" id="btnFillGoldMax" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); padding: 6px 14px; font-size: 12px; white-space: nowrap;">
-            💎 一键充盈 999,999 金铢
+          <button class="upgrade-btn" id="btnOpenRechargeModal" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); padding: 6px 16px; font-size: 12px; white-space: nowrap; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <span>💰</span>
+            <span>模拟充值金铢</span>
           </button>
         </div>
 
@@ -383,6 +386,7 @@
             <div class="gacha-btn-group">
               <button class="gacha-btn" id="btnGachaFamousSingle">招募 1 次<br><small>198 金铢</small></button>
               <button class="gacha-btn" id="btnGachaFamousFive" style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);">招募 5 次<br><small>948 金铢</small></button>
+              <button class="gacha-btn" id="btnGachaFamousTen" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">招募 10 次<br><small>1896 金铢</small></button>
             </div>
           </div>
 
@@ -537,6 +541,62 @@
       <div class="modal-body" id="gachaPoolPreviewBody" style="max-height: 65vh; overflow-y: auto; padding: 16px 20px;">
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;" id="gachaPoolPreviewGrid">
           <!-- 动态渲染武将预览卡片 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🏦 金铢钱庄 · 模拟充值全息 Modal (始终双倍特权) -->
+  <div class="modal-mask" id="rechargeModal" style="display: none;">
+    <div class="modal-content" style="max-width: 780px; width: 95%; max-height: 90vh;">
+      <div class="modal-header" style="border-bottom: 1px solid #374151;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">🏦</span>
+          <div class="modal-title">金铢钱庄 · 模拟充值大典</div>
+          <span style="font-size: 11px; background: #dc2626; color: #fff; padding: 1px 8px; border-radius: 4px; font-weight: bold;">🔥 始终双倍金珠</span>
+        </div>
+        <button class="modal-close-btn" id="btnRechargeModalClose">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 20px; max-height: 75vh; overflow-y: auto;">
+        <!-- 统计看板 -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 11px; color: #9ca3af;">💳 累计模拟充值金额</div>
+            <div style="font-size: 20px; font-weight: 800; color: #34d399; margin-top: 3px;" id="modalTotalRechargeMoney">¥0</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 11px; color: #9ca3af;">🎁 累计充值获得金珠</div>
+            <div style="font-size: 20px; font-weight: 800; color: #f59e0b; margin-top: 3px;" id="modalTotalRechargeGold">0</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 11px; color: #9ca3af;">👑 当前可用金珠库存</div>
+            <div style="font-size: 20px; font-weight: 800; color: #fbbf24; margin-top: 3px;" id="modalCurrentGoldBalance">0</div>
+          </div>
+        </div>
+
+        <!-- 始终双倍醒目标签 -->
+        <div style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(185, 28, 28, 0.05) 100%); border: 1px solid #dc2626; border-radius: 8px; padding: 8px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <div style="font-size: 12px; color: #fca5a5; display: flex; align-items: center; gap: 6px;">
+            <span>⚡</span>
+            <span><b>永久特权保障</b>：钱庄所有充值档位<b>始终保持 100% 双倍到账</b>，买多少送多少！纯前端绿色模拟，不产生任何真实扣款。</span>
+          </div>
+        </div>
+
+        <!-- 充值档位卡片网格 -->
+        <div class="recharge-tier-grid" id="rechargeTiersContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px;">
+          <!-- 动态渲染 6 大经典充值档位卡片 -->
+        </div>
+
+        <!-- 历史充值流水明细折叠区 -->
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid #2d3340; border-radius: 8px; padding: 12px 16px;">
+          <div style="font-size: 12px; font-weight: bold; color: #9ca3af; margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <span>📜 最近充值明细</span>
+            <span style="font-size: 11px; color: #6b7280;" id="rechargeHistoryCount">共 0 笔记录</span>
+          </div>
+          <div id="rechargeHistoryList" style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; max-height: 120px; overflow-y: auto;">
+            <div style="color: #6b7280; text-align: center; padding: 8px;">暂无充值记录，点击上方档位即可模拟充值</div>
+          </div>
         </div>
       </div>
     </div>
