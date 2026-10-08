@@ -9,6 +9,7 @@ class MarioAudio {
     this.muted = false;
     this.bgmPlaying = false;
     this.bgmTimer = null;
+    this.currentTheme = 'overworld';
     this.initAudioContext();
   }
 
@@ -363,8 +364,12 @@ class MarioAudio {
     });
   }
 
-  // 13. 经典地表 BGM 循环生成器 (8-Bit 经典旋律小节)
-  startBGM() {
+  // 13. 经典地表与地下 BGM 循环生成器 (8-Bit 经典旋律)
+  startBGM(theme = 'overworld') {
+    if (this.currentTheme !== theme && this.bgmPlaying) {
+      this.stopBGM();
+    }
+    this.currentTheme = theme;
     if (this.bgmPlaying) return;
     this.bgmPlaying = true;
     if (this.muted) return;
@@ -374,13 +379,23 @@ class MarioAudio {
       this.ensureContext();
       if (!this.ctx) return;
 
-      const tempo = 0.11; // 每个八分音符的基准节拍时间
-      const melody = [
-        // 第一小节：经典的 E E - E - C E - G ---
+      const isUnderground = this.currentTheme === 'underground';
+      const tempo = isUnderground ? 0.09 : 0.11;
+      
+      const melody = isUnderground ? [
+        // 经典地下洞穴 8-Bit 短促快奏脉冲
+        { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 110.00, d: 1 }, { f: 220.00, d: 1 },
+        { f: 116.54, d: 1 }, { f: 233.08, d: 1 }, { f: 0, d: 2 },
+        { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 110.00, d: 1 }, { f: 220.00, d: 1 },
+        { f: 116.54, d: 1 }, { f: 233.08, d: 1 }, { f: 0, d: 2 },
+        { f: 146.83, d: 1 }, { f: 293.66, d: 1 }, { f: 123.47, d: 1 }, { f: 246.94, d: 1 },
+        { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 0, d: 2 }
+      ] : [
+        // 地表第一小节：经典的 E E - E - C E - G ---
         { f: 659.25, d: 1 }, { f: 659.25, d: 1 }, { f: 0, d: 1 }, { f: 659.25, d: 1 },
         { f: 0, d: 1 }, { f: 523.25, d: 1 }, { f: 659.25, d: 1 }, { f: 0, d: 1 },
         { f: 783.99, d: 2 }, { f: 0, d: 2 }, { f: 392.00, d: 2 }, { f: 0, d: 2 },
-        // 第二小节：C - - G - - E - - A - B - Bb A
+        // 地表第二小节：C - - G - - E - - A - B - Bb A
         { f: 523.25, d: 1.5 }, { f: 0, d: 0.5 }, { f: 392.00, d: 1.5 }, { f: 0, d: 0.5 },
         { f: 329.63, d: 1.5 }, { f: 0, d: 0.5 }, { f: 440.00, d: 1 }, { f: 493.88, d: 1 },
         { f: 466.16, d: 1 }, { f: 440.00, d: 1.5 }, { f: 0, d: 0.5 }
@@ -394,9 +409,9 @@ class MarioAudio {
         if (item.f > 0) {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
-          osc.type = 'square';
+          osc.type = isUnderground ? 'triangle' : 'square';
           osc.frequency.setValueAtTime(item.f, now + totalTime);
-          gain.gain.setValueAtTime(0.06, now + totalTime);
+          gain.gain.setValueAtTime(isUnderground ? 0.12 : 0.06, now + totalTime);
           gain.gain.exponentialRampToValueAtTime(0.005, now + totalTime + dur * 0.9);
 
           osc.connect(gain);
@@ -411,7 +426,7 @@ class MarioAudio {
         if (this.bgmPlaying) {
           playThemeLoop();
         }
-      }, (totalTime + 0.2) * 1000);
+      }, (totalTime + 0.15) * 1000);
     };
 
     playThemeLoop();

@@ -21,21 +21,21 @@ export const UPGRADE_CONFIG = {
     title: '天生灵根',
     desc: '每一世出生时，自由可分配属性点数 +2 点',
     maxLevel: 5,
-    costs: [100, 250, 500, 1000, 2000],
+    costs: [60, 150, 300, 600, 1200],
     getEffectDesc: (lvl: number) => `额外分配点数 +${lvl * 2}（基础20点，当前${20 + lvl * 2}点）`,
   },
   extraTalentSlotsLevel: {
     title: '宿命机缘',
     desc: '逆天改命，转生时可勾选的天赋数量增加',
     maxLevel: 2,
-    costs: [500, 1500],
+    costs: [250, 800],
     getEffectDesc: (lvl: number) => `可选天赋数量：${3 + lvl} 项（基础 3 项）`,
   },
   goldSpoonLevel: {
     title: '富贵命格',
     desc: '转生含着金汤匙出生，自带巨额启动资金与家境加成',
     maxLevel: 4,
-    costs: [80, 200, 500, 1200],
+    costs: [50, 120, 280, 700],
     getEffectDesc: (lvl: number) => `开局家境 +${lvl * 10}，成年启动金 +${lvl * 50} 万元`,
   },
 };
@@ -46,7 +46,7 @@ export const DIVINE_TALENTS_CONFIG = [
     id: 'divine_god_favored',
     name: '天道酬勤',
     grade: 4 as const,
-    cost: 300,
+    cost: 250,
     desc: '受天道眷顾，每长 1 岁所有属性额外自动 +1，运气 +10',
     statBonus: { luck: 15, happiness: 10 },
   },
@@ -54,7 +54,7 @@ export const DIVINE_TALENTS_CONFIG = [
     id: 'divine_business_oracle',
     name: '商业先知',
     grade: 4 as const,
-    cost: 600,
+    cost: 500,
     desc: '精准洞悉每一次金融周期，理财投资收益翻倍，创业成功率暴增',
     statBonus: { intelligence: 20, wealth: 30 },
   },
@@ -62,7 +62,7 @@ export const DIVINE_TALENTS_CONFIG = [
     id: 'divine_immortal_vessel',
     name: '真仙降世',
     grade: 4 as const,
-    cost: 1000,
+    cost: 800,
     desc: '开局自带无垢灵根，百病不侵，寿命大幅延长，极高概率飞升渡劫',
     statBonus: { strength: 40, spiritualRoot: 80, charm: 20 },
   },
@@ -112,14 +112,14 @@ export function saveKarmaState(state: KarmaState): void {
 // 终局结算本生获得的功德点数
 export function calculateEarnedKarma(state: GameState, rank: string): number {
   let karma = 0;
-  // 寿命功德
+  // 1. 寿命功德 (每存活 1 岁折算 2 点)
   karma += Math.floor(state.age * 2);
-  // 最终资产/财富功德 (每 10 点财富折算 5 功德，每 100 万现金折算 10 功德)
+  // 2. 最终资产/财富功德 (每 10 点财富折算 8 功德，每 100 万现金折算 10 功德)
   karma += Math.floor(state.attrs.wealth * 0.8);
   const totalMoney = state.assets?.cash || 0;
   karma += Math.min(300, Math.floor(totalMoney / 10));
 
-  // 终局评级奖励
+  // 3. 终局评级奖励
   switch (rank) {
     case 'SSS':
       karma += 800;
@@ -140,15 +140,36 @@ export function calculateEarnedKarma(state: GameState, rank: string): number {
       karma += 20;
   }
 
-  // 飞升神话加成
-  if (state.tags.includes('羽化登仙')) {
+  // 4. 传奇成就与修真飞升大德加成
+  if (state.tags.includes('羽化登仙') || state.tags.includes('万古仙帝')) {
     karma += 500;
   }
   if (state.tags.includes('福布斯富豪') || state.tags.includes('商业帝国敲钟')) {
-    karma += 300;
+    karma += 250;
   }
 
-  return Math.max(10, karma);
+  // 5. 善行天下、救死扶伤与社会大德行奖励 (D20 奇遇及事件善举)
+  const benevolentTags = [
+    { tag: '英雄模范', bonus: 100 },
+    { tag: '国民大英雄', bonus: 200 },
+    { tag: '抗洪卫士', bonus: 150 },
+    { tag: '苍生大医', bonus: 200 },
+    { tag: '国宝守护神', bonus: 150 },
+    { tag: '大国重器奠基人', bonus: 200 },
+    { tag: '时代破壁者', bonus: 150 },
+  ];
+  for (const b of benevolentTags) {
+    if (state.tags.includes(b.tag)) {
+      karma += b.bonus;
+    }
+  }
+
+  // 6. 家族世代绵延加成 (每一代祖荫提供功德护佑)
+  if (state.family?.generation && state.family.generation > 1) {
+    karma += (state.family.generation - 1) * 60;
+  }
+
+  return Math.max(30, karma);
 }
 
 // 升级天赋树项

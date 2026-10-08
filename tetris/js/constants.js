@@ -22,11 +22,6 @@ export const LINE_POINTS = [0, 100, 300, 500, 800]; // 0, 1行, 2行, 3行, 4行
 export const SOFT_DROP_POINTS = 1;
 export const HARD_DROP_POINTS = 2;
 
-// 变异变色龙方块配置 (Morphing Piece)
-export const MORPH_INTERVAL = 1400; // 变换形状的时间间隔（毫秒）
-export const MORPH_CHANCE = 0.15;   // 随机生成变色龙方块的概率 (15%)
-export const RAINBOW_COLORS = ['#ff0055', '#ff9900', '#ffee00', '#00ff66', '#00f0f0', '#0066ff', '#bb00ff'];
-
 // 7 种经典俄罗斯方块定义（Tetrominoes）
 // 包含 4 个旋转状态矩阵与代表性配色（科技霓虹风）
 export const TETROMINOES = {

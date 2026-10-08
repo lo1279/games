@@ -56,87 +56,135 @@ function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels =
   const heroBattleId = isPlayer ? `p_${heroData.id || heroData.name}` : `e_${heroData.id || heroData.name}`;
   const teamPrefix = isPlayer ? '我军' : '敌军';
 
-  return {
-    id: heroData.id,
-    battleId: heroBattleId,
-    name: heroData.name,
-    label: `${teamPrefix}·${heroData.name}`,
-    camp: heroData.camp,
-    star: heroData.star,
-    avatar: heroData.avatar,
-    isLeader,
-    isPlayer,
-    aptGrade,
-    aptMod,
-    currentSoldiers: defaultSoldiers,
-    maxSoldiers: defaultSoldiers,
-    initialSoldiers: defaultSoldiers,
-    
-    // 实战属性（受适性修正）
-    force: Math.round(rawForce * aptMod),
-    intel: Math.round(rawIntel * aptMod),
-    command: Math.round(rawCommand * aptMod),
-    speed: Math.round(rawSpeed * aptMod),
+  // 装备战法 (按战法研习等级强化实际战法属性，同一队伍内严格唯一排重)
+  const rawTacticIds = [
+    heroData.builtInTacticId,
+    heroData.equippedTactic1,
+    heroData.equippedTactic2
+  ];
+  if (Array.isArray(heroData.tactics)) {
+    heroData.tactics.forEach(t => {
+      const tid = (typeof t === 'string') ? t : t?.id;
+      if (tid && !rawTacticIds.includes(tid)) rawTacticIds.push(tid);
+    });
+  }
 
-    // 装备战法 (按战法研习等级强化实际战法属性，同一队伍内严格唯一排重)
-    tactics: [
-      heroData.builtInTacticId,
-      heroData.equippedTactic1,
-      heroData.equippedTactic2
-    ].filter(Boolean).filter(id => {
-      if (teamSeenTactics.has(id)) {
-        return false; // 同一队伍内已存在相同战法，忽略过滤
-      }
-      teamSeenTactics.add(id);
-      return true;
-    }).map(id => {
-      const raw = TACTICS_MAP.get(id);
-      if (!raw) return null;
-      // 若武将自身显式指定了统一战法等级(如试炼模式强制拉满10级)，优先采用；否则按配置字典或默认值读取
-      const lvl = heroData.tacticLevel || (isPlayer ? (tacticLevels[id] || 1) : (tacticLevels[id] || 5));
-      return getTacticEffectiveProps(raw, lvl);
-    }).filter(Boolean),
-
-    // 战斗内临时状态
-    buffs: {
-      damageDealtMod: 1.0,
-      damageReceivedMod: 1.0,
-      firstStrike: false, // 先攻
-      insight: false,    // 洞察 (免疫控制)
-      disarmed: 0,       // 缴械回合
-      silenced: 0,       // 计穷回合
-      stunned: 0,        // 震慑回合
-      weakness: 0,       // 虚弱回合
-      confused: 0,       // 混乱回合
-      burn: 0,           // 灼烧回合
-      burnDmg: 0,
-      water: 0,          // 水攻回合
-      waterDmg: 0,       // 水攻伤害率
-      continuousAttack: false, // 连击
-      trueStrike: false,       // 必中 (无视规避与抵御)
-      shieldLayers: 0,         // 抵御剩余次数 (不可无脑无限叠加，单次最多2层)
-      shieldDuration: 0,       // 抵御剩余持续回合数
-      shareDamageTarget: null, // 闭月伤害分担受击替身
-      shareDamageRate: 0,      // 伤害分担比例
-      shareDamageDuration: 0,  // 分担持续回合
-      rescueCover: false,      // 千里驰援：援护友军普通攻击
-      taunt: false,            // 固若金汤：嘲讽敌方普攻
-      immuneBurn: false,       // 祝融夫人：免疫灼烧
-      tacticalCritRate: 0,     // 奇谋暴击几率 (太平道法)
-      tacticalCritDamage: 2.0, // 奇谋暴击倍率
-      isPreparingActive: null // 准备战法中
-    },
-
-    // 战报统计数据
-    stats: {
-      damageDealt: 0,
-      healDone: 0,
-      kills: 0,
-      damageTaken: 0,
-      tacticsCast: 0
+  const equippedTactics = rawTacticIds.filter(Boolean).filter(id => {
+    if (teamSeenTactics.has(id)) {
+      return false; // 同一队伍内已存在相同战法，忽略过滤
     }
-  };
-}
+    teamSeenTactics.add(id);
+    return true;
+  }).map(id => {
+    const raw = TACTICS_MAP.get(id);
+    if (!raw) return null;
+    // 若武将自身显式指定了统一战法等级(如试炼模式强制拉满10级)，优先采用；否则按配置字典或默认值读取
+    const lvl = heroData.tacticLevel || (isPlayer ? (tacticLevels[id] || 1) : (tacticLevels[id] || 5));
+    return getTacticEffectiveProps(raw, lvl);
+  }).filter(Boolean);
+
+    // 初始化战法统计字典 (普通攻击 + 装配战法)
+    const tacticStats = {
+      normal_attack: {
+        id: 'normal_attack',
+        name: '普通攻击',
+        type: 'normal',
+        quality: 'B',
+        level: 1,
+        isInnate: false,
+        casts: 0,
+        damage: 0,
+        heals: 0
+      }
+    };
+    equippedTactics.forEach((tac, idx) => {
+      const tacQuality = (idx === 0 && heroData.star === 3)
+        ? 'B'
+        : (tac.quality || (heroData.star === 5 ? 'S' : (heroData.star === 4 ? 'A' : 'B')));
+      tacticStats[tac.id] = {
+        id: tac.id,
+        name: tac.name,
+        type: tac.type || 'active',
+        quality: tacQuality,
+        level: tac.level || 1,
+        isInnate: (idx === 0),
+        casts: 0,
+        damage: 0,
+        heals: 0
+      };
+    });
+
+    return {
+      id: heroData.id,
+      battleId: heroBattleId,
+      name: heroData.name,
+      avatar: heroData.avatar,
+      camp: heroData.camp,
+      star: heroData.star || 4,
+      isLeader,
+      isPlayer,
+      label: `${isPlayer ? '我军·' : '敌军·'}${heroData.name}`,
+      troopArm,
+      aptGrade,
+      aptMod,
+      currentSoldiers: defaultSoldiers,
+      maxSoldiers: defaultSoldiers,
+      initialSoldiers: defaultSoldiers,
+      
+      // 实战属性（受适性修正）
+      force: Math.round(rawForce * aptMod),
+      intel: Math.round(rawIntel * aptMod),
+      command: Math.round(rawCommand * aptMod),
+      speed: Math.round(rawSpeed * aptMod),
+
+      tactics: equippedTactics,
+      tacticStats,
+
+      // 战斗内临时状态
+      buffs: {
+        damageDealtMod: 1.0,
+        damageReceivedMod: 1.0,
+        bladeDealtMod: 1.0,     // 兵刃输出乘区
+        bladeReceivedMod: 1.0,  // 兵刃受伤乘区 (藤甲兵减免)
+        tacticalDealtMod: 1.0,  // 谋略输出乘区
+        tacticalReceivedMod: 1.0, // 谋略受伤乘区 (水攻易伤 / 谋略减伤)
+        hasTengJia: false,      // 油浸藤甲标记 (遇火攻受巨额引燃)
+        firstStrike: false, // 先攻
+        insight: false,    // 洞察 (免疫控制)
+        disarmed: 0,       // 缴械回合
+        silenced: 0,       // 计穷回合
+        stunned: 0,        // 震慑回合
+        weakness: 0,       // 虚弱回合
+        confused: 0,       // 混乱回合
+        burn: 0,           // 灼烧回合
+        burnDmg: 0,
+        water: 0,          // 水攻回合
+        waterDmg: 0,       // 水攻伤害率
+        continuousAttack: false, // 连击
+        trueStrike: false,       // 必中 (无视规避与抵御)
+        shieldLayers: 0,         // 抵御剩余次数 (不可无脑无限叠加，单次最多2层)
+        shieldDuration: 0,       // 抵御剩余持续回合数
+        shareDamageTarget: null, // 闭月伤害分担受击替身
+        shareDamageRate: 0,      // 伤害分担比例
+        shareDamageDuration: 0,  // 分担持续回合
+        rescueCover: false,      // 千里驰援：援护友军普通攻击
+        taunt: false,            // 固若金汤：嘲讽敌方普攻
+        immuneBurn: false,       // 祝融夫人：免疫灼烧
+        tacticalCritRate: 0,     // 奇谋暴击几率 (太平道法)
+        tacticalCritDamage: 2.0, // 奇谋暴击倍率
+        isPreparingActive: null // 准备战法中
+      },
+
+      // 战报统计数据
+      stats: {
+        damageDealt: 0,
+        healDone: 0,
+        kills: 0,
+        damageTaken: 0,
+        tacticsCast: 0
+      }
+    };
+  }
 
 /**
  * 模拟推演一场完整战斗 (8回合)
@@ -274,7 +322,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         // 受到谋略伤害削减 (国之栋梁 -5%)
         if (bond.effect.tacticalDmgReduction) {
           heroes.forEach(h => {
-            h.buffs.damageReceivedMod -= bond.effect.tacticalDmgReduction;
+            h.buffs.tacticalReceivedMod -= bond.effect.tacticalDmgReduction;
           });
         }
         // 主将首回合强化 (太师动乱)
@@ -315,6 +363,12 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
 
   const executePrepTactics = (actor, team, opposingTeam, logFn = log) => {
     actor.tactics.forEach(tactic => {
+      // 准备回合战法生效计数 (指挥、被动、阵法、兵种)
+      if (['command', 'passive', 'formation', 'arm'].includes(tactic.type)) {
+        if (actor.tacticStats && actor.tacticStats[tactic.id]) {
+          actor.tacticStats[tactic.id].casts = Math.max(1, actor.tacticStats[tactic.id].casts);
+        }
+      }
       // 诸如一身是胆
       if (tactic.insight) {
         actor.buffs.insight = true;
@@ -503,7 +557,8 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       if (tactic.id === 'tac_teng_jia_bing') {
         const red = tactic.damageReduction || 0.40;
         team.forEach(m => {
-          m.buffs.damageReceivedMod -= red; // 兵刃大幅减伤
+          m.buffs.hasTengJia = true;
+          m.buffs.bladeReceivedMod -= red; // 兵刃专属大幅减伤
         });
         logFn(0, `【${actor.label}】列阵【${tactic.name}】：全军身披油浸藤甲！受到兵刃伤害大幅削减 ${(red * 100).toFixed(0)}%，但遇火攻将受到猛烈灼烧蔓延！`, 'skill');
       }
@@ -648,7 +703,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         } else {
           const burnSource = actor.buffs.burnSourceActor || oppTeam.find(h => h.currentSoldiers > 0) || actor;
           const dotDmg = Math.round(actor.buffs.burnDmg * (actor.currentSoldiers / actor.initialSoldiers + 0.5));
-          const actualDot = applyDamageToTarget(round, burnSource, actor, dotDmg, log, '烈火灼烧');
+          const actualDot = applyDamageToTarget(round, burnSource, actor, dotDmg, log, '烈火灼烧', { damageType: 'tactical', isFire: true });
           if (actualDot > 0) {
             log(round, `🔥【${actor.label}】身陷烈火，承受来自【${burnSource.label}】施加的 ${actualDot} 点谋略灼烧伤害！(余兵:${actor.currentSoldiers})`, 'dot', { actor: burnSource, target: actor });
           }
@@ -665,7 +720,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       if (actor.buffs.water > 0) {
         const waterSource = actor.buffs.waterSourceActor || oppTeam.find(h => h.currentSoldiers > 0) || actor;
         const dotDmg = Math.round(actor.buffs.waterDmg * (actor.currentSoldiers / actor.initialSoldiers + 0.5));
-        const actualDot = applyDamageToTarget(round, waterSource, actor, dotDmg, log, '滔天水攻');
+        const actualDot = applyDamageToTarget(round, waterSource, actor, dotDmg, log, '滔天水攻', { damageType: 'tactical' });
         if (actualDot > 0) {
           log(round, `🌊【${actor.label}】身陷滔天浪潮，承受来自【${waterSource.label}】施加的 ${actualDot} 点水浸谋略伤害！(余兵:${actor.currentSoldiers})`, 'dot', { actor: waterSource, target: actor });
         }
@@ -695,7 +750,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         const mult = baseMult * scale;
         livingOpps.forEach(opp => {
           const rawDmg = Math.round((actor.intel * 1.4 - opp.intel * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * mult);
-          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '用武通神');
+          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '用武通神', { damageType: 'tactical' });
           if (actualDmg > 0) {
             log(round, `⚡ 用武通神第 ${round} 回合爆发(伤害率${(mult * 100).toFixed(0)}%)！对【${opp.label}】造成 ${actualDmg} 点稳定谋略伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
           }
@@ -709,9 +764,9 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         const maxRate = jueDiTac.damageRate || 2.80;
         const baseRate = maxRate * 0.5;
         const currentRate = baseRate + (maxRate - baseRate) * (stacks / 10);
-        const rawDmg = Math.round((actor.force * 1.6 - 40) * Math.sqrt(actor.currentSoldiers / 100) * currentRate);
         livingOpps.forEach(opp => {
-          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '绝地反击');
+          const rawDmg = Math.round(Math.max(20, actor.force * 1.6 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * currentRate);
+          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '绝地反击', { damageType: 'blade' });
           if (actualDmg > 0) {
             log(round, `🛡️💥 绝地反击第 5 回合蓄力爆发(蓄力${stacks}层·伤害率${(currentRate * 100).toFixed(0)}%)！对【${opp.label}】发动致命反击造成 ${actualDmg} 点兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
           }
@@ -729,7 +784,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         log(round, `📖 士别三日非复阿蒙！【${actor.label}】智力暴增 ${intelBoost} 点，全体谋略轰炸引爆！`, 'buff', { actor });
         livingOpps.forEach(opp => {
           const rawDmg = Math.round((actor.intel * 1.5 - opp.intel * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate);
-          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '士别三日');
+          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '士别三日', { damageType: 'tactical' });
           if (actualDmg > 0) {
             log(round, `📖💥 士别三日雷霆轰顶！对【${opp.label}】造成 ${actualDmg} 点狂暴谋略伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
           }
@@ -742,7 +797,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       if (zhenYaTac && (round === 2 || round === 3)) {
         livingOpps.forEach(opp => {
           const rawDmg = Math.round(actor.intel * 1.35 * Math.sqrt(actor.currentSoldiers / 100) * (zhenYaTac.damageRate || 0.88));
-          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '镇压黄巾');
+          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '镇压黄巾', { damageType: 'true' });
           if (actualDmg > 0) {
             log(round, `⚡ 镇压黄巾破阵！大将朱儁号令严明，溃逃真伤穿透【${opp.label}】造成 ${actualDmg} 点谋略伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
           }
@@ -758,7 +813,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
           // 奇数回合：兵刃伤害 184% + 降低 64 点统率
           target.command = Math.max(10, target.command - 64);
           const rawDmg = Math.round((actor.force * 1.6 - target.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * 1.84);
-          const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '义胆兵刃');
+          const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '义胆兵刃', { damageType: 'blade' });
           if (actualDmg > 0) {
             log(round, `⚡ 义胆雄心奇数回合！【${actor.label}】剑斩【${target.label}】造成 ${actualDmg} 点兵刃伤害，并削弱其 64 点统率！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
           }
@@ -766,7 +821,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
           // 偶数回合：谋略伤害 184% + 降低 64 点智力
           target.intel = Math.max(10, target.intel - 64);
           const rawDmg = Math.round((actor.intel * 1.6 - target.intel * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * 1.84);
-          const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '义胆谋略');
+          const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '义胆谋略', { damageType: 'tactical' });
           if (actualDmg > 0) {
             log(round, `⚡ 义胆雄心偶数回合！【${actor.label}】神机轰炸【${target.label}】造成 ${actualDmg} 点谋略伤害，并削弱其 64 点智力！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
           }
@@ -782,7 +837,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         const actualHeal = Math.min(actor.maxSoldiers - actor.currentSoldiers, healVal);
         if (actualHeal > 0) {
           actor.currentSoldiers += actualHeal;
-          actor.stats.healDone += actualHeal;
+          recordHeroHeal(actor, actualHeal, tac.id);
           log(round, `🌿【${actor.label}】触发【${tac.name}】休整生息，稳定恢复 ${actualHeal} 兵力！(余兵:${actor.currentSoldiers})`, 'heal', { actor });
         }
       });
@@ -796,7 +851,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
             opp.buffs.waterDmg = Math.round(actor.intel * 0.72 * Math.sqrt(actor.currentSoldiers / 100));
             opp.buffs.waterSourceActor = actor;
             opp.buffs.waterApplied = true;
-            opp.buffs.damageReceivedMod += 0.15; // 受谋略伤害提升 15%
+            opp.buffs.tacticalReceivedMod += 0.15; // 受谋略伤害提升 15%
             log(round, `🌧️ 兴云布雨引动天象！【${opp.label}】陷入持续【水攻】侵蚀，受到谋略伤害提升 15%！`, 'debuff', { actor, target: opp });
           }
         });
@@ -942,7 +997,8 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         type: t.type,
         quality: t.quality,
         level: t.level || 1
-      }))
+      })),
+      tacticStats: Object.values(h.tacticStats || {})
     })),
     enemyHeroStats: enemyHeroes.map(h => ({
       id: h.id,
@@ -963,7 +1019,8 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         type: t.type,
         quality: t.quality,
         level: t.level || 1
-      }))
+      })),
+      tacticStats: Object.values(h.tacticStats || {})
     }))
   };
 
@@ -989,6 +1046,18 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
  * @param {Function} log 日志函数
  * @param {string} sourceName 战法来源名称
  */
+/**
+ * 战报统计：记录武将兵力恢复并精准归集至对应战法
+ */
+function recordHeroHeal(actor, heal, tacticId = null) {
+  if (!actor || !heal || heal <= 0) return 0;
+  actor.stats.healDone += heal;
+  if (tacticId && actor.tacticStats && actor.tacticStats[tacticId]) {
+    actor.tacticStats[tacticId].heals += heal;
+  }
+  return heal;
+}
+
 function grantShield(round, target, layers = 1, duration = 2, log, sourceName = '战法') {
   if (!target || target.currentSoldiers <= 0) return;
 
@@ -1007,15 +1076,15 @@ function grantShield(round, target, layers = 1, duration = 2, log, sourceName = 
 }
 
 /**
- * 通用目标伤害结算与防御减免 (全面覆盖必中穿透、规避、抵御与战损记录)
- * @returns {{ damage: number, wasHit: boolean, shielded: boolean }} 结算结果
+ * 通用目标伤害结算与防御减免 (全面覆盖兵刃/谋略/真伤分流、藤甲火攻引燃、会心/奇谋暴击与抵御规避)
+ * @returns {{ damage: number, wasHit: boolean, shielded: boolean, isCrit: boolean, damageType: string }} 结算结果
  */
 function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '', options = {}) {
-  if (target.currentSoldiers <= 0) return { damage: 0, wasHit: false, shielded: false };
+  if (target.currentSoldiers <= 0) return { damage: 0, wasHit: false, shielded: false, isCrit: false, damageType: 'blade', valueOf() { return 0; }, toString() { return '0'; } };
 
   // 1. 虚弱判定 (攻击方处于虚弱，无法造成伤害，但依然算攻击动作)
   if (actor.buffs.weakness > 0) {
-    return { damage: 0, wasHit: true, shielded: false, valueOf() { return 0; }, toString() { return '0'; } };
+    return { damage: 0, wasHit: true, shielded: false, isCrit: false, damageType: 'blade', valueOf() { return 0; }, toString() { return '0'; } };
   }
 
   const hasTrueStrike = Boolean(actor.buffs.trueStrike);
@@ -1023,7 +1092,7 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
   // 2. 规避判定 (如左慈金丹秘术，必中可直接无视规避)
   if (!hasTrueStrike && target.buffs.evasionRate && Math.random() < target.buffs.evasionRate) {
     log(round, `✨【${target.label}】身法鬼魅，凭借【金丹规避】完全避开了【${actor.label}】的攻击！`, 'buff', { actor, target });
-    return { damage: 0, wasHit: false, shielded: false, valueOf() { return 0; }, toString() { return '0'; } };
+    return { damage: 0, wasHit: false, shielded: false, isCrit: false, damageType: 'blade', valueOf() { return 0; }, toString() { return '0'; } };
   }
 
   // 3. 必中判定提示
@@ -1039,49 +1108,129 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     }
     const desc = damageDesc ? `【${damageDesc}】` : '攻势';
     log(round, `🛡️【${target.label}】周身浮现【抵御】坚壁，本次伤害化为 0，完全化解了来自【${actor.label}】的${desc}！(剩余抵御: ${target.buffs.shieldLayers}次)`, 'action', { actor, target });
-    return { damage: 0, wasHit: true, shielded: true, valueOf() { return 0; }, toString() { return '0'; } };
+    return { damage: 0, wasHit: true, shielded: true, isCrit: false, damageType: 'blade', valueOf() { return 0; }, toString() { return '0'; } };
   }
 
-  // 5. 计算并扣减实际伤害 (严格契合三战原版：增伤与减伤乘区、90%最大减伤封顶保护 + 士气有效削弱 + ±5%战场自然浮动)
-  const actorMoraleMod = actor.moraleMod ?? 1.0;
-  const baseDealtMod = actor.buffs?.damageDealtMod ?? 1.0;
-  const actorDealtMod = baseDealtMod * actorMoraleMod;
+  // 5. 伤害类型判定 (blade: 兵刃, tactical: 谋略, true: 真实伤害)
+  let damageType = 'blade';
+  let isFire = false;
+  let alreadyCrit = false;
 
-  // 获取防御方的有效减伤系数，并限制最大减伤幅度不超过 90% (即最少保留 10% 伤害底线)
-  const rawReceivedMod = target.buffs?.damageReceivedMod ?? 1.0;
-  const effectiveReceivedMod = Math.max(0.10, rawReceivedMod);
+  if (typeof options === 'string') {
+    damageType = options;
+  } else if (options && typeof options === 'object') {
+    if (options.damageType) damageType = options.damageType;
+    if (options.isFire) isFire = true;
+    if (options.alreadyCrit) alreadyCrit = true;
+  }
 
-  // 计算战场真实浮动系数 (0.95 ~ 1.05)
-  const floatMod = 0.95 + Math.random() * 0.10;
-
-  // 基础伤害结算
-  let finalDmg = Math.max(1, Math.round(rawDmg * actorDealtMod * effectiveReceivedMod * floatMod));
-
-  // 🎯 增伤、减伤与士气标签计算 (精准展示加成数值)
-  let modTags = '';
-  // 1) 攻击方输出增减伤
-  if (Math.abs(baseDealtMod - 1.0) >= 0.01) {
-    const dealtPct = Math.round((baseDealtMod - 1.0) * 100);
-    if (dealtPct > 0) {
-      modTags += `【增伤+${dealtPct}%】`;
-    } else if (dealtPct < 0) {
-      modTags += `【伤害${dealtPct}%】`;
+  // 若未显式传入 damageType，根据 damageDesc 进行智能推断兜底
+  if (damageType === 'blade' && damageDesc) {
+    if (/火|熯天|风助|烈火/.test(damageDesc)) {
+      damageType = 'tactical';
+      isFire = true;
+    } else if (/水|滔天|沉沙|覆雨|用武通神|士别三日|五雷轰顶|雷击|谋略|义胆谋略|铁索连环|杯蛇鬼车|料事如神|妖术|沙暴/.test(damageDesc)) {
+      damageType = 'tactical';
+    } else if (/真实|叛逃|十面埋伏/.test(damageDesc)) {
+      damageType = 'true';
     }
   }
-  // 2) 士气不足惩罚标签
+  if (!isFire && /火|熯天|风助|烈火/.test(damageDesc)) {
+    isFire = true;
+  }
+
+  // 基础系数：攻击方士气与战场自然随机浮动系数 (0.95 ~ 1.05)
+  const actorMoraleMod = actor.moraleMod ?? 1.0;
+  const floatMod = 0.95 + Math.random() * 0.10;
+
+  let effectiveDealtMod = 1.0;
+  let effectiveReceivedMod = 1.0;
+  let isCrit = alreadyCrit;
+  let critType = '';
+  let critMult = 1.0;
+  let tengJiaBurnIgnited = false;
+  let modTags = '';
+
+  // 6. 核心乘区分流结算
+  if (damageType === 'true') {
+    // 真实伤害：不受攻守双方常规减伤乘区影响，保留士气
+    effectiveDealtMod = actorMoraleMod;
+    effectiveReceivedMod = 1.0;
+    modTags += '【真实伤害】';
+  } else if (damageType === 'tactical') {
+    // 谋略伤害：
+    // 攻方谋略增减伤 * 全局伤害增减伤 * 士气
+    const baseTacticalDealtMod = (actor.buffs?.tacticalDealtMod ?? 1.0) * (actor.buffs?.damageDealtMod ?? 1.0);
+    effectiveDealtMod = baseTacticalDealtMod * actorMoraleMod;
+
+    // 防方谋略承受倍率 * 全局承受倍率
+    let baseTacticalReceivedMod = (target.buffs?.tacticalReceivedMod ?? 1.0) * (target.buffs?.damageReceivedMod ?? 1.0);
+
+    // 🌟 藤甲兵遇火攻克制结算 (暴增 250% 伤害引燃)
+    if (isFire && (target.buffs?.hasTengJia || target.hasTengJia)) {
+      baseTacticalReceivedMod *= 2.50;
+      tengJiaBurnIgnited = true;
+      modTags += '【🔥藤甲引燃·暴增250%】';
+    }
+
+    // 减伤上限保护 (非引燃状态下，最大减伤 90%，保留至少 10% 底线)
+    effectiveReceivedMod = tengJiaBurnIgnited ? baseTacticalReceivedMod : Math.max(0.10, baseTacticalReceivedMod);
+
+    // 奇谋暴击结算 (太平道法、五谋臣等)
+    if (!alreadyCrit && actor.buffs?.tacticalCritRate > 0 && Math.random() < actor.buffs.tacticalCritRate) {
+      isCrit = true;
+      critType = 'tactical';
+      critMult = actor.buffs?.tacticalCritDamage || 2.0;
+      modTags += '【⚡奇谋暴击】';
+    }
+
+    // 标签构造
+    if (Math.abs(baseTacticalDealtMod - 1.0) >= 0.01) {
+      const dealtPct = Math.round((baseTacticalDealtMod - 1.0) * 100);
+      modTags += dealtPct > 0 ? `【谋略增伤+${dealtPct}%】` : `【谋略减伤${dealtPct}%】`;
+    }
+    if (Math.abs(effectiveReceivedMod - 1.0) >= 0.01 && !tengJiaBurnIgnited) {
+      const receivedPct = Math.round((1.0 - effectiveReceivedMod) * 100);
+      modTags += receivedPct > 0 ? `【谋略减伤${receivedPct}%】` : `【谋略易伤+${Math.abs(receivedPct)}%】`;
+    }
+  } else {
+    // 兵刃伤害 (blade)：
+    // 攻方兵刃增减伤 * 全局伤害增减伤 * 士气
+    const baseBladeDealtMod = (actor.buffs?.bladeDealtMod ?? 1.0) * (actor.buffs?.damageDealtMod ?? 1.0);
+    effectiveDealtMod = baseBladeDealtMod * actorMoraleMod;
+
+    // 防方兵刃承受倍率 * 全局承受倍率
+    const baseBladeReceivedMod = (target.buffs?.bladeReceivedMod ?? 1.0) * (target.buffs?.damageReceivedMod ?? 1.0);
+    // 减伤上限保护 (最大减伤 90%，保留至少 10% 底线)
+    effectiveReceivedMod = Math.max(0.10, baseBladeReceivedMod);
+
+    // 会心暴击结算 (甘宁、黄忠、左右开弓、五虎等)
+    if (!alreadyCrit && actor.buffs?.critRate > 0 && Math.random() < actor.buffs.critRate) {
+      isCrit = true;
+      critType = 'blade';
+      critMult = actor.buffs?.critDamage || 1.5;
+      modTags += '【💥会心暴击】';
+    }
+
+    // 标签构造
+    if (Math.abs(baseBladeDealtMod - 1.0) >= 0.01) {
+      const dealtPct = Math.round((baseBladeDealtMod - 1.0) * 100);
+      modTags += dealtPct > 0 ? `【兵刃增伤+${dealtPct}%】` : `【兵刃减伤${dealtPct}%】`;
+    }
+    if (Math.abs(effectiveReceivedMod - 1.0) >= 0.01) {
+      const receivedPct = Math.round((1.0 - effectiveReceivedMod) * 100);
+      modTags += receivedPct > 0 ? `【兵刃减伤${receivedPct}%】` : `【兵刃易伤+${Math.abs(receivedPct)}%】`;
+    }
+  }
+
+  // 士气不足惩罚标签
   if (actorMoraleMod < 0.98) {
     const moraleNerfPct = Math.round((1.0 - actorMoraleMod) * 100);
     modTags += `【士气削弱-${moraleNerfPct}%】`;
   }
-  // 3) 受击方防御减伤 / 易伤
-  if (Math.abs(effectiveReceivedMod - 1.0) >= 0.01) {
-    const receivedPct = Math.round((1.0 - effectiveReceivedMod) * 100);
-    if (receivedPct > 0) {
-      modTags += `【减伤${receivedPct}%】`;
-    } else if (receivedPct < 0) {
-      modTags += `【易伤+${Math.abs(receivedPct)}%】`;
-    }
-  }
+
+  // 基础最终伤害结算 (带入暴击倍率)
+  let finalDmg = Math.max(1, Math.round(rawDmg * effectiveDealtMod * effectiveReceivedMod * floatMod * critMult));
 
   // 勇者得前单次增伤消费还原
   if (actor.buffs?.yongZheBonus) {
@@ -1096,8 +1245,12 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     target,
     finalDmg,
     modTags,
-    actorDealtMod,
-    effectiveReceivedMod
+    effectiveDealtMod,
+    effectiveReceivedMod,
+    damageType,
+    isCrit,
+    critType,
+    tengJiaBurnIgnited
   };
 
   // 貂蝉【闭月】伤害分担机制 (受击时将一定比例伤害转移给敌军替身目标承受)
@@ -1115,13 +1268,33 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
   actor.stats.damageDealt += finalDmg;
   target.stats.damageTaken += finalDmg;
 
+  // 战法明细统计：精准归集杀敌伤害至具体战法或普通攻击
+  let tId = (options && typeof options === 'object') ? options.tacticId : null;
+  if (!tId) {
+    if (damageDesc === '普通攻击' || damageDesc === '普攻' || damageDesc === '反击') {
+      tId = 'normal_attack';
+    } else if (damageDesc) {
+      const found = actor.tactics.find(t => t.name === damageDesc || damageDesc.includes(t.name) || t.name.includes(damageDesc));
+      if (found) tId = found.id;
+    }
+  }
+  if (tId && actor.tacticStats && actor.tacticStats[tId]) {
+    actor.tacticStats[tId].damage += finalDmg;
+  } else if (actor.tacticStats && actor.tacticStats['normal_attack'] && (!damageDesc || damageDesc === '普通攻击')) {
+    actor.tacticStats['normal_attack'].damage += finalDmg;
+  }
+
   const result = {
     damage: finalDmg,
     wasHit: true,
     shielded: false,
     modTags,
-    actorDealtMod,
+    effectiveDealtMod,
     effectiveReceivedMod,
+    damageType,
+    isCrit,
+    critType,
+    tengJiaBurnIgnited,
     valueOf() { return this.damage; },
     toString() { return String(this.damage); }
   };
@@ -1183,7 +1356,7 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     if (actor.buffs.insight) buffCount++;
     const bonusMult = 1.0 + buffCount * 0.20;
     const rawGongYao = Math.round((actor.force * 1.5 - target.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * 1.22 * bonusMult);
-    const hitGY = applyDamageToTarget(round, actor, target, rawGongYao, log, '弓腰姬');
+    const hitGY = applyDamageToTarget(round, actor, target, rawGongYao, log, '弓腰姬', { damageType: 'blade' });
     if (hitGY.damage > 0) {
       log(round, `🏹 弓腰姬巾帼突袭！【${actor.label}】随身 ${buffCount} 层增益加持，普攻前射中【${target.label}】造成 ${hitGY.damage} 点兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
     }
@@ -1200,35 +1373,32 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     }
   });
 
+  // 普攻发动次数统计
+  if (actor.tacticStats && actor.tacticStats['normal_attack']) {
+    actor.tacticStats['normal_attack'].casts++;
+  }
+
   // 伤害计算 (基础兵刃普攻)
   const armAdv = actor.isPlayer ? pArmAdv : eArmAdv;
   const baseDmg = Math.max(20, (actor.force * 1.5 - target.command * 0.75));
   const soldierRatio = Math.sqrt(actor.currentSoldiers / 100);
   let finalDmg = Math.round(baseDmg * soldierRatio * armAdv);
 
-  // 会心暴击判定 (甘宁 / 黄忠)
-  let isCrit = false;
-  if (actor.buffs.critRate && Math.random() < actor.buffs.critRate) {
-    isCrit = true;
-    const critMult = actor.buffs.critDamage || 2.0;
-    finalDmg = Math.round(finalDmg * critMult);
-  }
-
   // 虚弱判断
   if (actor.buffs.weakness > 0) finalDmg = 0;
 
-  // 抵御、规避与真实伤害结算
-  const hitResult = applyDamageToTarget(round, actor, target, finalDmg, log, '普通攻击');
+  // 抵御、规避与兵刃伤害结算 (由 applyDamageToTarget 统一结算兵刃乘区与会心暴击)
+  const hitResult = applyDamageToTarget(round, actor, target, finalDmg, log, '普通攻击', { damageType: 'blade', tacticId: 'normal_attack' });
   const actualDmg = hitResult.damage;
   if (actualDmg > 0) {
-    const critText = isCrit ? '💥 触发【会心暴击】！' : '';
+    const critText = hitResult.isCrit ? '💥 触发【会心暴击】！' : '';
     log(round, `🗡️【${actor.label}】挥戈突刺，${critText}对【${target.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
 
     // 马超 槊血复骑：普攻群体溅射
     if (actor.buffs.hasSplash) {
       const splashDmg = Math.round(actualDmg * 0.54);
       oppTeam.filter(h => h.currentSoldiers > 0 && h !== target).forEach(other => {
-        const splashResult = applyDamageToTarget(round, actor, other, splashDmg, log, '槊血溅射');
+        const splashResult = applyDamageToTarget(round, actor, other, splashDmg, log, '槊血溅射', { damageType: 'blade', tacticId: 'tac_shuo_xue_fu_qi' });
         if (splashResult.damage > 0) {
           log(round, `🐎 槊血溅射！狂暴枪芒波及【${other.label}】造成 ${splashResult.damage} 点兵刃溅射伤害！(余兵:${other.currentSoldiers})`, 'action', { actor, target: other });
         }
@@ -1243,7 +1413,7 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     if (qingNangDoc && Math.random() < 0.5) {
       const heal = Math.round(qingNangDoc.intel * 1.2);
       target.currentSoldiers = Math.min(target.maxSoldiers, target.currentSoldiers + heal);
-      qingNangDoc.stats.healDone += heal;
+      recordHeroHeal(qingNangDoc, heal, 'tac_qing_nang_xiang_zhu');
       log(round, `🧪【${qingNangDoc.label}】圣手施针触发【青囊急救】，紧急治愈【${target.label}】恢复 ${heal} 兵力！(余兵:${target.currentSoldiers})`, 'heal', { actor: qingNangDoc, target });
     }
   }
@@ -1265,26 +1435,29 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     // 梦中弑臣：前2回合受到普攻反击
     const mengZhong = target.tactics.find(t => t.id === 'tac_meng_zhong_shi_chen');
     if (mengZhong && round <= 2 && target.currentSoldiers > 0) {
+      if (target.tacticStats && target.tacticStats[mengZhong.id]) target.tacticStats[mengZhong.id].casts++;
       const retRate = mengZhong.damageRate || 1.05;
       const retDmg = Math.round(target.force * retRate * Math.sqrt(target.currentSoldiers / 100));
-      const retResult = applyDamageToTarget(round, target, actor, retDmg, log, '梦中反击');
+      const retResult = applyDamageToTarget(round, target, actor, retDmg, log, '梦中反击', { damageType: 'blade', tacticId: mengZhong.id });
       if (retResult.damage > 0) {
-        log(round, `🗡️【${target.label}】梦中弑臣！暴怒反戈一击，对【${actor.label}】造成 ${retResult.damage} 点兵刃反击伤害！(余兵:${actor.currentSoldiers})`, 'skill', { actor: target, target: actor });
+        log(round, `🗡️【${target.label}】梦中弑臣！暴怒反戈一击，对【${actor.label}】造成 ${retResult.damage} 点兵刃反击伤害！(余兵:${actor.currentSoldiers})`, 'skill', { actor: target, target: actor, isSkillCast: true });
       }
     }
 
     const retaliateTactic = target.tactics.find(t => t.id === 'tac_gang_lie_bu_qu');
     if (retaliateTactic && Math.random() * 100 < retaliateTactic.retaliateRate) {
+      if (target.tacticStats && target.tacticStats[retaliateTactic.id]) target.tacticStats[retaliateTactic.id].casts++;
       const retDmg = Math.round(target.force * 1.1 * Math.sqrt(target.currentSoldiers / 100));
-      const retResult = applyDamageToTarget(round, target, actor, retDmg, log, '刚烈反击');
+      const retResult = applyDamageToTarget(round, target, actor, retDmg, log, '刚烈反击', { damageType: 'blade', tacticId: retaliateTactic.id });
       if (retResult.damage > 0) {
-        log(round, `⚡【${target.label}】刚烈狂怒！拔矢啖睛触发反击，轰击【${actor.label}】造成 ${retResult.damage} 点兵刃反击伤害！(余兵:${actor.currentSoldiers})`, 'skill', { actor: target, target: actor });
+        log(round, `⚡【${target.label}】刚烈狂怒！拔矢啖睛触发反击，轰击【${actor.label}】造成 ${retResult.damage} 点兵刃反击伤害！(余兵:${actor.currentSoldiers})`, 'skill', { actor: target, target: actor, isSkillCast: true });
       }
     }
 
     // 程普 勇烈持重：受到伤害时有35%几率净化自身所有负面并随机震慑敌军1回合
     const yongLie = target.tactics.find(t => t.id === 'tac_yong_lie_chi_zhong');
     if (yongLie && Math.random() < 0.35) {
+      if (target.tacticStats && target.tacticStats[yongLie.id]) target.tacticStats[yongLie.id].casts++;
       target.buffs.silenced = 0;
       target.buffs.disarmed = 0;
       target.buffs.burn = 0;
@@ -1293,9 +1466,9 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
       if (freshEnemies.length > 0) {
         const stunTarget = freshEnemies[Math.floor(Math.random() * freshEnemies.length)];
         stunTarget.buffs.stunned = 1;
-        log(round, `🛡️【${target.label}】触发【勇烈持重】！净化自身所有负面状态，威武震慑【${stunTarget.label}】使其瘫痪 1 回合！`, 'skill', { actor: target, target: stunTarget });
+        log(round, `🛡️【${target.label}】触发【勇烈持重】！净化自身所有负面状态，威武震慑【${stunTarget.label}】使其瘫痪 1 回合！`, 'skill', { actor: target, target: stunTarget, isSkillCast: true });
       } else {
-        log(round, `🛡️【${target.label}】触发【勇烈持重】！净化自身所有负面状态！`, 'skill', { actor: target });
+        log(round, `🛡️【${target.label}】触发【勇烈持重】！净化自身所有负面状态！`, 'skill', { actor: target, isSkillCast: true });
       }
     }
   }
@@ -1304,7 +1477,7 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
   if (hitResult.wasHit && team.some(h => h.tactics.some(t => t.id === 'tac_da_ji_shi')) && target.currentSoldiers > 0) {
     if (Math.random() < 0.35) {
       const dajiDmg = Math.round((actor.force * 1.3 - target.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * 1.22);
-      const hitDJ = applyDamageToTarget(round, actor, target, dajiDmg, log, '大戟士');
+      const hitDJ = applyDamageToTarget(round, actor, target, dajiDmg, log, '大戟士', { damageType: 'blade', tacticId: 'tac_da_ji_shi' });
       if (hitDJ.damage > 0) {
         log(round, `🔱 大戟士列阵协同！长戟贯日对【${target.label}】追加造成 ${hitDJ.damage} 点协同兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
@@ -1316,7 +1489,7 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     team.filter(h => h.currentSoldiers > 0).forEach(mate => {
       const heal = Math.round(actor.force * 1.25 * Math.sqrt(actor.currentSoldiers / 100));
       mate.currentSoldiers = Math.min(mate.maxSoldiers, mate.currentSoldiers + heal);
-      actor.stats.healDone += heal;
+      recordHeroHeal(actor, heal, 'tac_huo_shen_ning_shang');
       log(round, `🔥 火神宁墒圣火庇佑！【${actor.label}】普攻毕，为【${mate.label}】回复 ${heal} 兵力！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
     });
   }
@@ -1327,6 +1500,9 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
       const bonusRate = actor.tactics.some(t => t.id === 'tac_xian_zhen_tu_xi') ? 15 : 0;
       if (Math.random() * 100 < (tac.rate + bonusRate)) {
         actor.stats.tacticsCast++;
+        if (actor.tacticStats && actor.tacticStats[tac.id]) {
+          actor.tacticStats[tac.id].casts++;
+        }
         executeAssaultTactic(round, actor, tac, target, oppTeam, team, log, moraleMod, armAdv);
       }
     });
@@ -1338,14 +1514,14 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
  */
 function executeAssaultTactic(round, actor, tactic, primaryTarget, oppTeam, myTeam, log, moraleMod, armAdv) {
   const lvlTag = tactic.level ? `Lv.${tactic.level} ` : '';
-  log(round, `⚡【${actor.label}】普攻破阵，连携发动突击战法【${lvlTag}${tactic.name}】！`, 'skill', { actor });
+  log(round, `⚡【${actor.label}】普攻破阵，连携发动突击战法【${lvlTag}${tactic.name}】！`, 'skill', { actor, tactic, isSkillCast: true });
 
   if (tactic.id === 'tac_yi_qi_dang_qian') {
     const baseRate = tactic.damageRate || 1.08;
     const rate = actor.isLeader ? (baseRate * 1.33) : baseRate;
     oppTeam.filter(h => h.currentSoldiers > 0).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.4 - opp.command * 0.7) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv * (actor.isPlayer ? moraleMod : 1));
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '一骑当千');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '一骑当千', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🌪️ 一骑当千横扫八荒！对【${opp.label}】造成 ${actualDmg} 点巨额兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1354,7 +1530,7 @@ function executeAssaultTactic(round, actor, tactic, primaryTarget, oppTeam, myTe
     if (primaryTarget && primaryTarget.currentSoldiers > 0) {
       const rate = tactic.damageRate || 1.84;
       const rawDmg = Math.round((actor.force * 1.8 - primaryTarget.command * 0.7) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv * (actor.isPlayer ? moraleMod : 1.0));
-      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '手起刀落');
+      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '手起刀落', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🗡️ 手起刀落迅疾斩杀！对【${primaryTarget.label}】造成 ${actualDmg} 点致命兵刃伤害！(余兵:${primaryTarget.currentSoldiers})`, 'action', { actor, target: primaryTarget });
       }
@@ -1386,7 +1562,7 @@ function executeAssaultTactic(round, actor, tactic, primaryTarget, oppTeam, myTe
     if (primaryTarget && primaryTarget.currentSoldiers > 0) {
       const rate = tactic.damageRate || 1.96;
       const rawDmg = Math.round((actor.force * 1.9 - primaryTarget.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv * (actor.isPlayer ? moraleMod : 1.0));
-      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '暴戾无仁');
+      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '暴戾无仁', { damageType: 'blade' });
       if (actualDmg > 0) {
         primaryTarget.buffs.confused = 1;
         log(round, `🩸 暴戾无仁狂残劈击！对【${primaryTarget.label}】造成 ${actualDmg} 点毁灭兵刃伤害并使其陷入【混乱】！(余兵:${primaryTarget.currentSoldiers})`, 'action', { actor, target: primaryTarget });
@@ -1397,10 +1573,10 @@ function executeAssaultTactic(round, actor, tactic, primaryTarget, oppTeam, myTe
     if (primaryTarget && primaryTarget.currentSoldiers > 0) {
       const rate = tactic.damageRate || 1.92;
       const rawDmg = Math.round((actor.force * 1.7 - primaryTarget.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv * (actor.isPlayer ? moraleMod : 1.0));
-      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '江东小霸王');
+      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '江东小霸王', { damageType: 'blade' });
       const heal = Math.round(actor.force * 1.16 * Math.sqrt(actor.currentSoldiers / 100));
       actor.currentSoldiers = Math.min(actor.maxSoldiers, actor.currentSoldiers + heal);
-      actor.stats.healDone += heal;
+      recordHeroHeal(actor, heal, tactic.id);
       if (actualDmg > 0) {
         log(round, `🐯 江东小霸王霸道破阵！对【${primaryTarget.label}】造成 ${actualDmg} 点兵刃伤害，并破血自愈 ${heal} 兵力！(余兵:${primaryTarget.currentSoldiers})`, 'action', { actor, target: primaryTarget });
       } else {
@@ -1424,7 +1600,7 @@ function executeAssaultTactic(round, actor, tactic, primaryTarget, oppTeam, myTe
     if (primaryTarget && primaryTarget.currentSoldiers > 0) {
       const rate = tactic.damageRate || 1.80;
       const rawDmg = Math.round((actor.force * 1.7 - primaryTarget.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv * (actor.isPlayer ? moraleMod : 1.0));
-      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '将行其疾');
+      const actualDmg = applyDamageToTarget(round, actor, primaryTarget, rawDmg, log, '将行其疾', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🏹⚡ 将行其疾疾风瞬杀！【${actor.label}】神箭贯穿【${primaryTarget.label}】造成 ${actualDmg} 点致命兵刃伤害！(余兵:${primaryTarget.currentSoldiers})`, 'action', { actor, target: primaryTarget });
       }
@@ -1467,7 +1643,11 @@ function executeActiveTactics(round, actor, team, livingOpps, log, moraleMod, pA
     if (tac.requiresPrep) {
       if (actor.buffs.isPreparingActive === tac.id) {
         actor.buffs.isPreparingActive = null;
-        log(round, `🔥【${actor.label}】蓄力完成！撼世战法【${lvlTag}${tac.name}】磅礴释放！`, 'skill', { actor });
+        actor.stats.tacticsCast++;
+        if (actor.tacticStats && actor.tacticStats[tac.id]) {
+          actor.tacticStats[tac.id].casts++;
+        }
+        log(round, `🔥【${actor.label}】蓄力完成！撼世战法【${lvlTag}${tac.name}】磅礴释放！`, 'skill', { actor, tactic: tac, isSkillCast: true });
         castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, armAdv);
         return;
       } else {
@@ -1475,19 +1655,25 @@ function executeActiveTactics(round, actor, team, livingOpps, log, moraleMod, pA
           // 魏延 奇兵间道：有 75% 几率直接跳过准备回合瞬间爆发！
           if (actor.buffs.skipPrepChance && Math.random() < actor.buffs.skipPrepChance) {
             actor.stats.tacticsCast++;
-            log(round, `⚡ 奇兵间道神谋瞬发！【${actor.label}】跳过蓄力，绝技【${lvlTag}${tac.name}】刹那间呼啸释放！`, 'skill', { actor });
+            if (actor.tacticStats && actor.tacticStats[tac.id]) {
+              actor.tacticStats[tac.id].casts++;
+            }
+            log(round, `⚡ 奇兵间道神谋瞬发！【${actor.label}】跳过蓄力，绝技【${lvlTag}${tac.name}】刹那间呼啸释放！`, 'skill', { actor, tactic: tac, isSkillCast: true });
             castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, armAdv);
             return;
           }
           actor.buffs.isPreparingActive = tac.id;
-          log(round, `⌛【${actor.label}】沉声立定，开始蓄势准备绝技【${lvlTag}${tac.name}】！(下回合释放)`, 'prep', { actor });
+          log(round, `⌛【${actor.label}】沉声立定，开始蓄势准备绝技【${lvlTag}${tac.name}】！(下回合释放)`, 'prep', { actor, tactic: tac });
           return;
         }
       }
     } else {
       if (Math.random() * 100 < finalRate) {
         actor.stats.tacticsCast++;
-        log(round, `✨【${actor.label}】大喝一声，发动主动战法【${lvlTag}${tac.name}】！`, 'skill', { actor });
+        if (actor.tacticStats && actor.tacticStats[tac.id]) {
+          actor.tacticStats[tac.id].casts++;
+        }
+        log(round, `✨【${actor.label}】大喝一声，发动主动战法【${lvlTag}${tac.name}】！`, 'skill', { actor, tactic: tac, isSkillCast: true });
         castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, armAdv);
       }
     }
@@ -1501,7 +1687,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     livingOpps.forEach(opp => {
       const dmgRate = tac.damageRate || 1.46;
       const rawDmg = Math.round((actor.force * 1.5 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '威震华夏');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '威震华夏', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🐉 青龙偃月威震华夏！对【${opp.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1516,7 +1702,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     livingOpps.forEach(opp => {
       const dmgRate = tac.damageRate || 2.06;
       const rawDmg = Math.round((actor.force * 1.7 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '所向披靡');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '所向披靡', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `💥 所向披靡席卷全场！对【${opp.label}】造成 ${actualDmg} 点毁灭性兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1532,7 +1718,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       const healRate = tac.healRate || 2.56;
       const heal = Math.round(actor.intel * healRate * Math.sqrt(actor.currentSoldiers / 100));
       wounded.currentSoldiers = Math.min(wounded.maxSoldiers, wounded.currentSoldiers + heal);
-      actor.stats.healDone += heal;
+      recordHeroHeal(actor, heal, tac.id);
       log(round, `🩹 刮骨疗毒圣手回春！清除【${wounded.label}】所有负面状态，大幅疗愈 ${heal} 兵力！(余兵:${wounded.currentSoldiers})`, 'heal', { actor, target: wounded });
     }
   }
@@ -1555,7 +1741,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       for (let s = 1; s <= 3; s++) {
         if (target.currentSoldiers <= 0 || actor.currentSoldiers <= 0) break;
         const rawD = Math.round((actor.force * 1.6 - target.command * 0.7) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv);
-        const actualD = applyDamageToTarget(round, actor, target, rawD, log, `天下无双第${s}击`);
+        const actualD = applyDamageToTarget(round, actor, target, rawD, log, `天下无双第${s}击`, { damageType: 'blade' });
         if (actualD > 0) {
           log(round, ` ⚡ 第 ${s} 击：狂猛重斩，削去【${target.label}】 ${actualD} 点兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
         }
@@ -1567,7 +1753,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     livingOpps.forEach(opp => {
       const dmgRate = tac.damageRate || 1.60;
       const rawDmg = Math.round((actor.force * 1.5 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '横扫千军');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '横扫千军', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `⚔️ 横扫千军破阵横劈！对【${opp.label}】造成 ${actualDmg} 点狂暴兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1594,7 +1780,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       const isBurning = (target.buffs.burn > 0);
       if (isBurning) dmgRate += 1.98; // 灼烧引爆额外追加198%
       const rawDmg = Math.round((actor.intel * 1.6 - target.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '风助火势');
+      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '风助火势', { damageType: 'tactical', isFire: true });
       if (actualDmg > 0) {
         if (isBurning) {
           log(round, `🌪️🔥 借东风势引爆火海！【风助火势】对【${target.label}】造成 ${actualDmg} 点毁灭连环谋略伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
@@ -1608,7 +1794,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_han_tian_chi_di') {
     livingOpps.forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.4 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.02) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '熯天炽地');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '熯天炽地', { damageType: 'tactical', isFire: true });
       opp.buffs.burn = 2;
       opp.buffs.burnDmg = Math.round(actor.intel * 0.72);
       opp.buffs.burnSourceActor = actor;
@@ -1631,7 +1817,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
 
     targets.forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.3 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 0.96) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '卧薪尝胆');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '卧薪尝胆', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `⚔️ 卧薪尝胆坚毅奋战！对【${opp.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1654,7 +1840,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     actor.buffs.critRate = (actor.buffs.critRate || 0) + 0.25;
     livingOpps.forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.6 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.80) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '百步穿杨');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '百步穿杨', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🏹 百步穿杨万钧开弓！对【${opp.label}】造成 ${actualDmg} 点极速暴击兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1666,7 +1852,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       const heal = Math.round(actor.intel * 1.58 * Math.sqrt(actor.currentSoldiers / 100));
       mate.currentSoldiers = Math.min(mate.maxSoldiers, mate.currentSoldiers + heal);
       mate.buffs.damageReceivedMod -= 0.40;
-      actor.stats.healDone += heal;
+      recordHeroHeal(actor, heal, tac.id);
       log(round, `📜 以逸待劳神机安澜！为【${mate.label}】回复 ${heal} 兵力并附加 40% 强效减伤！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
     });
   }
@@ -1674,7 +1860,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_tie_suo_lian_huan') {
     livingOpps.forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.5 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.56) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '铁索连环');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '铁索连环', { damageType: 'tactical' });
       if (actualDmg > 0) {
         log(round, `⛓️ 铁索连环大计！锁困【${opp.label}】造成 ${actualDmg} 点谋略伤害并连带全场！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1684,7 +1870,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_shi_mian_mai_fu') {
     livingOpps.forEach(opp => {
       const rawDmg = Math.round(actor.intel * 1.65 * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.26));
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '十面埋伏');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '十面埋伏', { damageType: 'true' });
       opp.buffs.cannotHeal = 2;
       if (actualDmg > 0) {
         log(round, `🔮 十面埋伏叛逃真伤！对【${opp.label}】无视统御造成 ${actualDmg} 点谋略伤害，并施加 2 回合禁疗！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
@@ -1700,14 +1886,11 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       if (freshLiving.length === 0) break;
       const target = freshLiving[Math.floor(Math.random() * freshLiving.length)];
       
-      // 奇谋暴击判定 (太平道法 28% 暴击率，200% 伤害)
-      const isCrit = (actor.buffs.tacticalCritRate && Math.random() < actor.buffs.tacticalCritRate);
-      const critMultiplier = isCrit ? (actor.buffs.tacticalCritDamage || 2.0) : 1.0;
-
-      const rawDmg = Math.round((actor.intel * 1.55 - target.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.36) * armAdv * critMultiplier);
-      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, `五雷轰顶第${strike}道`);
+      const rawDmg = Math.round((actor.intel * 1.55 - target.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.36) * armAdv);
+      const hitResult = applyDamageToTarget(round, actor, target, rawDmg, log, `五雷轰顶第${strike}道`, { damageType: 'tactical' });
+      const actualDmg = hitResult.damage;
       if (actualDmg > 0) {
-        const critTag = isCrit ? '💥【奇谋暴击】' : '';
+        const critTag = hitResult.isCrit ? '💥【奇谋暴击】' : '';
         log(round, `⚡ 第 ${strike} 道五雷轰顶！${critTag}天雷劈中【${target.label}】造成 ${actualDmg} 点狂暴谋略雷击伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
 
@@ -1737,7 +1920,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_wan_jian_qi_fa') {
     livingOpps.forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.4 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.40) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '万箭齐发');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '万箭齐发', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🏹 万箭齐发漫天箭雨！对【${opp.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1747,8 +1930,8 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_chen_sha_jue_shui') {
     livingOpps.slice(0, 2).forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.45 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.26) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '沉沙决水');
-      opp.buffs.damageReceivedMod += 0.25;
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '沉沙决水', { damageType: 'tactical' });
+      opp.buffs.tacticalReceivedMod += 0.25;
       if (actualDmg > 0) {
         log(round, `🌊 沉沙决水汪洋水攻！对【${opp.label}】造成 ${actualDmg} 点谋略水攻伤害，且使其受到谋略伤害提升 25%！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       } else {
@@ -1763,7 +1946,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       opp.command = Math.max(10, opp.command - debuffVal);
       opp.intel = Math.max(10, opp.intel - debuffVal);
       const rawDmg = Math.round((actor.force * 1.6 - opp.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.58) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '破阵摧坚');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '破阵摧坚', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `💥 破阵摧坚削弱统智！重砍【${opp.label}】造成 ${actualDmg} 点毁灭兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       } else {
@@ -1775,7 +1958,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_bei_she_gui_che') {
     livingOpps.slice(0, 2).forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.5 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.53) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '杯蛇鬼车');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '杯蛇鬼车', { damageType: 'tactical' });
       if (actualDmg > 0) {
         log(round, `🐍 杯蛇鬼车幽冥幻法！对【${opp.label}】造成 ${actualDmg} 点奇门谋略伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1784,7 +1967,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       const healRate = tac.healRate || 1.02;
       const heal = Math.round(actor.intel * healRate * Math.sqrt(actor.currentSoldiers / 100));
       mate.currentSoldiers = Math.min(mate.maxSoldiers, mate.currentSoldiers + heal);
-      actor.stats.healDone += heal;
+      recordHeroHeal(actor, heal, tac.id);
       log(round, `✨ 杯蛇生息！治愈【${mate.label}】恢复 ${heal} 兵力！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
     });
   }
@@ -1802,7 +1985,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     actor.currentSoldiers = Math.min(actor.maxSoldiers, actor.currentSoldiers + heal);
     const boost = tac.statBuff || 42;
     actor.command += boost;
-    actor.stats.healDone += heal;
+    recordHeroHeal(actor, heal, tac.id);
     log(round, `🛡️ 一力拒守铜墙铁壁！【${actor.label}】自愈狂增 ${heal} 兵力，统率提升 ${boost} 点！(余兵:${actor.currentSoldiers})`, 'heal', { actor });
   }
   // 闭月 (貂蝉官方自带S级战法)
@@ -1847,7 +2030,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     if (freshLiving.length > 0) {
       const target = freshLiving[Math.floor(Math.random() * freshLiving.length)];
       const rawDmg = Math.round((actor.force * 1.7 - target.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 2.50) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '落凤');
+      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '落凤', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🦅 落凤破空穿杨！神箭射中【${target.label}】造成 ${actualDmg} 点狂暴兵刃重创！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
@@ -1863,7 +2046,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     if (freshLiving.length > 0) {
       const target = freshLiving[Math.floor(Math.random() * freshLiving.length)];
       const rawDmg = Math.round((actor.force * 1.5 - target.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.72) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '纵兵劫掠');
+      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '纵兵劫掠', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🔥 纵兵劫掠狂啸劈砍！对【${target.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
@@ -1880,7 +2063,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       const sorted = [...freshLiving].sort((a, b) => a.command - b.command);
       const target = sorted[0];
       const rawDmg = Math.round((actor.force * 1.6 - target.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.85) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '避实击虚');
+      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '避实击虚', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🎯 避实击虚精准打击！锁定统率最弱点【${target.label}】(统率:${target.command})，造成 ${actualDmg} 点致命兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
@@ -1895,7 +2078,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       if (freshLiving.length === 0) break;
       const target = freshLiving[Math.floor(Math.random() * freshLiving.length)];
       const rawDmg = Math.round((actor.force * 1.4 - target.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 0.84) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, `轻勇飞燕第${h}段`);
+      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, `轻勇飞燕第${h}段`, { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, ` ⚡ 第 ${h} 段飞燕刺击命中【${target.label}】，造成 ${actualDmg} 点兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
@@ -1913,7 +2096,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       const healRate = tac.healRate || 1.16;
       const heal = Math.round(actor.intel * healRate * Math.sqrt(actor.currentSoldiers / 100));
       mate.currentSoldiers = Math.min(mate.maxSoldiers, mate.currentSoldiers + heal);
-      actor.stats.healDone += heal;
+      recordHeroHeal(actor, heal, tac.id);
       log(round, `🏰 坐守孤城安抚伤卒！治愈【${mate.label}】恢复 ${heal} 兵力！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
     });
   }
@@ -1921,7 +2104,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_liao_shi_ru_shen') {
     livingOpps.slice(0, 2).forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.4 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.06) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '料事如神');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '料事如神', { damageType: 'tactical' });
       opp.buffs.damageDealtMod -= 0.16;
       if (actualDmg > 0) {
         log(round, `📜 料事如神奇策制敌！对【${opp.label}】造成 ${actualDmg} 点谋略伤害，并使其伤害降低 16%！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
@@ -1949,7 +2132,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_bao_lian_si_fang') {
     livingOpps.slice(0, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.45 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.02) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '暴敛四方');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '暴敛四方', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🪓 暴敛四方秋风扫叶！对【${opp.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -1963,7 +2146,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   else if (tac.id === 'tac_tian_jiang_fu_yu') {
     livingOpps.slice(0, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.45 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.10) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '天降覆雨');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '天降覆雨', { damageType: 'blade' });
       opp.buffs.burn = 1;
       opp.buffs.burnDmg = Math.round(actor.intel * 0.66);
       opp.buffs.burnSourceActor = actor;
@@ -1988,7 +2171,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     if (freshLiving.length > 0) {
       const target = freshLiving[Math.floor(Math.random() * freshLiving.length)];
       const rawDmg = Math.round((actor.force * 1.55 - target.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.80) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '左右开弓');
+      const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '左右开弓', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🏹 左右开弓连珠双箭！对【${target.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
@@ -1999,7 +2182,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     grantShield(round, actor, 1, 2, log, '妖术');
     livingOpps.forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.3 - opp.intel * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 0.72) * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '妖术沙暴');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '妖术沙暴', { damageType: 'tactical' });
       if (actualDmg > 0) {
         log(round, `🌪️ 妖术黄天迷雾！漫天狂沙席卷【${opp.label}】造成 ${actualDmg} 点谋略沙暴伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -2019,7 +2202,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     const rate = tac.damageRate || 1.28;
     livingOpps.slice(0, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.5 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '将门虎女');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '将门虎女', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `🐅 将门虎女刀芒凌厉！【${actor.label}】重斩【${opp.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -2034,7 +2217,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     const rate = tac.damageRate || 1.35;
     livingOpps.slice(0, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.6 - opp.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv);
-      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '临战先登');
+      const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '临战先登', { damageType: 'blade' });
       if (actualDmg > 0) {
         log(round, `⚔️ 临战先登每战必前！【${actor.label}】飞身登城暴击【${opp.label}】造成 ${actualDmg} 点狂暴兵刃重创！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
@@ -2060,7 +2243,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       }
       if (isAlreadyConfused) {
         const rawDmg = Math.round((actor.intel * 1.7 - target.intel * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * 1.75 * armAdv);
-        const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '乱武极刑');
+        const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '乱武极刑', { damageType: 'tactical' });
         if (actualDmg > 0) {
           log(round, `☠️ 乱武引爆极刑诛灭！对已混乱的【${target.label}】造成 ${actualDmg} 点毁灭谋略伤害！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
         }

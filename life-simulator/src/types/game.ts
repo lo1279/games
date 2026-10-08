@@ -115,7 +115,7 @@ export type CompanyStage = 'angel' | 'seed' | 'seriesA' | 'preIPO' | 'listed' | 
 export interface StartupCompany {
   id: string;
   name: string;
-  industry: 'catering' | 'media' | 'tech';
+  industry: 'catering' | 'media' | 'tech' | 'biotech';
   industryName: string;
   level: number;       // 企业等级 1-5
   valuation: number;   // 企业估值 (万元)
@@ -186,9 +186,9 @@ export interface DiceChallenge {
   id: string;
   title: string;
   description: string;
-  category: 'adventure' | 'cultivation' | 'business_gamble' | 'crisis';
+  category: 'adventure' | 'cultivation' | 'business_gamble' | 'crisis' | 'science' | 'diplomacy' | 'heritage';
   targetDC: number;         // 检定目标难度阈值 (Difficulty Class 10-35)
-  checkAttr: AttributeKey;  // 检定依赖的属性 (如 intelligence, luck, strength, spiritualRoot)
+  checkAttr: AttributeKey;  // 检定依赖的属性 (如 intelligence, luck, strength, spiritualRoot, charm, wealth)
   attrScale: number;        // 属性补正换算系数 (例如 attrs[key] * 0.2)
   successReward: {
     logText: string;

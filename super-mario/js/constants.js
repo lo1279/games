@@ -75,27 +75,31 @@ const CONFIG = {
  */
 const SpriteRenderer = {
   // 绘制 16x16 地面砖
-  drawGroundTile(ctx, x, y) {
-    ctx.fillStyle = CONFIG.PALETTE.BRICK_BROWN;
+  drawGroundTile(ctx, x, y, theme = 'overworld') {
+    const isUnder = theme === 'underground';
+    const isTree = theme === 'treetop';
+    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#00a800' : CONFIG.PALETTE.BRICK_BROWN);
     ctx.fillRect(x, y, 16, 16);
     // 高光与纹理
-    ctx.fillStyle = '#fc9838';
+    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#80d010' : '#fc9838');
     ctx.fillRect(x, y, 15, 1);
     ctx.fillRect(x, y, 1, 15);
     ctx.fillStyle = '#000000';
     ctx.fillRect(x, y + 15, 16, 1);
     ctx.fillRect(x + 15, y, 1, 16);
     // 内部斑纹
-    ctx.fillStyle = '#602000';
+    ctx.fillStyle = isUnder ? '#004050' : (isTree ? '#005800' : '#602000');
     ctx.fillRect(x + 3, y + 4, 3, 3);
     ctx.fillRect(x + 9, y + 7, 3, 3);
     ctx.fillRect(x + 4, y + 11, 3, 3);
   },
 
-  // 绘制普通红砖块
-  drawBrick(ctx, x, y, offsetY = 0) {
+  // 绘制普通砖块 (支持地表、地下与高空主题)
+  drawBrick(ctx, x, y, offsetY = 0, theme = 'overworld') {
     const drawY = y + offsetY;
-    ctx.fillStyle = CONFIG.PALETTE.BRICK_BROWN;
+    const isUnder = theme === 'underground';
+    const isTree = theme === 'treetop';
+    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#b84418' : CONFIG.PALETTE.BRICK_BROWN);
     ctx.fillRect(x, drawY, 16, 16);
     // 砖块黑色缝隙线条
     ctx.fillStyle = '#000000';
@@ -105,16 +109,18 @@ const SpriteRenderer = {
     ctx.fillRect(x + 3, drawY + 8, 2, 7);
     ctx.fillRect(x + 12, drawY + 8, 2, 7);
     // 高光边缘
-    ctx.fillStyle = '#fc9838';
+    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#fc9838' : '#fc9838');
     ctx.fillRect(x, drawY, 15, 1);
     ctx.fillRect(x, drawY + 8, 15, 1);
   },
 
-  // 绘制坚硬石块 (台阶与障碍)
-  drawHardBlock(ctx, x, y) {
-    ctx.fillStyle = '#b84418';
+  // 绘制坚硬石块 (台阶、浮岛与障碍)
+  drawHardBlock(ctx, x, y, theme = 'overworld') {
+    const isUnder = theme === 'underground';
+    const isTree = theme === 'treetop';
+    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#00a800' : '#b84418');
     ctx.fillRect(x, y, 16, 16);
-    ctx.fillStyle = '#fc9838';
+    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#80d010' : '#fc9838');
     ctx.fillRect(x, y, 15, 2);
     ctx.fillRect(x, y, 2, 15);
     ctx.fillStyle = '#000000';

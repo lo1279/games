@@ -1960,15 +1960,29 @@ class GameApp {
                 <div style="display:flex; flex-direction:column; gap:8px;">
                   
                   <!-- 自带战法 -->
-                  <div style="background:rgba(0,0,0,0.3); border:1px solid #d97706; padding:8px 12px; border-radius:6px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="color:#fbbf24; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
-                      <span style="font-size:10px; color:#fde047; background:rgba(217,119,6,0.2); border:1px solid #d97706; padding:1px 6px; border-radius:3px;">
-                        🌟 S级 · ${{ command: '指挥', passive: '被动', active: '主动', assault: '突击' }[builtInTac?.type] || '被动'}
-                      </span>
-                    </div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-top:3px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
-                  </div>
+                  ${(() => {
+                    const qBuiltIn = (realHero.star === 3) ? 'B' : (builtInTac?.quality || (realHero.star === 5 ? 'S' : 'A'));
+                    const isS = qBuiltIn === 'S';
+                    const isA = qBuiltIn === 'A';
+                    const color = isS ? '#fbbf24' : (isA ? '#c084fc' : '#60a5fa');
+                    const borderColor = isS ? 'rgba(217,119,6,0.5)' : (isA ? 'rgba(147,51,234,0.5)' : 'rgba(59,130,246,0.5)');
+                    const bgBadge = isS ? 'rgba(217,119,6,0.2)' : (isA ? 'rgba(147,51,234,0.2)' : 'rgba(59,130,246,0.2)');
+                    const borderBadge = isS ? '#d97706' : (isA ? '#9333ea' : '#2563eb');
+                    const qualityBadgeText = isS ? '🌟 S级' : (isA ? '💜 A级' : '🔷 B级');
+                    const typeZh = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[builtInTac?.type] || '战法';
+
+                    return `
+                      <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor}; padding:8px 12px; border-radius:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <span style="color:${color}; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
+                          <span style="font-size:10px; color:${color}; background:${bgBadge}; border:1px solid ${borderBadge}; padding:1px 6px; border-radius:3px;">
+                            ${qualityBadgeText} · ${typeZh}
+                          </span>
+                        </div>
+                        <div style="font-size:11px; color:#cbd5e1; margin-top:3px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
+                      </div>
+                    `;
+                  })()}
 
                   <!-- 战法槽位 1 -->
                   ${(() => {
@@ -2266,7 +2280,7 @@ class GameApp {
               <div style="font-size:11px; color:#9ca3af; margin-top:2px; display:flex; gap:10px; flex-wrap:wrap;">
                 <span>${currentArmMeta.name}适性: <b class="apt-tag ${apt}">${apt}</b> <span style="color:#6ee7b7; font-size:10px;">(${aptModPct}%)</span></span>
                 <span>武:${c.force} 智:${c.intel} 统:${c.command} 速:${c.speed}</span>
-                <span style="color:#e2e8f0;">[战法] <b style="color:#fde047;">${tacName}</b></span>
+                <span style="color:#e2e8f0;">[战法] <b style="color:${c.star === 5 ? '#fde047' : (c.star === 4 ? '#c084fc' : '#93c5fd')};">${tacName}</b></span>
               </div>
             </div>
           </div>
@@ -3854,9 +3868,9 @@ class GameApp {
         </div>
 
         <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px;">
-          <div style="color: #fbbf24; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+          <div style="color: ${isFive ? '#fbbf24' : '#c084fc'}; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
             <span>${tacName}</span>
-            <span style="font-size: 9px; padding: 0 4px; border-radius: 3px; background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3);">${tacType}</span>
+            <span style="font-size: 9px; padding: 0 4px; border-radius: 3px; background: ${isFive ? 'rgba(251,191,36,0.15)' : 'rgba(192,132,252,0.15)'}; color: ${isFive ? '#fbbf24' : '#c084fc'}; border: 1px solid ${isFive ? 'rgba(251,191,36,0.3)' : 'rgba(192,132,252,0.3)'};">${isFive ? '🌟 S级' : '💜 A级'} · ${tacType}</span>
           </div>
           <div style="font-size: 10px; color: #9ca3af; margin-top: 2px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${builtInTac?.desc || hero.bio}">
             ${builtInTac?.desc || hero.bio}
@@ -3972,6 +3986,7 @@ class GameApp {
     };
 
     // 格式化日志，自动标注 [我军] 与 [敌军]，并将伤害数字置红、治疗数字置绿 (三战原版经典战报呈现)
+    // 格式化日志，自动标注 [我军] 与 [敌军]，并将伤害数字置红、治疗数字置绿 (三战原版经典战报呈现)
     const formattedLogs = (rep.logs || []).map(l => {
       let txt = l.text || '';
       // 1. 若日志已自带原生阵营前缀（我军·XX 或 敌军·XX），直接正则转换为高亮标签
@@ -3989,17 +4004,13 @@ class GameApp {
       });
 
       // 3. 🎯 三战原版战报核心：精准将【造成/受到/承受伤害数字】标记为鲜红色
-      // 匹配形如：造成 1234 点 / 受到 567 点 / 承受 890 点 / 反弹 120 点 / 转移至...承受 345 点伤害
       txt = txt.replace(/(造成|受到|承受|反弹|转移(?:至.*?承受)?)\s*(\d+)\s*(点(?:兵刃|谋略|溃逃|叛逃|火攻|水攻|稳定|致命|反弹)?伤害)/g, '$1 <span class="battle-num-dmg">-$2</span> $3');
-      // 匹配形如：造成了 1234 点伤害
       txt = txt.replace(/(造成了)\s*(\d+)\s*(点(?:兵刃|谋略)?伤害)/g, '$1 <span class="battle-num-dmg">-$2</span> $3');
 
       // 4. 🎯 三战原版战报核心：精准将【治疗/恢复兵力数字】标记为翡翠绿色
-      // 匹配形如：恢复 680 点兵力 / 恢复自身 500 点兵力 / 治愈 350 点兵力 / 驱散负面并恢复 450 点兵力
       txt = txt.replace(/(恢复(?:自身|友军|群体|兵力)?|治愈|急救)\s*(\d+)\s*(点兵力|点伤兵|点气血)/g, '$1 <span class="battle-num-heal">+$2</span> $3');
 
       // 5. 🎯 三战原版战报核心：对关键 Buff 状态添加专属彩色徽章标签
-      // 正面增益 Buff
       txt = txt.replace(/【洞察】/g, '<span class="buff-badge buff-insight">洞察</span>');
       txt = txt.replace(/【先攻】/g, '<span class="buff-badge buff-first-strike">先攻</span>');
       txt = txt.replace(/【必中】/g, '<span class="buff-badge buff-true-strike">必中</span>');
@@ -4019,13 +4030,39 @@ class GameApp {
       txt = txt.replace(/【水攻】/g, '<span class="buff-badge debuff-water">水攻</span>');
       txt = txt.replace(/【禁疗】/g, '<span class="buff-badge debuff-cannot-heal">禁疗</span>');
 
-      // 6. 🎯 三战原版战报核心：精准将【增伤 / 减伤 / 易伤】加成修饰标记为彩色胶囊徽章
+      // 6. 增减伤 / 易伤
       txt = txt.replace(/【增伤\+(\d+)%】/g, '<span class="buff-badge buff-dmg-boost">增伤 +$1%</span>');
       txt = txt.replace(/【减伤(\d+)%】/g, '<span class="buff-badge buff-dmg-reduce">减伤 $1%</span>');
       txt = txt.replace(/【易伤\+(\d+)%】/g, '<span class="buff-badge debuff-dmg-taken">易伤 +$1%</span>');
       txt = txt.replace(/【伤害-(\d+)%】/g, '<span class="buff-badge debuff-dmg-nerf">伤害 -$1%</span>');
 
-      return `<div class="battle-log-item ${l.type}">${txt}</div>`;
+      // 7. 分类判定用于快筛
+      const isSkill = (l.type === 'skill' || l.meta?.isSkillCast || /发动主动战法|连携发动突击战法|磅礴释放|施展指挥战法|触发被动战法|兵种战法|蓄力准备/.test(txt));
+      const isDmg = (l.type === 'action' || /造成.*?点.*?伤害/.test(txt) || /会心暴击|奇谋暴击/.test(txt));
+      const isHeal = (l.type === 'heal' || /恢复|治愈|急救|自愈/.test(txt));
+      const isControl = (l.type === 'debuff' || /计穷|缴械|震慑|虚弱|混乱/.test(txt));
+      const isRound = (l.type === 'round-start');
+
+      let cat = 'normal';
+      if (isSkill) cat = 'skill';
+      else if (isDmg) cat = 'damage';
+      else if (isHeal) cat = 'heal';
+      else if (isControl) cat = 'control';
+      else if (isRound) cat = 'round';
+
+      // 8. 战法释放渲染为醒目的大招横幅
+      if (isSkill) {
+        const isPlayer = l.meta?.actor?.isPlayer ?? (/我军/.test(txt) && !/敌军·.*?发动/.test(txt));
+        const campClass = isPlayer ? 'player' : 'enemy';
+        return `
+          <div class="battle-log-item skill-banner ${campClass}" data-cat="skill">
+            <span class="skill-banner-badge ${campClass}">⚡ 战法释放</span>
+            <div style="flex:1;">${txt}</div>
+          </div>
+        `;
+      }
+
+      return `<div class="battle-log-item ${l.type}" data-cat="${cat}">${txt}</div>`;
     }).join('');
 
     this.battleDetailBody.innerHTML = `
@@ -4088,9 +4125,19 @@ class GameApp {
         </button>
       </div>
 
-      <!-- 1. 实战日志容器 -->
-      <div id="modalLogsContainer" style="display:flex; flex-direction:column; gap:3px;">
-        ${formattedLogs}
+      <!-- 1. 实战日志容器 (包含快筛工具栏) -->
+      <div id="modalLogsSection" style="display:flex; flex-direction:column;">
+        <div class="battle-log-filter-bar" id="battleLogFilterBar">
+          <span style="font-size:11px; color:#9ca3af; margin-right:4px;">🔍 战报快筛:</span>
+          <button class="log-filter-btn active" data-filter="all">📜 全部推演</button>
+          <button class="log-filter-btn" data-filter="skill">⚡ 战法发动</button>
+          <button class="log-filter-btn" data-filter="damage">💥 关键杀伤</button>
+          <button class="log-filter-btn" data-filter="heal">🩹 兵力恢复</button>
+          <button class="log-filter-btn" data-filter="control">⛓️ 状态控制</button>
+        </div>
+        <div id="modalLogsContainer" style="display:flex; flex-direction:column; gap:3px;">
+          ${formattedLogs}
+        </div>
       </div>
 
       <!-- 2. 对战数据统计全息容器 (默认隐藏) -->
@@ -4119,7 +4166,52 @@ class GameApp {
       const maxHealInMatch = Math.max(1, ...(allHeroStats.map(h => h.heals || 0)));
       const maxLossInMatch = Math.max(1, ...(allHeroStats.map(h => h.losses || 0)));
 
-      // 渲染单支队伍的武将数据行
+      // 战法明细数据表格渲染器 (三战原版经典战报明细)
+      const renderTacticRows = (tacticStats, heroTotalDmg, heroTotalHeal) => {
+        if (!tacticStats || tacticStats.length === 0) {
+          return `<tr><td colspan="7" style="color:#6b7280; font-size:11px; padding:6px;">暂无战法释放数据</td></tr>`;
+        }
+        return tacticStats.map(ts => {
+          let typeName = '主动';
+          let typeClass = 'active';
+          if (ts.type === 'normal') { typeName = '普攻'; typeClass = 'normal'; }
+          else if (ts.type === 'assault') { typeName = '突击'; typeClass = 'assault'; }
+          else if (ts.type === 'passive') { typeName = '被动'; typeClass = 'passive'; }
+          else if (ts.type === 'command') { typeName = '指挥'; typeClass = 'command'; }
+          else if (ts.type === 'formation') { typeName = '阵法'; typeClass = 'formation'; }
+          else if (ts.type === 'arm') { typeName = '兵种'; typeClass = 'arm'; }
+
+          const isNormal = (ts.id === 'normal_attack');
+          const isInnate = ts.isInnate;
+          const badgePrefix = isNormal ? '普攻' : (isInnate ? '自带' : '传承');
+          const badgeClass = isNormal ? 'normal' : (isInnate ? 'innate' : 'inherited');
+          const dmgPct = (heroTotalDmg > 0 && ts.damage > 0) ? Math.min(100, Math.round((ts.damage / heroTotalDmg) * 100)) : 0;
+
+          return `
+            <tr>
+              <td style="text-align:left; padding-left:8px;">
+                <div style="display:flex; align-items:center; gap:4px;">
+                  <span class="tac-badge-tag ${badgeClass}">[${badgePrefix}]</span>
+                  <span style="font-weight:600; color:#fff;">${ts.name}</span>
+                </div>
+              </td>
+              <td><span class="tac-type-pill ${typeClass}">${typeName}</span></td>
+              <td style="font-size:10px; color:#fbbf24;">${isNormal ? '-' : (ts.quality + '级 · Lv.' + (ts.level || 1))}</td>
+              <td><b style="color:#60a5fa; font-size:12px;">${ts.casts}</b> 次</td>
+              <td><b style="color:#ef4444; font-size:12px;">${(ts.damage || 0).toLocaleString()}</b></td>
+              <td><b style="color:#10b981; font-size:12px;">${(ts.heals || 0).toLocaleString()}</b></td>
+              <td>
+                <div style="display:flex; align-items:center; gap:4px; justify-content:center;">
+                  <span style="font-size:10px; color:#9ca3af; min-width:24px;">${dmgPct}%</span>
+                  <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${dmgPct}%;"></div></div>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      };
+
+      // 渲染单支队伍的武将数据行 (含战法明细面板)
       const renderTeamStatsRows = (heroList, isPlayer) => {
         return (heroList || []).map(h => {
           const campObj = CAMPS[h.camp] || { name: '群', color: '#888' };
@@ -4166,6 +4258,32 @@ class GameApp {
                 <div style="font-weight:bold; color:#93c5fd; font-size:12px;">-${(h.losses || 0).toLocaleString()}</div>
                 <div class="stats-bar-track" title="承伤战损占比: ${lossPct}%">
                   <div class="stats-bar-fill tank" style="width: ${lossPct}%;"></div>
+                </div>
+              </td>
+            </tr>
+            <tr class="tactic-detail-row">
+              <td colspan="5" style="padding: 2px 8px 10px 8px;">
+                <div class="tactic-breakdown-card">
+                  <div class="tactic-breakdown-header">
+                    <span>⚔️ 【${h.name}】战法释放与杀伤明细</span>
+                    <span style="font-size:10px; color:#9ca3af; font-weight:normal;">普通攻击与各装配战法释放追踪</span>
+                  </div>
+                  <table class="tactic-mini-table">
+                    <thead>
+                      <tr>
+                        <th style="text-align:left; padding-left:8px;">战法名称</th>
+                        <th>机制类型</th>
+                        <th>品质研习</th>
+                        <th>释放次数</th>
+                        <th>杀敌伤害</th>
+                        <th>救援恢复</th>
+                        <th>输出占比</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${renderTacticRows(h.tacticStats, h.damage, h.heals)}
+                    </tbody>
+                  </table>
                 </div>
               </td>
             </tr>
@@ -4251,16 +4369,16 @@ class GameApp {
     // 绑定【实战日志】与【对战统计】选项卡切换
     const btnLogs = this.battleDetailBody.querySelector('#btnModalTabLogs');
     const btnStats = this.battleDetailBody.querySelector('#btnModalTabStats');
-    const logsContainer = this.battleDetailBody.querySelector('#modalLogsContainer');
+    const logsSection = this.battleDetailBody.querySelector('#modalLogsSection');
 
-    if (btnLogs && btnStats && logsContainer && statsContainer) {
+    if (btnLogs && btnStats && logsSection && statsContainer) {
       btnLogs.addEventListener('click', () => {
         btnLogs.classList.add('active');
         btnLogs.style.background = '';
         btnLogs.style.color = '#fff';
         btnStats.classList.remove('active');
         btnStats.style.background = 'rgba(217,119,6,0.15)';
-        logsContainer.style.display = 'flex';
+        logsSection.style.display = 'flex';
         statsContainer.style.display = 'none';
         sound.playDrum();
       });
@@ -4272,11 +4390,32 @@ class GameApp {
         btnLogs.classList.remove('active');
         btnLogs.style.background = '#1f2937';
         btnLogs.style.color = '#9ca3af';
-        logsContainer.style.display = 'none';
+        logsSection.style.display = 'none';
         statsContainer.style.display = 'flex';
         sound.playDrum();
       });
     }
+
+    // 绑定战报日志快筛功能
+    const filterBtns = this.battleDetailBody.querySelectorAll('.log-filter-btn');
+    const logItems = this.battleDetailBody.querySelectorAll('.battle-log-item');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const filterType = btn.getAttribute('data-filter');
+        logItems.forEach(item => {
+          if (filterType === 'all') {
+            item.style.display = '';
+          } else if (filterType === 'skill') {
+            item.style.display = (item.classList.contains('skill-banner') || item.getAttribute('data-cat') === 'skill') ? '' : 'none';
+          } else {
+            item.style.display = (item.getAttribute('data-cat') === filterType) ? '' : 'none';
+          }
+        });
+        sound.playDrum();
+      });
+    });
 
     this.battleDetailModal.style.display = 'flex';
   }

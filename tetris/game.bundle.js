@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 俄罗斯方块（Tetris Neon Edition）独立整合运行包
  * 支持移动端/手机触控手势、震动反馈、微信内置浏览器、动态变异方块（变色龙方块）与小程序 web-view 极速运行
  */
@@ -25,9 +25,6 @@
     const SOFT_DROP_POINTS = 1;
     const HARD_DROP_POINTS = 2;
 
-    // 变异变色龙方块配置 (Morphing Piece)
-    const MORPH_INTERVAL = 1400; // 变换形状的时间间隔（毫秒）
-    const MORPH_CHANCE = 0.15;   // 随机生成变色龙方块的概率 (15%)
 
     const TETROMINOES = {
         I: {
@@ -262,23 +259,7 @@
             this.playTone(587.33, 'triangle', 0.08, 0.08);
         }
 
-        playMorph() {
-            if (this.muted || !this.ctx) return;
-            this.init();
-            try {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(780, this.ctx.currentTime + 0.12);
-                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.12);
-            } catch (e) {}
-        }
+
     }
 
     const sound = new SoundEngine();
@@ -287,7 +268,7 @@
     // 3. 方块类与随机袋 (Piece & Bag)
     // ==========================================
     class Piece {
-        constructor(type, isMorphing = false) {
+        constructor(type) {
             this.type = type;
             this.config = TETROMINOES[type];
             this.rotation = 0;
@@ -295,68 +276,12 @@
             this.color = this.config.color;
             this.glow = this.config.glow;
 
-            this.isMorphing = isMorphing;
-            this.morphTimer = 0;
-            this.hue = Math.floor(Math.random() * 360);
-
             this.x = Math.floor((COLS - this.shape[0].length) / 2);
             this.y = this.type === 'I' ? -1 : 0;
         }
 
         getShape(rotIndex = this.rotation) {
             return this.config.shapes[rotIndex % 4];
-        }
-
-        getDisplayColor() {
-            if (this.isMorphing) {
-                this.hue = (this.hue + 2.5) % 360;
-                return `hsl(${this.hue}, 100%, 62%)`;
-            }
-            return this.color;
-        }
-
-        getDisplayGlow() {
-            if (this.isMorphing) {
-                return `hsla(${this.hue}, 100%, 65%, 0.8)`;
-            }
-            return this.glow;
-        }
-
-        morph(board) {
-            if (!this.isMorphing) return false;
-
-            const allTypes = Object.keys(TETROMINOES).filter(t => t !== this.type);
-            for (let i = allTypes.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [allTypes[i], allTypes[j]] = [allTypes[j], allTypes[i]];
-            }
-
-            for (const candidateType of allTypes) {
-                const candidateConfig = TETROMINOES[candidateType];
-                const candidateShape = candidateConfig.shapes[0];
-
-                const testOffsets = [
-                    [0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0], [0, -2]
-                ];
-
-                for (const [ox, oy] of testOffsets) {
-                    const targetX = this.x + ox;
-                    const targetY = this.y + oy;
-
-                    if (board.isValidMove(targetX, targetY, candidateShape)) {
-                        this.type = candidateType;
-                        this.config = candidateConfig;
-                        this.rotation = 0;
-                        this.shape = candidateShape;
-                        this.x = targetX;
-                        this.y = targetY;
-                        this.color = candidateConfig.color;
-                        this.glow = candidateConfig.glow;
-                        return true;
-                    }
-                }
-            }
-            return false;
         }
 
         rotate(board, clockwise = true) {
@@ -407,7 +332,7 @@
             this.bag = [];
         }
 
-        next(forceMorph = false) {
+        next() {
             if (this.bag.length === 0) {
                 this.bag = Object.keys(TETROMINOES);
                 for (let i = this.bag.length - 1; i > 0; i--) {
@@ -416,8 +341,7 @@
                 }
             }
             const type = this.bag.pop();
-            const isMorphing = forceMorph || (Math.random() < MORPH_CHANCE);
-            return new Piece(type, isMorphing);
+            return new Piece(type);
         }
     }
 
@@ -492,30 +416,6 @@
             return fullRows;
         }
 
-        spawnMorphParticles(piece) {
-            for (let r = 0; r < piece.shape.length; r++) {
-                for (let c = 0; c < piece.shape[r].length; c++) {
-                    if (piece.shape[r][c]) {
-                        const px = (piece.x + c) * BLOCK_SIZE + BLOCK_SIZE / 2;
-                        const py = (piece.y + r) * BLOCK_SIZE + BLOCK_SIZE / 2;
-                        for (let i = 0; i < 4; i++) {
-                            const angle = Math.random() * Math.PI * 2;
-                            const speed = 1.0 + Math.random() * 3.5;
-                            this.particles.push({
-                                x: px,
-                                y: py,
-                                vx: Math.cos(angle) * speed,
-                                vy: Math.sin(angle) * speed,
-                                size: 2.5 + Math.random() * 2.5,
-                                alpha: 1,
-                                decay: 0.03 + Math.random() * 0.02,
-                                color: piece.getDisplayColor ? piece.getDisplayColor() : '#00ffff'
-                            });
-                        }
-                    }
-                }
-            }
-        }
 
         spawnClearParticles(rowIndices) {
             for (const row of rowIndices) {
@@ -630,8 +530,8 @@
             }
 
             if (activePiece) {
-                const pieceColor = activePiece.getDisplayColor ? activePiece.getDisplayColor() : activePiece.color;
-                const pieceGlow = activePiece.getDisplayGlow ? activePiece.getDisplayGlow() : activePiece.glow;
+                const pieceColor = activePiece.color;
+                const pieceGlow = activePiece.glow;
 
                 const ghostY = activePiece.getGhostY(this);
                 for (let r = 0; r < activePiece.shape.length; r++) {
@@ -808,18 +708,6 @@
             this.board.updateParticles();
 
             if (!this.isClearing) {
-                // 变异变色龙方块在空中动态变换形状
-                if (this.currentPiece && this.currentPiece.isMorphing) {
-                    this.currentPiece.morphTimer += deltaTime;
-                    if (this.currentPiece.morphTimer >= MORPH_INTERVAL) {
-                        this.currentPiece.morphTimer = 0;
-                        if (this.currentPiece.morph(this.board)) {
-                            this.board.spawnMorphParticles(this.currentPiece);
-                            sound.playMorph();
-                            this.triggerHaptic('medium');
-                        }
-                    }
-                }
 
                 this.dropCounter += deltaTime;
                 const dropInterval = this.getDropInterval();
@@ -899,17 +787,15 @@
             sound.playHold();
             this.triggerHaptic('medium');
             const currentType = this.currentPiece.type;
-            const currentMorph = this.currentPiece.isMorphing;
 
             if (!this.heldPiece) {
-                this.heldPiece = new Piece(currentType, currentMorph);
+                this.heldPiece = new Piece(currentType);
                 this.currentPiece = this.nextPiece;
                 this.nextPiece = this.randomizer.next();
             } else {
                 const tempType = this.heldPiece.type;
-                const tempMorph = this.heldPiece.isMorphing;
-                this.heldPiece = new Piece(currentType, currentMorph);
-                this.currentPiece = new Piece(tempType, tempMorph);
+                this.heldPiece = new Piece(currentType);
+                this.currentPiece = new Piece(tempType);
             }
 
             this.canHold = false;
@@ -949,19 +835,16 @@
                     }
 
                     this.updateUI();
-
-                    // 四行连消达成 Tetris! 奖励必定产出神秘变色龙变异方块
-                    const rewardMorph = clearedCount === 4;
-                    this.spawnNext(rewardMorph);
+                this.spawnNext();
                 }, 180);
             } else {
-                this.spawnNext(false);
+                this.spawnNext();
             }
         }
 
-        spawnNext(forceMorph = false) {
+        spawnNext() {
             this.currentPiece = this.nextPiece;
-            this.nextPiece = this.randomizer.next(forceMorph);
+            this.nextPiece = this.randomizer.next();
             this.canHold = true;
 
             if (!this.board.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.shape)) {
@@ -1023,7 +906,7 @@
 
                         ctx.save();
                         ctx.shadowColor = pieceGlow;
-                        ctx.shadowBlur = piece.isMorphing ? 10 : 6;
+                        ctx.shadowBlur = 6;
                         ctx.fillStyle = pieceColor;
                         ctx.fillRect(px + 1, py + 1, PREVIEW_BLOCK_SIZE - 2, PREVIEW_BLOCK_SIZE - 2);
 
@@ -1034,17 +917,6 @@
                         ctx.restore();
                     }
                 }
-            }
-
-            // 变异变色龙方块专属发光角标
-            if (piece.isMorphing) {
-                ctx.save();
-                ctx.fillStyle = '#ffee00';
-                ctx.shadowColor = '#ffee00';
-                ctx.shadowBlur = 6;
-                ctx.font = 'bold 9px monospace';
-                ctx.fillText('★MORPH', 4, 11);
-                ctx.restore();
             }
         }
 

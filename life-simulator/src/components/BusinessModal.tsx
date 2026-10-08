@@ -57,7 +57,7 @@ export const BusinessModal: React.FC<BusinessModalProps> = ({
   };
 
   // 创办企业
-  const handleFoundCompany = (industry: 'catering' | 'media' | 'tech') => {
+  const handleFoundCompany = (industry: 'catering' | 'media' | 'tech' | 'biotech') => {
     const res = foundCompany(assets, industry, newCompanyName.trim());
     if (res.success) {
       onUpdateAssets(res.newAssets);
@@ -337,17 +337,31 @@ export const BusinessModal: React.FC<BusinessModalProps> = ({
                   {assets.companies.map((comp) => (
                     <div
                       key={comp.id}
-                      className="p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-1.5"
+                      className={`p-3 rounded-xl border space-y-1.5 ${
+                        comp.stage === 'bankrupt'
+                          ? 'bg-slate-900/60 border-rose-900/40 opacity-70'
+                          : 'bg-slate-800 border-slate-700'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-sm text-amber-200">{comp.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
-                            {comp.stage === 'listed' ? '已上市敲钟 🔔' : '创业推进中'}
+                          <span className={`font-bold text-sm ${comp.stage === 'bankrupt' ? 'text-slate-400 line-through' : 'text-amber-200'}`}>
+                            {comp.name}
+                          </span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                              comp.stage === 'bankrupt'
+                                ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                                : comp.stage === 'listed'
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                            }`}
+                          >
+                            {comp.stage === 'bankrupt' ? '破产清算 💥' : comp.stage === 'listed' ? '已上市敲钟 🔔' : '创业推进中'}
                           </span>
                         </div>
-                        <span className="text-xs text-emerald-400 font-bold">
-                          年利润分红：+{comp.annualRevenue}万
+                        <span className={`text-xs font-bold ${comp.stage === 'bankrupt' ? 'text-slate-500' : 'text-emerald-400'}`}>
+                          {comp.stage === 'bankrupt' ? '已终止运营' : `年利润分红：+${comp.annualRevenue}万`}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-400 flex justify-between">

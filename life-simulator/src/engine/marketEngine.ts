@@ -38,22 +38,29 @@ export const INDUSTRY_CATALOG = [
     industry: 'catering' as const,
     industryName: '潮流茶饮/连锁餐饮',
     cost: 15, // 启动资金 15 万
-    desc: '门槛亲民，受大众喜爱，回本周期快但竞争激烈',
+    desc: '门槛亲民，回本周期快但同行竞争激烈，难以上市敲钟',
     minReq: { wealth: 10 },
   },
   {
     industry: 'media' as const,
     industryName: 'MCN与文娱传媒',
     cost: 50, // 50 万
-    desc: '依靠颜值、热点运营与智力，极易爆发式吸金',
+    desc: '依靠颜值魅力与热点运营，爆发力强，但需警惕流量退潮与网红塌房',
     minReq: { charm: 30, intelligence: 30 },
   },
   {
     industry: 'tech' as const,
-    industryName: '硬科技半导体/AI实验室',
+    industryName: '硬科技半导体/AI大模型',
     cost: 200, // 200 万
-    desc: '技术壁垒极高，烧钱研发，一旦突破即成千亿独角兽',
+    desc: '技术壁垒极高，前期烧钱研发，一旦突破即成千亿行业独角兽',
     minReq: { intelligence: 60, wealth: 50 },
+  },
+  {
+    industry: 'biotech' as const,
+    industryName: '前沿生物医药/基因靶向',
+    cost: 500, // 500 万
+    desc: '临床试验与审批风险极高，但一旦新药过审即成跨国药企并造福万民',
+    minReq: { intelligence: 75, wealth: 80 },
   },
 ];
 
@@ -155,7 +162,7 @@ export function settleYearlyFinances(state: GameState): {
     let rate = 0;
     const cryptoDice = Math.random();
     if (sentiment === 'bull' || cryptoDice > 0.6) {
-      rate = 0.4 + Math.random() * 1.2; // +40% ~ +160%
+      rate = 0.35 + Math.random() * 0.85; // +35% ~ +120%
     } else {
       rate = -0.35 - Math.random() * 0.45; // -35% ~ -80%
     }
@@ -167,47 +174,79 @@ export function settleYearlyFinances(state: GameState): {
     investmentGain += delta;
     assets.investments.crypto = Math.max(0, Math.round((assets.investments.crypto + delta) * 10) / 10);
 
-    if (delta > 30) news.push(`🚀 风险投资与加密资产爆发，净赚 +${delta.toFixed(1)} 万元！`);
+    if (delta > 30) news.push(`🚀 风险投资与数字资产爆发，净赚 +${delta.toFixed(1)} 万元！`);
     else if (delta < -20) news.push(`⚠️ 虚拟资产遭遇剧烈爆仓震荡，损失 ${Math.abs(delta).toFixed(1)} 万元`);
   }
 
-  // 4. 企业经营与分红
+  // 4. 企业经营与分红 (加入真实破产、重组与行业差异化机制)
   let companyDividends = 0;
   const updatedCompanies: StartupCompany[] = [];
 
   for (const comp of assets.companies) {
-    if (comp.stage === 'bankrupt') continue;
-
-    // 随机经营事件
-    const successRoll = Math.random() * 100 + (state.attrs.intelligence * 0.2) + (state.attrs.luck * 0.15);
-
-    if (successRoll > 65 && comp.stage !== 'listed') {
-      // 融资或升级
-      if (comp.stage === 'angel') {
-        comp.stage = 'seed';
-        comp.valuation *= 2.5;
-        comp.annualRevenue = Math.round(comp.valuation * 0.15);
-        news.push(`💼 你的公司【${comp.name}】产品走红，获得天使轮追加，估值达 ${comp.valuation} 万元！`);
-      } else if (comp.stage === 'seed') {
-        comp.stage = 'seriesA';
-        comp.valuation *= 3;
-        comp.annualRevenue = Math.round(comp.valuation * 0.12);
-        news.push(`🦄 【${comp.name}】完成 A 轮融资，正式跻身行业知名梯队！`);
-      } else if (comp.stage === 'seriesA' && successRoll > 85) {
-        comp.stage = 'listed';
-        comp.valuation = Math.max(2000, comp.valuation * 5);
-        comp.annualRevenue = Math.round(comp.valuation * 0.1);
-        news.push(`🔔 奇迹达成！【${comp.name}】正式敲钟上市，造就财富神话！`);
-        newTags.push('商业帝国敲钟');
-      }
-    } else if (successRoll < 15 && comp.stage !== 'listed') {
-      // 经营困难
-      news.push(`⚠️ 【${comp.name}】遭遇恶性价格战与同行挤压，当年发生亏损。`);
-      comp.annualRevenue = Math.max(0, Math.floor(comp.annualRevenue * 0.5));
+    if (comp.stage === 'bankrupt') {
+      updatedCompanies.push(comp);
+      continue;
     }
 
-    const dividend = Math.round(comp.annualRevenue * (comp.shareholding / 100));
-    companyDividends += dividend;
+    // 行业差异化属性权重补正
+    let attrScore = 0;
+    if (comp.industry === 'catering') {
+      attrScore = (state.attrs.wealth * 0.15) + (state.attrs.charm * 0.1);
+    } else if (comp.industry === 'media') {
+      attrScore = (state.attrs.charm * 0.25) + (state.attrs.intelligence * 0.12);
+    } else if (comp.industry === 'tech') {
+      attrScore = (state.attrs.intelligence * 0.3) + (state.attrs.luck * 0.12);
+    } else if (comp.industry === 'biotech') {
+      attrScore = (state.attrs.intelligence * 0.35) + (state.attrs.wealth * 0.1);
+    }
+
+    // 市场环境修正
+    let marketBonus = 0;
+    if (sentiment === 'bull') marketBonus = 12;
+    if (sentiment === 'bear') marketBonus = -15;
+
+    // 天赋加成
+    if (state.tags.includes('商业先知')) marketBonus += 20;
+
+    const successRoll = Math.random() * 100 + attrScore + marketBonus;
+
+    // 经营结果判定
+    if (successRoll > 68 && comp.stage !== 'listed') {
+      // 成功获得融资晋升
+      if (comp.stage === 'angel') {
+        comp.stage = 'seed';
+        comp.valuation = Math.round(comp.valuation * 1.8);
+        comp.annualRevenue = Math.round(comp.valuation * 0.08);
+        news.push(`💼 【${comp.name}】产品获得市场热烈反响，完成种子轮融资，估值达 ${comp.valuation} 万元！`);
+      } else if (comp.stage === 'seed') {
+        comp.stage = 'seriesA';
+        comp.valuation = Math.round(comp.valuation * 2.2);
+        comp.annualRevenue = Math.round(comp.valuation * 0.07);
+        news.push(`🦄 【${comp.name}】突破行业重围，斩获 A 轮顶级投资，跻身知名梯队！`);
+      } else if (comp.stage === 'seriesA' && successRoll > 88) {
+        comp.stage = 'listed';
+        comp.valuation = Math.max(2500, Math.round(comp.valuation * 3.0));
+        comp.annualRevenue = Math.round(comp.valuation * 0.06);
+        news.push(`🔔 奇迹达成！【${comp.name}】正式敲钟上市，全场起立欢呼！`);
+        newTags.push('商业帝国敲钟');
+      }
+    } else if (successRoll < 16 && comp.stage !== 'listed') {
+      // 极端危机：触发【破产清算】
+      comp.stage = 'bankrupt';
+      comp.valuation = 0;
+      comp.annualRevenue = 0;
+      news.push(`💥 资本寒冬与恶性价格战！你的企业【${comp.name}】资金链断裂，被迫申请破产清算...`);
+    } else if (successRoll < 32 && comp.stage !== 'listed') {
+      // 一般性经营困难
+      news.push(`⚠️ 【${comp.name}】遭遇同行低价挤压与市场饱和，当年经营亏损，启动裁员降本。`);
+      comp.annualRevenue = Math.max(0, Math.floor(comp.annualRevenue * 0.4));
+      comp.valuation = Math.max(comp.valuation * 0.7, 5);
+    }
+
+    if (comp.stage !== 'bankrupt') {
+      const dividend = Math.round(comp.annualRevenue * (comp.shareholding / 100));
+      companyDividends += dividend;
+    }
     updatedCompanies.push(comp);
   }
   assets.companies = updatedCompanies;
@@ -307,7 +346,7 @@ export function buyRealEstate(
 // 创办新企业
 export function foundCompany(
   assets: PersonalAssets,
-  industryType: 'catering' | 'media' | 'tech',
+  industryType: 'catering' | 'media' | 'tech' | 'biotech',
   companyName: string
 ): { success: boolean; newAssets: PersonalAssets; error?: string } {
   const cfg = INDUSTRY_CATALOG.find((i) => i.industry === industryType);
@@ -324,7 +363,7 @@ export function foundCompany(
     industryName: cfg.industryName,
     level: 1,
     valuation: cfg.cost * 1.5,
-    annualRevenue: Math.round(cfg.cost * 0.2),
+    annualRevenue: Math.max(1, Math.round(cfg.cost * 0.08)),
     shareholding: 100,
     stage: 'angel',
   };

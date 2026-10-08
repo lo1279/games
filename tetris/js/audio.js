@@ -178,31 +178,6 @@ class SoundEngine {
         } catch (e) {}
     }
 
-    /**
-     * 变异方块变身音效（神秘升频滑音）
-     */
-    playMorph() {
-        if (this.muted || !this.ctx) return;
-        this.init();
-
-        try {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(320, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(780, this.ctx.currentTime + 0.12);
-
-            gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
-
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.12);
-        } catch (e) {}
-    }
 
     /**
      * 暂存方块音效

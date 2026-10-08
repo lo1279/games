@@ -11,8 +11,7 @@ import {
     SOFT_DROP_POINTS, 
     HARD_DROP_POINTS, 
     PREVIEW_SIZE, 
-    PREVIEW_BLOCK_SIZE,
-    MORPH_INTERVAL
+    PREVIEW_BLOCK_SIZE
 } from './constants.js';
 
 export class Game {
@@ -168,19 +167,6 @@ export class Game {
         this.board.updateParticles();
 
         if (!this.isClearing) {
-            // 变异变色龙方块在空中动态变换形状
-            if (this.currentPiece && this.currentPiece.isMorphing) {
-                this.currentPiece.morphTimer += deltaTime;
-                if (this.currentPiece.morphTimer >= MORPH_INTERVAL) {
-                    this.currentPiece.morphTimer = 0;
-                    if (this.currentPiece.morph(this.board)) {
-                        this.board.spawnMorphParticles(this.currentPiece);
-                        sound.playMorph();
-                        this.triggerHaptic('medium');
-                    }
-                }
-            }
-
             this.dropCounter += deltaTime;
             const dropInterval = this.getDropInterval();
 
@@ -308,18 +294,16 @@ export class Game {
                     sound.playLevelUp();
                 }
 
-                // 四行连消达成 Tetris! 奖励必定产出神秘变色龙变异方块
-                const rewardMorph = clearedCount === 4;
-                this.spawnNext(rewardMorph);
+                this.spawnNext();
             }, 180);
         } else {
-            this.spawnNext(false);
+            this.spawnNext();
         }
     }
 
-    spawnNext(forceMorph = false) {
+    spawnNext() {
         this.currentPiece = this.nextPiece;
-        this.nextPiece = this.randomizer.next(forceMorph);
+        this.nextPiece = this.randomizer.next();
         this.canHold = true;
 
         if (!this.board.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.shape)) {
@@ -370,8 +354,8 @@ export class Game {
         const offsetX = (ctx.canvas.width - cols * PREVIEW_BLOCK_SIZE) / 2;
         const offsetY = (ctx.canvas.height - rows * PREVIEW_BLOCK_SIZE) / 2;
 
-        const pieceColor = piece.getDisplayColor ? piece.getDisplayColor() : piece.color;
-        const pieceGlow = piece.getDisplayGlow ? piece.getDisplayGlow() : piece.glow;
+        const pieceColor = piece.color;
+        const pieceGlow = piece.glow;
 
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
@@ -381,7 +365,7 @@ export class Game {
 
                     ctx.save();
                     ctx.shadowColor = pieceGlow;
-                    ctx.shadowBlur = piece.isMorphing ? 10 : 6;
+                    ctx.shadowBlur = 6;
                     ctx.fillStyle = pieceColor;
                     ctx.fillRect(px + 1, py + 1, PREVIEW_BLOCK_SIZE - 2, PREVIEW_BLOCK_SIZE - 2);
 
@@ -392,17 +376,6 @@ export class Game {
                     ctx.restore();
                 }
             }
-        }
-
-        // 变异变色龙方块专属发光角标
-        if (piece.isMorphing) {
-            ctx.save();
-            ctx.fillStyle = '#ffee00';
-            ctx.shadowColor = '#ffee00';
-            ctx.shadowBlur = 6;
-            ctx.font = 'bold 9px monospace';
-            ctx.fillText('★MORPH', 4, 11);
-            ctx.restore();
         }
     }
 
