@@ -117,22 +117,26 @@
     
     <!-- 1. 征战天下 (Battle & Campaigns) -->
     <section class="slg-tab-page" id="tabBattle">
-      <div class="battle-subtabs-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-        <div class="battle-subtabs-nav" style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="nav-tab-btn active" id="subTabCampaigns" style="padding:6px 14px; border:1px solid #374151; font-size:13px;">
-            📜 经典战役
+      <div class="battle-subtabs-header">
+        <div class="battle-subtabs-nav" role="tablist" aria-label="征战模式切换">
+          <button class="battle-subtab-btn active" id="subTabCampaigns" type="button">
+            <span class="subtab-icon">📜</span>
+            <span class="subtab-label">经典战役</span>
           </button>
-          <button class="nav-tab-btn" id="subTabTrials" style="padding:6px 14px; border:1px solid #374151; font-size:13px;">
-            🏛️ 演武通天阁
+          <button class="battle-subtab-btn" id="subTabTrials" type="button">
+            <span class="subtab-icon">🏛️</span>
+            <span class="subtab-label">演武通天阁</span>
           </button>
-          <button class="nav-tab-btn" id="subTabSandbox" style="padding:6px 14px; border:1px solid #d97706; font-size:13px; color:#fbbf24; font-weight:bold;">
-            🎯 假想敌演习沙盒
+          <button class="battle-subtab-btn" id="subTabSandbox" type="button">
+            <span class="subtab-icon">🎯</span>
+            <span class="subtab-label">假想敌演习沙盒</span>
+            <span class="subtab-badge">演习</span>
           </button>
         </div>
-        <div class="battle-subtabs-hints" style="font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span style="background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px; font-weight:bold;">📜 战役：真实练级突破</span>
-          <span style="background:rgba(56,189,248,0.15); border:1px solid #0284c7; color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:bold;">🏛️ 演武：满级满兵对决</span>
-          <span style="background:rgba(251,191,36,0.15); border:1px solid #d97706; color:#fbbf24; padding:2px 8px; border-radius:4px; font-weight:bold;">🎯 沙盒：全武将战法演习</span>
+        <div class="battle-subtabs-hints">
+          <span class="battle-hint-tag hint-campaigns">📜 战役：真实练级突破</span>
+          <span class="battle-hint-tag hint-trials">🏛️ 演武：满级满兵对决</span>
+          <span class="battle-hint-tag hint-sandbox">🎯 沙盒：全武将战法演习</span>
         </div>
       </div>
 
@@ -366,6 +370,34 @@
           <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
             <div style="font-size:11px; color:#9ca3af;">🎯 5星保底追踪</div>
             <div style="font-size:18px; font-weight:800; color:#34d399; margin-top:2px;"><span id="gachaPityCount">0</span> <span style="font-size:11px; color:#9ca3af;">/ 30 抽</span></div>
+          </div>
+        </div>
+
+        <!-- ★ 三条保底进度可视化：让"还有几次必出"一眼可见 -->
+        <div class="pity-panel">
+          <div class="pity-row">
+            <span class="pity-name">🌟 五星大保底</span>
+            <div class="pity-bar" id="pityBarFive">
+              <div class="pity-fill"></div>
+            </div>
+            <span class="pity-label">0 / 30</span>
+          </div>
+          <div class="pity-row">
+            <span class="pity-name">💜 四星小保底</span>
+            <div class="pity-bar purple" id="pityBarFour">
+              <div class="pity-fill"></div>
+            </div>
+            <span class="pity-label">0 / 5</span>
+          </div>
+          <div class="pity-row">
+            <span class="pity-name">👑 大核心 7+1</span>
+            <div class="pity-bar core" id="pityBarCore">
+              <div class="pity-fill"></div>
+            </div>
+            <span class="pity-label">0 / 7</span>
+          </div>
+          <div class="pity-hint">
+            连续未出对应星级时，下一抽<b>必定出该星级</b>；大核心连续 7 张普通五星后，第 8 张<b>必出大核心</b>
           </div>
         </div>
 

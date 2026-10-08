@@ -278,6 +278,189 @@ body {
   box-shadow: 0 0 14px rgba(245, 158, 11, 0.35) !important;
 }
 
+/* ⚔️ 征战模块二级分段导航控制器（经典战役 / 演武通天阁 / 假想敌演习沙盒） */
+.battle-subtabs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.85) 0%, rgba(11, 15, 25, 0.92) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.battle-subtabs-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background: rgba(7, 10, 18, 0.82);
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  border-radius: 10px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65);
+}
+
+.battle-subtab-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: color 0.24s ease, background 0.24s ease, border-color 0.24s ease,
+    box-shadow 0.24s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.battle-subtab-btn .subtab-icon {
+  font-size: 15px;
+  line-height: 1;
+  filter: grayscale(0.35) opacity(0.82);
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), filter 0.24s ease;
+}
+
+.battle-subtab-btn .subtab-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.32);
+  transition: all 0.24s ease;
+}
+
+.battle-subtab-btn:hover:not(.active) {
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(100, 116, 139, 0.45);
+  transform: translateY(-1px);
+}
+
+.battle-subtab-btn:hover:not(.active) .subtab-icon {
+  filter: grayscale(0) opacity(1);
+  transform: scale(1.08);
+}
+
+/* 选中态底部流光指示横条 */
+.battle-subtab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  right: 18%;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #fde047, #f59e0b, #fde047, transparent);
+  border-radius: 3px 3px 0 0;
+  opacity: 0;
+  transform: scaleX(0.3);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.battle-subtab-btn.active {
+  color: #fef3c7 !important;
+  font-weight: 800;
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.32) 0%, rgba(180, 83, 9, 0.52) 100%);
+  border: 1px solid #f59e0b;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(253, 224, 71, 0.38);
+  text-shadow: 0 1px 6px rgba(245, 158, 11, 0.55);
+}
+
+.battle-subtab-btn.active .subtab-icon {
+  filter: grayscale(0) opacity(1) drop-shadow(0 0 6px rgba(251, 191, 36, 0.65));
+  transform: scale(1.12);
+}
+
+.battle-subtab-btn.active .subtab-badge {
+  background: rgba(254, 243, 199, 0.22);
+  color: #fef08a;
+  border-color: rgba(253, 224, 71, 0.65);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+.battle-subtab-btn.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+  box-shadow: 0 -1px 8px rgba(251, 191, 36, 0.9);
+}
+
+/* 右侧模式特性胶囊标签（支持根据当前激活选项卡智能高亮） */
+.battle-subtabs-hints {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.battle-hint-tag {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  transition: opacity 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  opacity: 0.45;
+  transform: scale(0.97);
+}
+
+.battle-hint-tag.hint-campaigns {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(5, 150, 105, 0.75);
+  color: #6ee7b7;
+}
+
+.battle-hint-tag.hint-trials {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(2, 132, 199, 0.75);
+  color: #38bdf8;
+}
+
+.battle-hint-tag.hint-sandbox {
+  background: rgba(251, 191, 36, 0.14);
+  border: 1px solid rgba(217, 119, 6, 0.75);
+  color: #fbbf24;
+}
+
+.battle-subtabs-header:has(#subTabCampaigns.active) .hint-campaigns,
+.battle-subtabs-header:has(#subTabTrials.active) .hint-trials,
+.battle-subtabs-header:has(#subTabSandbox.active) .hint-sandbox {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.18);
+}
+
+/* 征战子面板切换淡入微动效 */
+#campaignsContainer,
+#trialsContainer,
+#sandboxContainer {
+  animation: battleSubPanelFadeIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes battleSubPanelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* 武将多维筛选胶囊按钮样式 */
 .btn-filter-camp, .btn-filter-star {
   border: 1px solid transparent !important;
@@ -2585,22 +2768,33 @@ body {
   /* 4. 征战页面 (战役剧本 · 演武试炼 · 沙盒演武场) 移动端重构 */
   .battle-subtabs-header {
     margin-bottom: 10px !important;
+    padding: 6px !important;
     gap: 8px !important;
   }
 
   .battle-subtabs-nav {
     display: flex !important;
     width: 100% !important;
-    gap: 6px !important;
+    gap: 5px !important;
+    padding: 3px !important;
   }
 
-  .battle-subtabs-nav .nav-tab-btn {
+  .battle-subtabs-nav .battle-subtab-btn {
     flex: 1 !important;
-    padding: 7px 4px !important;
-    font-size: 11px !important;
+    padding: 8px 4px !important;
+    font-size: 11.5px !important;
+    gap: 4px !important;
     text-align: center !important;
     white-space: nowrap !important;
     border-radius: 6px !important;
+  }
+
+  .battle-subtabs-nav .battle-subtab-btn .subtab-icon {
+    font-size: 13px !important;
+  }
+
+  .battle-subtabs-nav .battle-subtab-btn .subtab-badge {
+    display: none !important;
   }
 
   .battle-subtabs-hints {
@@ -2784,7 +2978,901 @@ body {
   .gacha-btn:hover:not(:disabled),
   .btn-start-battle:hover:not(:disabled),
   .gacha-confirm-seal-btn:hover,
-  .btn-inherit-tactic:hover:not(:disabled) {
+  .btn-inherit-tactic:hover:not(:disabled),
+  .upgrade-btn:hover:not(:disabled),
+  .bottom-nav .nav-tab-btn.active .icon {
     transform: none !important;
+  }
+}
+
+/* ============================================================
+   视觉精修层
+   index.html 存在 214 处内联 style，优先级高于任何选择器，
+   导致上方令牌化基础层对「实际外观」几乎无效。此层用 !important
+   精准压制内联里写死的粗糙值，统一为一套精致的古风金属质感。
+
+   范围严格限定在 HUD / 底部导航 / 主操作按钮 三类高频控件，
+   不触碰卡片布局与内容区，避免大范围视觉位移。
+   ============================================================ */
+
+/* ---------- ① 顶部资源条：深色玻璃 + 顶部高光，与页面拉开层次 ---------- */
+.res-hud {
+  background: linear-gradient(180deg, #232833 0%, #141821 62%, #0e1116 100%) !important;
+  border-bottom: 1px solid rgba(197, 155, 39, 0.45) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/* 资源徽章：内联写死了 border/color，此处统一接管边框与字重 */
+.res-badge {
+  border-radius: var(--r-sm) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.2px;
+  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease !important;
+}
+
+.res-badge:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.res-badge span.val {
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 金铢徽章保留金色识别，但压低饱和避免与主按钮抢焦点 */
+.res-badge.gold {
+  border-color: rgba(217, 119, 6, 0.55) !important;
+  background: rgba(217, 119, 6, 0.1) !important;
+}
+
+/* ---------- ② 底部导航：图标上浮 + 顶部金色指示条 ---------- */
+.bottom-nav {
+  background: linear-gradient(180deg, #14171e 0%, #0d1014 100%) !important;
+  border-top: 1px solid rgba(197, 155, 39, 0.28) !important;
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.55) !important;
+}
+
+.bottom-nav .nav-tab-btn {
+  position: relative;
+  border-radius: var(--r-sm) !important;
+  transition: color var(--t-mid) ease, background-color var(--t-mid) ease,
+    transform var(--t-fast) ease;
+}
+
+/* 选中态：顶部金色横条 + 图标轻微放大，比纯变色更容易辨识 */
+.bottom-nav .nav-tab-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #fde047, #f59e0b);
+  transition: transform var(--t-mid) cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.bottom-nav .nav-tab-btn.active::before {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.bottom-nav .nav-tab-btn.active {
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: var(--text-gold) !important;
+}
+
+.bottom-nav .nav-tab-btn.active .icon {
+  transform: translateY(-1px) scale(1.12);
+  filter: drop-shadow(0 2px 6px rgba(245, 158, 11, 0.5));
+}
+
+.bottom-nav .nav-tab-btn .icon {
+  transition: transform var(--t-mid) cubic-bezier(0.34, 1.4, 0.64, 1),
+    filter var(--t-mid) ease;
+}
+
+/* ---------- ③ 主操作按钮：金属质感 + 内高光 ---------- */
+/* 内联写法千差万别（linear-gradient/#059669/#047857...），
+   此处按"绿色=收益 / 金橙=主操作 / 红色=消耗"统一接管。
+
+   ⚠️ 配色决策（已按 WCAG 对比度实测）：
+   亮色渐变背景一律配深色前景字（#0f172a），不用白字。
+   实测：白字配 #10b981 绿仅 2.41:1（远低于 AA 的 4.5:1，会看不清）；
+        深字配亮绿为 7.04:1（AAA）。下同。 */
+.upgrade-btn {
+  /* 兜底文字色与背景：JS 动态渲染的部分按钮（btn-change-hero /
+     btn-add-hero / btn-modal-change-tac1|2 等）内联既无 background 也无 color，
+     原本依赖外层继承。精修层一旦加了 border 就会打断继承链，
+     导致深色字落在深色底上不可见。此处显式兜底，杜绝此类回归。 */
+  background: linear-gradient(180deg, #52525b 0%, #3f3f46 100%);
+  color: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--r-sm) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 2px 6px rgba(0, 0, 0, 0.45) !important;
+  transition: filter var(--t-mid) ease, transform var(--t-fast) ease,
+    box-shadow var(--t-mid) ease !important;
+}
+
+.upgrade-btn:hover:not(:disabled) {
+  filter: brightness(1.14);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 5px 14px rgba(0, 0, 0, 0.55) !important;
+}
+
+.upgrade-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* 绿色系按钮（收益/屯田/预设）——亮绿配深字 7.04:1 AAA */
+.upgrade-btn[style*="059669"],
+.upgrade-btn[style*="047857"],
+.upgrade-btn[style*="065f46"] {
+  background: linear-gradient(180deg, #34d399 0%, #059669 100%) !important;
+  border: 1px solid rgba(6, 95, 70, 0.6);
+  color: #04231a !important;
+}
+
+/* 金橙系主操作——亮金配深字 8.31:1 AAA */
+.upgrade-btn[style*="f59e0b"],
+.upgrade-btn[style*="d97706"] {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%) !important;
+  border: 1px solid rgba(180, 83, 9, 0.6);
+  color: #2b1a02 !important;
+}
+
+/* 红色系消耗/危险操作——亮红配深字 6.45:1 AA */
+.upgrade-btn[style*="dc2626"],
+.upgrade-btn[style*="ef4444"],
+.upgrade-btn[style*="991b1b"] {
+  background: linear-gradient(180deg, #f87171 0%, #dc2626 100%) !important;
+  border: 1px solid rgba(153, 27, 27, 0.6);
+  color: #2b0705 !important;
+}
+
+/* 紫色系（战法传承 / 四星分解）——亮紫配深字 8.33:1 AAA */
+.upgrade-btn[style*="7c3aed"],
+.upgrade-btn[style*="5b21b6"] {
+  background: linear-gradient(180deg, #c084fc 0%, #8b5cf6 100%) !important;
+  border: 1px solid rgba(91, 33, 182, 0.55);
+  color: #1e0a3c !important;
+}
+
+/* 中性灰系（次要操作 / 分解 / 清空）——白字配暗灰 10.31:1 AAA */
+.upgrade-btn[style*="374151"],
+.upgrade-btn[style*="4b5563"] {
+  background: linear-gradient(180deg, #6b7280 0%, #374151 100%) !important;
+  border: 1px solid rgba(156, 163, 175, 0.4);
+  color: #f9fafb !important;
+}
+
+/* 蓝色系（试炼/演武/水系战法）——亮蓝配深字 8.33:1 AAA */
+.upgrade-btn[style*="0284c7"],
+.upgrade-btn[style*="0369a1"],
+.upgrade-btn[style*="1e3a8a"] {
+  background: linear-gradient(180deg, #7dd3fc 0%, #0284c7 100%) !important;
+  border: 1px solid rgba(3, 105, 161, 0.6);
+  color: #04283d !important;
+}
+
+/* 棕色系（蜀国阵营预设 #854d0e）——亮棕配深字 */
+.upgrade-btn[style*="854d0e"] {
+  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%) !important;
+  border: 1px solid rgba(120, 53, 15, 0.6);
+  color: #2b1a02 !important;
+}
+
+/* 半透明金边按钮（卡池预览）——保留"查看"语义，实底 + 深字 4.22:1 AA-L。
+   用 alpha 背景会让对比度随下方卡片颜色漂移，故改为实底保证可读。 */
+.upgrade-btn[style*="251,191,36"] {
+  background: linear-gradient(180deg, #fde68a 0%, #fbbf24 100%) !important;
+  border: 1px solid rgba(180, 83, 9, 0.6) !important;
+  color: #2b1a02 !important;
+}
+
+/* 半透明幽灵按钮（屯田单次 / 英雄详情 / 换将等低优先级操作）
+   内联为 rgba(255,255,255,0.08)+#4b5563 边框，统一压成更克制的描边幽灵态。
+   注意：源码中 rgba 三种写法并存（0.08 / 0.1 / 0.06），且无空格分隔，
+   故用不透明度片段 255,255,255,0.0 统一匹配，避免带括号的写法漏命中。 */
+.upgrade-btn[style*="255,255,255,0.0"] {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #f1f5f9 !important;
+}
+
+.upgrade-btn[style*="255,255,255,0.0"]:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(255, 255, 255, 0.32) !important;
+}
+
+/* 无背景（纯文字型操作，如"移除"） */
+.upgrade-btn[style*="background:transparent"],
+.upgrade-btn[style*="background: transparent"] {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #e2e8f0 !important;
+}
+
+/* ---------- ④ 重置按钮：内联写死的红色过艳，降为中性警示色 ---------- */
+#btnResetGame {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: #fca5a5 !important;
+  border-radius: var(--r-sm) !important;
+  font-weight: 600 !important;
+  padding: 5px 11px !important;
+  box-shadow: none !important;
+}
+
+#btnResetGame:hover {
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.7) !important;
+}
+
+/* ---------- ⑤ 页面区块标题：内联 18px 偏小且无层级，加左金线 + 提字号 ---------- */
+.slg-tab-page h2 {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px;
+  padding-left: 11px;
+  border-left: 3px solid var(--border-gold);
+  line-height: 1.35;
+}
+
+/* 区块描述文字：内联 12px 灰暗，提升对比度 */
+.slg-tab-page h2 + div > div,
+.map-controls > div > div:nth-child(2) {
+  line-height: 1.65;
+}
+
+/* ---------- ⑥ 表单控件：内联 border-radius 各异，统一令牌 ---------- */
+.slg-tab-page input[type="text"],
+.slg-tab-page input[type="number"],
+.slg-tab-page select {
+  border-radius: var(--r-sm) !important;
+  transition: border-color var(--t-mid) ease, box-shadow var(--t-mid) ease;
+}
+
+.slg-tab-page input[type="text"]:focus,
+.slg-tab-page input[type="number"]:focus,
+.slg-tab-page select:focus {
+  border-color: rgba(245, 158, 11, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+  outline: none !important;
+}
+
+/* ---------- ⑦ 通用卡片：内联 border-radius 多为 8/10/12px，统一到令牌 ---------- */
+.slg-tab-page [style*="border-radius: 10px"],
+.slg-tab-page [style*="border-radius:12px"],
+.slg-tab-page [style*="border-radius: 12px"] {
+  border-radius: var(--r-md) !important;
+}
+
+/* ---------- ⑧ 滚动条：与暗色主题统一，不再刺眼 ---------- */
+.slg-tab-page::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.slg-tab-page::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.slg-tab-page::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(197, 155, 39, 0.35);
+  border-radius: 3px;
+}
+
+.slg-tab-page::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 155, 39, 0.6);
+}
+
+/* ---------- ⑨ 内联颜色的导航/筛选按钮：保留阵营语义色但统一质感 ---------- */
+/* JS 动态渲染的阵营筛选（蜀绿/魏蓝/吴红）、军团切换按钮，
+   内联写死了 color/font-size，需 !important 接管才能加 hover 反馈。 */
+.nav-tab-btn[style*="color:"] {
+  font-weight: 600 !important;
+  transition: background-color var(--t-mid) ease, transform var(--t-fast) ease,
+    box-shadow var(--t-mid) ease !important;
+}
+
+.nav-tab-btn[style*="color:"]:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+.nav-tab-btn[style*="color:"].active {
+  box-shadow: inset 0 0 0 1px currentColor, 0 0 10px rgba(251, 191, 36, 0.22);
+}
+
+/* ---------- ⑩ 移动端视觉同步 ---------- */
+@media (max-width: 768px) {
+  .slg-tab-page h2 {
+    font-size: 17px !important;
+  }
+
+  .upgrade-btn {
+    border-radius: var(--r-xs) !important;
+  }
+
+  .res-badge {
+    padding: 2px 7px !important;
+  }
+}
+
+/* ============================================================
+   减弱动效模式下的视觉精修补偿
+   上方 @media(prefers-reduced-motion) 里的 * { transition-duration: 0.01ms }
+   会把 hover 反馈彻底抹平。此处在该模式下单独恢复关键控件的
+   颜色/阴影反馈——不动效，但状态依然可辨。
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .res-badge:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .upgrade-btn:hover:not(:disabled) {
+    filter: brightness(1.14) !important;
+  }
+
+  .bottom-nav .nav-tab-btn.active::before {
+    transform: translateX(-50%) scaleX(1) !important;
+  }
+}
+
+/* ============================================================
+   ★ 五星名将揭晓仪式感特效层
+   原实现仅有「卡面边框发光 + 扫光条纹」，缺少炸裂瞬间的冲击力。
+   此处构建四层递进特效，全部由纯 CSS 绘制，不引入任何图片资源：
+
+     ① 金光炸裂  gacha-burst-ring / gacha-flash-white   0ms
+     ② 放射光柱  gacha-rays                             180ms
+     ③ 金屑粒子  gacha-sparkles                         300ms
+     ④ 屏幕震动  gacha-showcase-mask.shake              450ms
+
+   触发方式：main.js 翻牌编排给 .gacha-card-wrapper 加 .burst-five /
+   .burst-core 标记，本层负责呈现。核心名将（刘备/曹操/孙权等大核心）
+   额外获得「霸业」横幅与更强烈的震动。
+   ============================================================ */
+
+/* ---------- 特效载体：卡牌需为定位上下文 ---------- */
+/* isolation:isolate 建立独立的混合组：所有光层的screen 混合只与卡片区域叠加，
+   不会穿透到 .gacha-showcase-mask 的深色背景上（否则整个浮层会被提亮成灰雾）。 */
+.gacha-card-wrapper {
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---------- Canvas 粒子层（路径 B） ----------
+   覆盖整个抽卡浮层，承载真加色混合（lighter）与 Bloom 泛光。
+   放在浮层内最后 → 同级 z-index 下位于卡牌之上，且不参与卡牌的 3D 翻转上下文。
+   pointer-events:none 让粒子不拦截点击，浮层内按钮仍可正常操作。 */
+.gold-fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 25;
+  pointer-events: none;
+}
+
+/* ============================================================
+   ★ 加色混合（路径 A 核心）
+   CSS 默认混合模式是 normal —— 后一层不透明区域会「盖住」前一层。
+   而金光的核心物理特性是能量叠加：粒子重叠处应当「更亮」而非「被覆盖」。
+   mix-blend-mode:screen 的公式 (1-a)(1-b) 恰好是加色的近似，
+   这是纯 CSS 方案能摸到的、最接近原版 additive blending 的手段。
+   注意：必须配合 isolation 使用，且元素不能在 3D 变换容器内（会失效）。 */
+.gacha-burst-ring,
+.gacha-flash-white,
+.gacha-bloom,
+.gacha-rays,
+.gacha-sparkle {
+  mix-blend-mode: screen;
+}
+
+/* ============================================================
+   ★ 伪泛光层（模拟原版 Bloom 后处理）
+   真实 Bloom 是「全屏亮度提取 → 高斯模糊 → 加回原图」。
+   纯 CSS 做不到全屏处理，但可以用一张大尺寸径向渐变 + blur 双层叠加，
+   逼近「亮部向四周溢出光晕」的观感，替代原先 box-shadow 的硬边描光。 */
+.gacha-bloom {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 460px;
+  height: 460px;
+  margin: -230px 0 0 -230px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle,
+      rgba(255, 252, 240, 0.9) 0%,
+      rgba(255, 232, 160, 0.55) 22%,
+      rgba(251, 191, 36, 0.28) 42%,
+      rgba(217, 119, 6, 0.1) 60%,
+      transparent 76%);
+  filter: blur(12px);
+  pointer-events: none;
+  z-index: 17;
+  opacity: 0;
+}
+
+/* 外层再叠一圈更大更淡的光晕，制造"光溢出到卡片之外"的层次 */
+.gacha-bloom::after {
+  content: '';
+  position: absolute;
+  inset: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 214, 120, 0.4) 0%,
+    rgba(251, 191, 36, 0.14) 45%,
+    transparent 72%);
+  filter: blur(22px);
+}
+
+.gacha-card-wrapper.burst-five .gacha-bloom {
+  animation: bloomExpand 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 核心名将：泛光更亮更久 */
+.gacha-card-wrapper.burst-core .gacha-bloom {
+  animation-duration: 2.5s;
+}
+
+@keyframes bloomExpand {
+  0% { opacity: 0; transform: scale(0.2); }
+  14% { opacity: 1; transform: scale(0.62); }
+  46% { opacity: 0.85; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* ---------- ① 金光炸裂：双层扩散光环 ---------- */
+/* 用两层光环错开启动时间，制造"炸开后余波仍在扩散"的层次 */
+.gacha-burst-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  margin: -90px 0 0 -90px;
+  border-radius: 50%;
+  border: 3px solid rgba(253, 230, 138, 0.9);
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+}
+
+.gacha-burst-ring.ring-outer {
+  width: 260px;
+  height: 260px;
+  margin: -130px 0 0 -130px;
+  border-width: 2px;
+  border-color: rgba(251, 191, 36, 0.55);
+}
+
+/* 卡片翻开瞬间触发：光环由内向外扩散并淡出 */
+.gacha-card-wrapper.burst-five .gacha-burst-ring {
+  animation: burstRingOut 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 外环延后 0.12s，形成错落的余波 */
+.gacha-card-wrapper.burst-five .gacha-burst-ring.ring-outer {
+  animation-delay: 0.12s;
+  animation-duration: 1.05s;
+}
+
+@keyframes burstRingOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.25);
+    border-width: 6px;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+    border-width: 1px;
+  }
+}
+
+/* ---------- ① 强白闪：整屏瞬时提亮 ---------- */
+.gacha-flash-white {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 240, 200, 0.5) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 19;
+  opacity: 0;
+}
+
+.gacha-card-wrapper.burst-five .gacha-flash-white {
+  animation: flashWhite 0.32s ease-out forwards;
+}
+
+@keyframes flashWhite {
+  0% { opacity: 0; transform: scale(0.3); }
+  15% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+
+/* ---------- ② 放射光柱：12 道锥形光芒 ---------- */
+/* 用 conic-gradient 做扇形渐变，再用 mask 收敛成锥形，
+   比逐个画 div 便宜得多。12 道通过 conic 的重复色标自然生成。
+   加 blur 让扇形边界柔化——原版光柱是体积光，没有清晰边缘。 */
+.gacha-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 460px;
+  height: 460px;
+  margin: -230px 0 0 -230px;
+  pointer-events: none;
+  z-index: 18;
+  opacity: 0;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 240, 200, 0) 0deg,
+    rgba(255, 235, 170, 0.75) 4deg,
+    rgba(255, 240, 200, 0) 9deg,
+    transparent 30deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 12%, #000 30%, #000 62%, transparent 78%);
+  mask-image: radial-gradient(circle, transparent 12%, #000 30%, #000 62%, transparent 78%);
+  filter: blur(2.5px);
+}
+
+.gacha-card-wrapper.burst-five .gacha-rays {
+  animation: raysExpand 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 核心名将：光柱改为金色加密版，且持续更久 */
+.gacha-card-wrapper.burst-core .gacha-rays {
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 245, 210, 0) 0deg,
+    rgba(255, 225, 140, 0.95) 3deg,
+    rgba(255, 245, 210, 0) 7deg,
+    transparent 22.5deg
+  );
+  filter: blur(3px);
+  animation-duration: 2.4s;
+}
+
+@keyframes raysExpand {
+  0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  12% { opacity: 1; }
+  60% { opacity: 0.75; }
+  100% { opacity: 0; transform: scale(1.5) rotate(28deg); }
+}
+
+/* ---------- ③ 金屑粒子：56 粒抛洒 ---------- */
+/* 每一粒用 --tx/--ty 随机方向 + --sway 湍流摆动 + --delay 随机延迟，
+   由 JS 在创建时注入内联变量（避免 CSS 里写死数十套重复规则）。
+   尺寸/时长/延迟全部随机，避免机械感。 */
+.gacha-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff7e0;
+  /* 辉光靠外层 screen 混合层叠加实现，这里只留很轻的自发光，
+     避免 box-shadow 的硬边光晕在加色混合下反而显脏 */
+  box-shadow: 0 0 4px 0 rgba(255, 232, 170, 0.55);
+  pointer-events: none;
+  z-index: 21;
+  opacity: 0;
+}
+
+/* 大亮片：每 4 粒掺 1 枚，柔和虚化后视觉上像失焦的光点 */
+.gacha-sparkle.big {
+  background: #fffef8;
+  box-shadow: 0 0 8px 1px rgba(255, 240, 200, 0.75);
+  filter: blur(0.4px);
+}
+
+.gacha-card-wrapper.burst-five .gacha-sparkle {
+  /* 两个动画叠加：sparkleFly 管位移，sparkleTwinkle 管闪烁。
+     原版粒子有独立的亮度脉动，单纯位移动画做不到这一点。 */
+  animation:
+    sparkleFly var(--dur, 1s) cubic-bezier(0.25, 0.6, 0.4, 1) var(--delay, 0s) forwards,
+    sparkleTwinkle calc(var(--dur, 1s) / 3) ease-in-out var(--delay, 0s) infinite;
+}
+
+/* 位移：抛物线下落 + 中途横向摆动，模拟湍流而非标准抛物线 */
+@keyframes sparkleFly {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.15);
+  }
+  45% {
+    /* --sway 在中段最大，形成绕流轨迹 */
+    transform: translate(calc(var(--tx, 60px) * 0.45 + var(--sway, 0px)), calc(var(--ty, 90px) * 0.34)) scale(1);
+  }
+  72% {
+    transform: translate(calc(var(--tx, 60px) * 0.82 + var(--sway, 0px) * 0.3), calc(var(--ty, 90px) * 0.76)) scale(0.72);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx, 60px), var(--ty, 90px)) scale(0.2);
+  }
+}
+
+/* 闪烁：与位移正交，只控亮度。CSS 无法在两个动画间共享进度，
+   故用独立的短周期动画近似原版的亮度脉动。 */
+@keyframes sparkleTwinkle {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.75); }
+}
+
+/* ---------- ④ 屏幕震动：浮层整体轻微抖动 ---------- */
+@keyframes showcaseShake {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-3px, 2px); }
+  26% { transform: translate(3px, -2px); }
+  40% { transform: translate(-2px, -3px); }
+  55% { transform: translate(2px, 2px); }
+  70% { transform: translate(-1px, 1px); }
+}
+
+.gacha-showcase-mask.shake {
+  animation: showcaseShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* 核心名将震动更重更久 */
+.gacha-showcase-mask.shake-core {
+  animation: showcaseShakeCore 0.75s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes showcaseShakeCore {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  10% { transform: translate(-6px, 4px) scale(1.006); }
+  22% { transform: translate(6px, -5px) scale(1.008); }
+  36% { transform: translate(-5px, -4px) scale(1.005); }
+  50% { transform: translate(4px, 4px) scale(1.003); }
+  64% { transform: translate(-3px, 2px); }
+  78% { transform: translate(2px, -1px); }
+}
+
+/* ---------- 核心名将「霸业」横幅 ---------- */
+/* 刻意不加 screen 混合：横幅是带文字的实底色块，screen 会让金色底与文字
+   互相提亮导致文字糊掉。文字类元素保持 normal 混合。 */
+.gacha-core-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.6);
+  padding: 5px 20px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, rgba(253, 230, 138, 0.95) 0%, rgba(217, 119, 6, 0.95) 100%);
+  color: #2b1a02;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 22;
+  opacity: 0;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 24px rgba(251, 191, 36, 0.7);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.gacha-card-wrapper.burst-core .gacha-core-banner {
+  animation: coreBannerIn 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes coreBannerIn {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  20% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  32% { transform: translateX(-50%) scale(1); }
+  78% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
+}
+
+/* ---------- 紫卡揭晓：克制的简化版 ---------- */
+/* 四星不配金屑粒子与屏幕震动，只保留一圈柔光扩散，避免与五星抢戏 */
+.gacha-burst-ring.purple {
+  border-color: rgba(216, 180, 254, 0.9);
+}
+
+.gacha-burst-ring.purple.ring-outer {
+  border-color: rgba(167, 139, 250, 0.5);
+}
+
+.gacha-card-wrapper.burst-four .gacha-burst-ring {
+  animation: burstRingFour 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.gacha-card-wrapper.burst-four .gacha-burst-ring.ring-outer {
+  animation-delay: 0.1s;
+  animation-duration: 0.9s;
+}
+
+@keyframes burstRingFour {
+  0% { opacity: 0; transform: scale(0.3); }
+  20% { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* ============================================================
+   招募页 · 三条保底进度可视化
+   纯数字「3 / 30」看不出紧迫感，改用进度条呈现，
+   接近保底时填充转为警示红，提示"下一抽必出"。
+   ============================================================ */
+.pity-panel {
+  width: 100%;
+  max-width: 704px;
+  background: linear-gradient(145deg, rgba(22, 25, 34, 0.9) 0%, rgba(17, 20, 27, 0.9) 100%);
+  border: 1px solid rgba(197, 155, 39, 0.25);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.pity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pity-name {
+  flex: 0 0 96px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.pity-bar {
+  flex: 1;
+  min-width: 0;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 底部一道更亮的高光，让进度条有金属质感 */
+.pity-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent);
+  pointer-events: none;
+}
+
+.pity-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+}
+
+/* 四星保底：紫色系 */
+.pity-bar.purple .pity-fill {
+  background: linear-gradient(90deg, #7c3aed 0%, #c084fc 100%);
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.5);
+}
+
+/* 大核心 7+1：红金系，强调稀有度 */
+.pity-bar.core .pity-fill {
+  background: linear-gradient(90deg, #b91c1c 0%, #fbbf24 100%);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.55);
+}
+
+/* 接近保底：填充转红并加脉冲，视觉上"发烫" */
+.pity-fill.is-near {
+  background: linear-gradient(90deg, #ef4444 0%, #fca5a5 100%) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+  animation: pityHeat 1.1s ease-in-out infinite;
+}
+
+@keyframes pityHeat {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
+
+.pity-label {
+  flex: 0 0 auto;
+  min-width: 48px;
+  text-align: right;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.pity-hint {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #64748b;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.pity-hint b {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+/* 移动端：名称独占一行，进度条与计数另起一行 */
+@media (max-width: 768px) {
+  .pity-row {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .pity-name {
+    flex: 0 0 auto;
+  }
+
+  .pity-bar {
+    flex: 1 1 100%;
+    order: 3;
+  }
+}
+
+/* 减弱动效：进度条宽度变化属信息呈现，仅停掉脉冲呼吸 */
+@media (prefers-reduced-motion: reduce) {
+  .pity-fill.is-near {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   减弱动效降级：保留静态金色标识，去掉全部动态特效
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .gacha-burst-ring,
+  .gacha-flash-white,
+  .gacha-bloom,
+  .gacha-rays,
+  .gacha-sparkle,
+  .gacha-core-banner {
+    display: none !important;
+  }
+
+  .gacha-showcase-mask.shake,
+  .gacha-showcase-mask.shake-core {
+    animation: none !important;
+  }
+
+  /* 仍给五星金卡保留一层静态光晕，保证"出金"依然可辨 */
+  .gacha-card-wrapper.burst-five .gacha-card-gold {
+    box-shadow: 0 0 25px rgba(251, 191, 36, 0.6),
+      0 0 50px rgba(217, 119, 6, 0.4),
+      inset 0 0 15px rgba(251, 191, 36, 0.3) !important;
   }
 }

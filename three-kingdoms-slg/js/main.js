@@ -8,6 +8,7 @@ import { CAMPAIGNS_DATA, TRIALS_DATA } from './data/campaigns.js';
 import { simulateBattle } from './engine/battle.js';
 import { GACHA_CONFIG, pullGeneral, CORE_FIVE_STAR_IDS } from './engine/gacha.js';
 import { sound } from './engine/audio.js';
+import { goldFX } from './engine/goldfx.js';
 import { loadGameState, saveGameState, resetGameState } from './engine/storage.js';
 import { MAP_CONFIG, LAND_TIERS, RESOURCE_TYPES, isTileAdjacentToPlayer, calculateMarchMorale, createLandGuardTroop } from './engine/map.js';
 import { BUILDINGS_CONFIG, hasEnoughResources, deductResources } from './engine/city.js';
@@ -183,6 +184,9 @@ class GameApp {
     // 确认并关闭抽卡开箱（支持底部大按钮与右上角快捷关闭按钮）
     const closeGachaShowcase = () => {
       this.gachaShowcase.style.display = 'none';
+      // 必须卸载粒子画布：其 RAF 循环会一直跑到页面结束，
+      // 空转的 requestAnimationFrame 在移动端是实打实的耗电与发热源
+      goldFX.unmount();
       this.renderGenerals();
       this.renderTroops();
       this.renderHUD();
@@ -449,6 +453,26 @@ class GameApp {
     this.domRes.trialFloor.textContent = `第 ${this.state.trialFloor || 1} 层`;
     this.domRes.ownedCount.textContent = this.state.ownedGenerals.length;
     this.gachaPityCount.textContent = this.state.gachaPity || 0;
+
+    // ★ 招募保底进度可视化（三条）
+    // 五星大保底30 抽、四星小保底 5 抽、大核心"7+1"暗保底 7 抽。
+    // 玩家最关心的就是"还有几次必出"，用进度条比纯数字直观得多。
+    const renderPity = (barId, cur, max, dangerAt) => {
+      const bar = document.getElementById(barId);
+      if (!bar) return;
+      const pct = Math.min(100, ((cur || 0) / max) * 100);
+      const fill = bar.querySelector('.pity-fill');
+      const label = bar.querySelector('.pity-label');
+      if (fill) {
+        fill.style.width = pct + '%';
+        // 接近保底时填充转为警示红，提示"下次必出"
+        fill.classList.toggle('is-near', cur >= dangerAt);
+      }
+      if (label) label.textContent = `${cur || 0} / ${max}`;
+    };
+    renderPity('pityBarFive', this.state.gachaPity || 0, 30, 24);
+    renderPity('pityBarFour', this.state.gachaFourPity || 0, 5, 3);
+    renderPity('pityBarCore', this.state.gachaCorePity || 0, 7, 5);
 
     // 招募统计数据刷新
     const elTotal = document.getElementById('gachaTotalCount');
@@ -3671,7 +3695,9 @@ class GameApp {
 
     // 弹出开箱展示，先展示神秘虎符卡背，支持手动点击翻牌或按序自动翻开
     this.gachaCardsContainer.innerHTML = '';
-    
+    // 重抽时先清掉上一轮残留粒子，否则新旧爆发会叠加在同一帧
+    goldFX.clear();
+
     // 跟踪已翻牌状态
     const cardElements = [];
 
@@ -3689,6 +3715,48 @@ class GameApp {
       const starStr = isFive ? '★★★★★' : (isFour ? '★★★★' : '★★★');
       const starClass = isFive ? 'color:#fbbf24; text-shadow:0 0 8px rgba(251,191,36,0.8);' : (isFour ? 'color:#c084fc; text-shadow:0 0 6px rgba(192,132,252,0.6);' : 'color:#9ca3af;');
 
+      // ★ 仪式感特效元素：仅 4/5 星卡牌才注入，3 星卡保持朴素
+      // 金屑粒子由 JS 生成随机方向/延迟/摆动量，避免在 CSS 里写死数十套重复规则
+      const SPARKLE_COUNT = 56;
+      let sparkleHtml = '';
+      if (isFive) {
+        const bits = [];
+        for (let i = 0; i < SPARKLE_COUNT; i++) {
+          // 角度均分 + 随机抖动，让迸射呈圆锥形而非杂乱
+          const angle = (i / SPARKLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+          const dist = 70 + Math.random() * 130;
+          const tx = Math.cos(angle) * dist;
+          // 上抛后再下坠：ty 取正值并叠加一点随机，制造抛物线
+          const ty = Math.abs(Math.sin(angle)) * dist * 0.55 + dist * 0.42 + Math.random() * 30;
+          const delay = (Math.random() * 0.3).toFixed(3);
+          const dur = (0.9 + Math.random() * 0.7).toFixed(2);
+          // 每 4 粒掺 1 枚大亮片，制造大中小三级层次（原版粒子系统同样分档）
+          const isBig = i % 4 === 0;
+          const size = isBig ? 5 + Math.random() * 4 : 2 + Math.random() * 2.2;
+          // 横向摆动量：模拟湍流，让轨迹不是完美抛物线（纯 CSS 逼近粒子物理的关键近似）
+          const sway = (Math.random() - 0.5) * 46;
+          bits.push(
+            `<div class="gacha-sparkle${isBig ? ' big' : ''}" style="--tx:${tx.toFixed(1)}px;--ty:${ty.toFixed(1)}px;--sway:${sway.toFixed(1)}px;--delay:${delay}s;--dur:${dur}s;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;"></div>`
+          );
+        }
+        sparkleHtml = bits.join('');
+      }
+
+      // 光环 + 白闪 + 泛光 + 光柱 + 霸业横幅（核心名将专属）
+      // .gacha-bloom 为新增泛光层：中心白热→金→透明的大径向渐变，
+      // 配合 screen 混合让亮部向四周"溢出"，逼近原版 bloom 后处理的观感
+      const fxHtml = (isFive || isFour) ? `
+        <div class="gacha-burst-ring${isFour ? ' purple' : ''}"></div>
+        <div class="gacha-burst-ring ring-outer${isFour ? ' purple' : ''}"></div>
+        ${isFive ? '<div class="gacha-flash-white"></div><div class="gacha-bloom"></div><div class="gacha-rays"></div>' + sparkleHtml : ''}
+        ${isFive && isCore ? '<div class="gacha-core-banner">霸 业 名 将</div>' : ''}
+      ` : '';
+
+      // 【关键结构】特效层必须挂在 .gacha-card-wrapper 上，不能放进 .gacha-card-inner。
+      // inner 是 transform-style:preserve-3d 的 3D 翻转容器，在 3D 变换上下文中
+      // 图层会被强制展平，导致 mix-blend-mode（加色混合）失效；
+      // 且横幅等带文字元素会被 rotateY(180°) 翻转成镜像。
+      // wrapper 有 perspective 但自身不参与翻转，且已设 isolation:isolate，是安全的混合上下文。
       wrapper.innerHTML = `
         <div class="gacha-card-inner">
           <!-- 🎴 背面：神秘古风虎符卡背 -->
@@ -3710,6 +3778,7 @@ class GameApp {
             <div class="stars-row" style="${starClass} font-size:14px; letter-spacing:2px; margin-bottom:4px;">${starStr}</div>
           </div>
         </div>
+        ${fxHtml}
       `;
 
       // 翻开单张卡牌逻辑
@@ -3722,24 +3791,74 @@ class GameApp {
         wrapper.classList.add('flipped');
         sound.playCardFlip();
 
-        // 翻到半途（300ms）触发金光/紫光音效与环境光增强
-        setTimeout(() => {
-          if (isFive) {
-            sound.playGachaGold();
-            this.gachaShowcase.classList.add('has-gold');
-            if (this.gachaShowcaseTitle) {
-              this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
-              this.gachaShowcaseTitle.innerHTML = '🌟 华光万道 · 恭迎五星名将！';
-            }
-          } else if (isFour && !this.gachaShowcase.classList.contains('has-gold')) {
-            sound.playGachaPurple();
-            this.gachaShowcase.classList.add('has-purple');
-            if (this.gachaShowcaseTitle && !this.gachaShowcaseTitle.classList.contains('gold')) {
-              this.gachaShowcaseTitle.className = 'gacha-title-banner purple';
-              this.gachaShowcaseTitle.innerHTML = '💜 紫气东来 · 恭获四星良将！';
-            }
+        // ★ 四阶段仪式编排：按时间轴分层触发，形成"炸裂 → 光芒 → 金屑 → 震动"的递进
+        // 3 星卡不参与仪式，仅翻牌音效
+        if (isFive) {
+          // ① 0ms 金光炸裂：扩散光环 + 强白闪 + 上行琶音
+          wrapper.classList.add('burst-five');
+          if (isCore) wrapper.classList.add('burst-core');
+          sound.playGoldBurst(isCore);
+
+          // ①' Canvas 粒子爆发（路径 B）。坐标必须取卡牌在视口中的实际中心，
+          // 因为画布覆盖整个 fixed 浮层，与卡牌容器无定位关系。
+          // rAF 推迟一帧等翻转 transform 生效，否则读到的是翻牌前的旧位置。
+          requestAnimationFrame(() => {
+            const rect = wrapper.getBoundingClientRect();
+            if (!rect.width) return;
+            goldFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, { isCore });
+          });
+
+          // 环境光与标题在炸裂瞬间同步点亮
+          this.gachaShowcase.classList.add('has-gold');
+          if (this.gachaShowcaseTitle) {
+            this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
+            this.gachaShowcaseTitle.innerHTML = isCore
+              ? '👑 霸业既开 · 天命大核心名将降世！'
+              : '🌟 华光万道 · 恭迎五星名将！';
           }
-        }, 280);
+
+          // ② 180ms 放射光柱：铜锣一记承接炸裂；同步补一圈低重力外扩余波
+          setTimeout(() => {
+            if (!wrapper.classList.contains('flipped')) return;
+            sound.playGoldRay();
+            const rect = wrapper.getBoundingClientRect();
+            if (rect.width) {
+              goldFX.shockwave(rect.left + rect.width / 2, rect.top + rect.height / 2, { isCore });
+            }
+          }, 180);
+
+          // ③ 300ms 金屑迸射：细碎高频闪烁
+          setTimeout(() => {
+            if (wrapper.classList.contains('flipped')) sound.playGoldSparkle();
+          }, 300);
+
+          // ④ 450ms 屏幕震动 + 低频冲击（核心名将震得更重）
+          setTimeout(() => {
+            if (!wrapper.classList.contains('flipped')) return;
+            sound.playScreenImpact(isCore);
+            this.gachaShowcase.classList.add(isCore ? 'shake-core' : 'shake');
+            // 抖完移除，避免残留 class 影响下次揭晓
+            setTimeout(() => {
+              this.gachaShowcase.classList.remove('shake', 'shake-core');
+            }, isCore ? 780 : 520);
+          }, 450);
+
+        } else if (isFour) {
+          // 紫卡：仅一圈柔光扩散 + 柔和琴音，无粒子与震动
+          wrapper.classList.add('burst-four');
+          setTimeout(() => {
+            if (!wrapper.classList.contains('flipped')) return;
+            sound.playPurpleBurst();
+            // 已有金卡在场时不覆盖金光氛围，避免紫光抢金卡风头
+            if (!this.gachaShowcase.classList.contains('has-gold')) {
+              this.gachaShowcase.classList.add('has-purple');
+              if (this.gachaShowcaseTitle && !this.gachaShowcaseTitle.classList.contains('gold')) {
+                this.gachaShowcaseTitle.className = 'gacha-title-banner purple';
+                this.gachaShowcaseTitle.innerHTML = '💜 紫气东来 · 恭获四星良将！';
+              }
+            }
+          }, 280);
+        }
       };
 
       // 绑定手动点击翻开
@@ -3750,12 +3869,20 @@ class GameApp {
     });
 
     this.gachaShowcase.style.display = 'flex';
+    // 画布必须在浮层 display 设为 flex 之后挂载，
+    // 否则 getBoundingClientRect() 全返回 0，画布尺寸会是 1x1
+    goldFX.mount(this.gachaShowcase);
 
-    // 优雅体验：入场完成后，如果主公未点击，依次按序自动掀起翻开（带来丝滑连环揭晓仪式）
-    cardElements.forEach((doFlip, i) => {
-      setTimeout(() => {
-        doFlip();
-      }, 550 + i * 280);
+    // 优雅体验：入场完成后，如果主公未点击，依次按序自动掀起翻开。
+    // ★ 出五星的卡牌多留 900ms 间隔，让炸裂/光柱/金屑/震动四层特效完整演完；
+    //   否则连翻时后一张会立刻盖住前一张的特效，五星仪式感就白做了。
+    let autoDelay = 550;
+    pulledCards.forEach((c, i) => {
+      const doFlip = cardElements[i];
+      if (!doFlip) return;
+      const isFive = (c.star >= 5);
+      setTimeout(() => doFlip(), autoDelay);
+      autoDelay += isFive ? 1150 : 320;
     });
   }
 
