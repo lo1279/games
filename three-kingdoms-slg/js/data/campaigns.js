@@ -65,8 +65,8 @@ export const CAMPAIGNS_DATA = [
         maxSoldiers: 2200,
         aptitude: { cavalry: 'S', shield: 'A', bow: 'B', spear: 'A', siege: 'B' },
         builtInTacticId: 'tac_bai_mei',
-        equippedTactic1: 'tac_zi_yu',
-        equippedTactic2: 'tac_fen_fa'
+        equippedTactic1: 'tac_luo_feng',
+        equippedTactic2: 'tac_bi_shi_ji_xu'
       }
     ]
   },
@@ -200,7 +200,7 @@ export const CAMPAIGNS_DATA = [
         aptitude: { cavalry: 'B', shield: 'A', bow: 'S', spear: 'A', siege: 'B' },
         builtInTacticId: 'tac_wang_ling_feng_fa',
         equippedTactic1: 'tac_fen_fa',
-        equippedTactic2: 'tac_yu_di_ping_zhang'
+        equippedTactic2: 'tac_liao_shi_ru_shen'
       }
     ]
   },
@@ -267,7 +267,7 @@ export const CAMPAIGNS_DATA = [
         aptitude: { cavalry: 'A', shield: 'S', bow: 'A', spear: 'S', siege: 'S' },
         builtInTacticId: 'tac_ying_shi_lang_gu',
         equippedTactic1: 'tac_yong_wu_tong_shen',
-        equippedTactic2: 'tac_yu_di_ping_zhang'
+        equippedTactic2: 'tac_ji_lue_zong_heng'
       }
     ]
   },
@@ -316,7 +316,7 @@ export const CAMPAIGNS_DATA = [
         aptitude: { cavalry: 'B', shield: 'B', bow: 'S', spear: 'A', siege: 'A' },
         builtInTacticId: 'tac_shen_huo_ji',
         equippedTactic1: 'tac_ba_men_jin_suo',
-        equippedTactic2: 'tac_feng_zhu_huo_shi'
+        equippedTactic2: 'tac_she_zhan_qun_ru'
       },
       {
         id: 'gen_tai_shi_ci',
@@ -418,7 +418,7 @@ export const TRIALS_DATA = [
     heroes: [
       { id: 'gen_zhang_bao', name: '张宝', star: 4, camp: 'qun', avatar: '🌩️', level: 50, force: 68, intel: 82, command: 75, speed: 55, builtInTacticId: 'tac_yao_shu', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_yu_di_ping_zhang' },
       { id: 'gen_guan_ping', name: '关平', star: 4, camp: 'shu', avatar: '🗡️', level: 50, force: 82, intel: 65, command: 80, speed: 60, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zuo_you_kai_gong' },
-      { id: 'gen_bian_xi', name: '卞喜', star: 3, camp: 'qun', avatar: '🔨', level: 50, force: 73, intel: 44, command: 66, speed: 51, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zi_yu' }
+      { id: 'gen_bian_xi', name: '卞喜', star: 3, camp: 'qun', avatar: '🔨', level: 50, force: 73, intel: 44, command: 66, speed: 51, builtInTacticId: 'tac_an_cang_xian_ji', equippedTactic1: 'tac_qiang_gong', equippedTactic2: 'tac_luo_feng' }
     ]
   },
   {
@@ -429,9 +429,9 @@ export const TRIALS_DATA = [
     difficulty: '简单',
     hint: '敌军为坚盾阵型，带御敌屏障减伤，换骑兵出阵克制。',
     heroes: [
-      { name: '郭淮', star: 4, camp: 'wei', avatar: '🧱', level: 50, force: 75, intel: 75, command: 85, speed: 45, builtInTacticId: 'tac_yu_di_ping_zhang', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_fen_fa' },
-      { name: '韩当', star: 4, camp: 'wu', avatar: '🎯', level: 50, force: 80, intel: 55, command: 75, speed: 60, builtInTacticId: 'tac_zuo_you_kai_gong', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_fen_fa' },
-      { name: '典韦', star: 5, camp: 'wei', avatar: '🛡️', level: 50, force: 95, intel: 35, command: 90, speed: 60, builtInTacticId: 'tac_yi_li_ju_shou', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_yu_di_ping_zhang' }
+      { name: '郭淮', star: 4, camp: 'wei', avatar: '🧱', level: 50, force: 75, intel: 75, command: 85, speed: 45, builtInTacticId: 'tac_yu_di_ping_zhang', equippedTactic1: 'tac_zi_yu', equippedTactic2: 'tac_bai_lian_cheng_gang' },
+      { name: '韩当', star: 4, camp: 'wu', avatar: '🎯', level: 50, force: 80, intel: 55, command: 75, speed: 60, builtInTacticId: 'tac_zuo_you_kai_gong', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_qiang_gong' },
+      { name: '典韦', star: 5, camp: 'wei', avatar: '🛡️', level: 50, force: 95, intel: 35, command: 90, speed: 60, builtInTacticId: 'tac_yi_li_ju_shou', equippedTactic1: 'tac_qing_yong_fei_yan', equippedTactic2: 'tac_jue_di_fan_ji' }
     ]
   },
   {
@@ -443,8 +443,8 @@ export const TRIALS_DATA = [
     hint: '张飞第2、4回合全体暴击，注意前排统率防御。',
     heroes: [
       { name: '张飞', star: 5, camp: 'shu', avatar: '🐅', level: 50, force: 98, intel: 35, command: 94, speed: 85, builtInTacticId: 'tac_yan_ren_pao_xiao', equippedTactic1: 'tac_suo_xiang_pi_mi', equippedTactic2: 'tac_chen_mu_heng_mao' },
-      { name: '关平', star: 4, camp: 'shu', avatar: '🗡️', level: 50, force: 82, intel: 65, command: 80, speed: 60, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zi_yu' },
-      { name: '廖化', star: 4, camp: 'shu', avatar: '🛡️', level: 50, force: 76, intel: 65, command: 82, speed: 52, builtInTacticId: 'tac_zi_yu', equippedTactic1: 'tac_yu_di_ping_zhang', equippedTactic2: 'tac_fen_fa' }
+      { name: '关平', star: 4, camp: 'shu', avatar: '🗡️', level: 50, force: 82, intel: 65, command: 80, speed: 60, builtInTacticId: 'tac_fen_fa', equippedTactic1: 'tac_shou_qi_dao_luo', equippedTactic2: 'tac_zuo_you_kai_gong' },
+      { name: '廖化', star: 4, camp: 'shu', avatar: '🛡️', level: 50, force: 76, intel: 65, command: 82, speed: 52, builtInTacticId: 'tac_zi_yu', equippedTactic1: 'tac_yu_di_ping_zhang', equippedTactic2: 'tac_bai_lian_cheng_gang' }
     ]
   },
   {

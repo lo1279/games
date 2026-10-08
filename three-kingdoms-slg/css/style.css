@@ -149,6 +149,38 @@ body {
   font-weight: bold;
 }
 
+/* 🎴/📚 武将模块二级导航选项卡（名将 / 战法） */
+.sub-nav-tab-btn {
+  font-weight: bold;
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid #374151;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  outline: none;
+}
+
+.sub-nav-tab-btn:hover {
+  color: #e5e7eb;
+  border-color: #4b5563;
+  background: rgba(31, 41, 55, 0.85);
+}
+
+.sub-nav-tab-btn.active {
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.3) 0%, rgba(180, 83, 9, 0.2) 100%) !important;
+  border: 1px solid #f59e0b !important;
+  color: #fbbf24 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35) !important;
+}
+
 /* 武将多维筛选胶囊按钮样式 */
 .btn-filter-camp, .btn-filter-star {
   border: 1px solid transparent !important;

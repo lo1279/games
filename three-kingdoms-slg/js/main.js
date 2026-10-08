@@ -1813,13 +1813,14 @@ class GameApp {
     const reqExp = getExpRequiredForLevel(hLvl);
     const expPct = reqExp > 0 ? Math.min(100, Math.round((hExp / reqExp) * 100)) : 100;
     const redStars = realHero.redStars || 0;
+    const maxRedStars = realHero.star || 5;
+    const isFullRed = (redStars >= maxRedStars);
 
-    // 星级渲染
+    // 星级渲染 (4星限4红、5星限5红，原版纯净星标)
     let starsHtml = '';
     for (let s = 1; s <= realHero.star; s++) {
       starsHtml += (s <= redStars) ? `<span class="star-red">★</span>` : `<span class="star-gold">★</span>`;
     }
-    if (redStars > 0) starsHtml += ` <span style="font-size:11px; color:#ef4444; font-weight:bold;">(+${redStars}红)</span>`;
 
     // 模态弹窗构建
     const modal = document.createElement('div');
@@ -1998,7 +1999,7 @@ class GameApp {
                       <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor2}; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
                         <div style="flex:1; min-width:0;">
                           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                            <span style="color:#60a5fa; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法②]</span>
+                            <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法②]</span>
                             ${tac2 ? `
                               <span style="color:${color2}; font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac2.name}</span>
                               <span style="font-size:10px; color:${color2}; background:${isS2 ? 'rgba(251,191,36,0.15)' : 'rgba(192,132,252,0.15)'}; border:1px solid ${isS2 ? '#d97706' : '#9333ea'}; padding:0 4px; border-radius:3px;">
@@ -2012,7 +2013,7 @@ class GameApp {
                           <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac2 ? (tac2.desc.length > 38 ? tac2.desc.substring(0, 38) + '...' : tac2.desc) : '点击右侧按钮装配第二战法'}</div>
                         </div>
                         ${isOwned ? `
-                          <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; background:#2563eb; white-space:nowrap; flex-shrink:0;">换配</button>
+                          <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; white-space:nowrap; flex-shrink:0;">换配</button>
                         ` : `
                           <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
                         `}
@@ -2317,11 +2318,95 @@ class GameApp {
     const campFilter = this.generalFilter?.camp || 'all';
     const starFilter = this.generalFilter?.star || 'all';
 
+    // 建立部队上阵排位权重映射 (军团顺位与主副将槽位)
+    const troopOrderMap = new Map();
+    (this.state.troops || []).forEach((t, tIdx) => {
+      (t.heroes || []).forEach((h, hIdx) => {
+        if (h && h.id) {
+          troopOrderMap.set(h.id, tIdx * 10 + hIdx);
+        }
+      });
+    });
+    const currentTroopHeroIds = new Set(troopOrderMap.keys());
+
     // 联合筛选过滤
     const list = (this.state.ownedGenerals || []).filter(g => {
       if (campFilter !== 'all' && g.camp !== campFilter) return false;
       if (starFilter !== 'all' && g.star !== starFilter) return false;
       return true;
+    });
+
+    // 建立同名武将分组元数据映射 (用于同名卡相邻聚合与组间权重对比)
+    const nameMetaMap = new Map();
+    (this.state.ownedGenerals || []).forEach(g => {
+      if (!nameMetaMap.has(g.name)) {
+        nameMetaMap.set(g.name, {
+          star: g.star || 3,
+          maxRed: g.redStars || 0,
+          maxLevel: g.level || 1,
+          cost: g.cost || 0,
+          attrSum: (g.force || 0) + (g.intel || 0) + (g.command || 0) + (g.speed || 0)
+        });
+      } else {
+        const meta = nameMetaMap.get(g.name);
+        meta.maxRed = Math.max(meta.maxRed, g.redStars || 0);
+        meta.maxLevel = Math.max(meta.maxLevel, g.level || 1);
+      }
+    });
+
+    // 🌟 原版多维权重综合排序 (同名武将紧密排列在一起)：
+    // 1. 上阵出征状态置顶 (按军团与主副将顺位排列)
+    // 2. 武将品质星级降序 (5星名将 > 4星良将 > 3星裨将)
+    // 3. 同名武将相邻聚合 (同一武将的所有卡牌必定排列在一起，高红在左、白板在右)
+    // 4. 不同武将之间按组主力红星、等级、御值有序排位
+    list.sort((a, b) => {
+      // 1. 出征部队置顶
+      const inTroopA = troopOrderMap.has(a.id);
+      const inTroopB = troopOrderMap.has(b.id);
+      if (inTroopA !== inTroopB) {
+        return inTroopA ? -1 : 1;
+      }
+      if (inTroopA && inTroopB) {
+        const orderDiff = troopOrderMap.get(a.id) - troopOrderMap.get(b.id);
+        if (orderDiff !== 0) return orderDiff;
+      }
+
+      // 2. 星级品质降序 (5星名将 > 4星良将 > 3星裨将)
+      const starDiff = (b.star || 3) - (a.star || 3);
+      if (starDiff !== 0) return starDiff;
+
+      // 3. 同名卡紧密相邻排列！
+      if (a.name === b.name) {
+        // 同名卡内部排序：红星数降序 (满红/高红在左，白板在右)
+        const redDiff = (b.redStars || 0) - (a.redStars || 0);
+        if (redDiff !== 0) return redDiff;
+        // 等级降序
+        const lvlDiff = (b.level || 1) - (a.level || 1);
+        if (lvlDiff !== 0) return lvlDiff;
+        return a.id.localeCompare(b.id);
+      }
+
+      // 4. 不同武将组间排序权重 (以该武将主力最高战力排位，等级与御值优先，确保进阶后排位稳定不瞬移)
+      const metaA = nameMetaMap.get(a.name) || {};
+      const metaB = nameMetaMap.get(b.name) || {};
+
+      // ① 最高等级降序 (主力核心靠前，进阶不改等级故排位稳定)
+      const groupLvlDiff = (metaB.maxLevel || 1) - (metaA.maxLevel || 1);
+      if (groupLvlDiff !== 0) return groupLvlDiff;
+
+      // ② 统御值降序 (7御大核优先)
+      const costDiff = (metaB.cost || 0) - (metaA.cost || 0);
+      if (costDiff !== 0) return costDiff;
+
+      // ③ 最高红星降序 (同等级同御值下，高红优先)
+      const groupRedDiff = (metaB.maxRed || 0) - (metaA.maxRed || 0);
+      if (groupRedDiff !== 0) return groupRedDiff;
+
+      // ④ 综合属性降序
+      const attrDiff = (metaB.attrSum || 0) - (metaA.attrSum || 0);
+      if (attrDiff !== 0) return attrDiff;
+
+      return (a.name || '').localeCompare(b.name || '', 'zh-Hans');
     });
 
     if (list.length === 0) {
@@ -2335,12 +2420,11 @@ class GameApp {
       return;
     }
 
-    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
-
     list.forEach(g => {
       const card = document.createElement('div');
       const redStars = g.redStars || 0;
-      const isFullRed = (redStars >= 5);
+      const maxRedStars = g.star || 5;
+      const isFullRed = (redStars >= maxRedStars);
 
       card.className = `general-card ${g.star===5?'star-5':''} ${isFullRed?'full-red':''}`;
       const campInfo = CAMPS[g.camp] || CAMPS.qun;
@@ -2351,14 +2435,14 @@ class GameApp {
       const inheritTac = TACTICS_MAP.get(inheritTacId);
       const isInherited = this.state.ownedTactics.includes(inheritTacId);
 
-      // 统计可进阶同名卡数量 (未上阵且不是自身)
+      // 统计可进阶同名卡数量 (未上阵、不是自身，且必须是未进阶的白板卡，保护高红卡不被吞噬)
       const duplicateCards = this.state.ownedGenerals.filter(other => 
-        other.name === g.name && other.id !== g.id && !currentTroopHeroIds.has(other.id)
+        other.name === g.name && other.id !== g.id && !currentTroopHeroIds.has(other.id) && (other.redStars || 0) === 0
       );
-      const canPromote = (redStars < 5 && duplicateCards.length > 0);
+      const canPromote = (!isFullRed && duplicateCards.length > 0);
       const isInTroop = currentTroopHeroIds.has(g.id);
 
-      // 星级渲染 (红星 + 金星)
+      // 星级渲染 (红星 + 金星，原版纯净星标)
       let starsHtml = '';
       for (let s = 1; s <= g.star; s++) {
         if (s <= redStars) {
@@ -2366,9 +2450,6 @@ class GameApp {
         } else {
           starsHtml += `<span class="star-gold">★</span>`;
         }
-      }
-      if (redStars > 0) {
-        starsHtml += ` <span style="font-size:10px; color:#ef4444; font-weight:bold;">(+${redStars}红)</span>`;
       }
 
       const gLvl = g.level || 1;
@@ -2415,10 +2496,10 @@ class GameApp {
         <div style="margin-top:2px; display:flex; justify-content:center;">
           ${canPromote ? `
             <button class="upgrade-btn btn-promote-hero" style="width:100%; padding:2px 0; font-size:10px; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
-              🌟 升星(${duplicateCards.length})
+              🌟 进阶
             </button>
           ` : isFullRed ? `
-            <span style="font-size:10px; color:#ef4444; font-weight:bold; padding:2px 0;">👑 满红名宿</span>
+            <span style="font-size:10px; color:#fbbf24; font-weight:bold; padding:2px 0;">👑 满红名宿</span>
           ` : `
             <span style="font-size:10px; color:#6b7280; padding:2px 0;">点击查看军略</span>
           `}
@@ -2483,43 +2564,137 @@ class GameApp {
     }
   }
 
-  // 升星进阶单个武将
+  // 升星进阶单个武将 (智能选拔培养主力，保护高红，严格消耗白板副卡)
   promoteHero(targetHero, materialCard) {
-    if (!materialCard) return;
-    const matIdx = this.state.ownedGenerals.findIndex(x => x.id === materialCard.id);
+    if (!targetHero) return;
+    const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
+
+    // 1. 汇集该武将的所有同名卡
+    const sameNameCards = (this.state.ownedGenerals || []).filter(x => x.name === targetHero.name);
+    if (sameNameCards.length <= 1) {
+      alert(`⚠️ 背包中没有多余的【${targetHero.name}】同名卡可供进阶！`);
+      return;
+    }
+
+    // 2. 选拔唯一进阶培养主体主卡：
+    // 优先：已上阵 > 红星最高 > 等级最高 > 经验最高
+    sameNameCards.sort((a, b) => {
+      const inA = currentTroopHeroIds.has(a.id);
+      const inB = currentTroopHeroIds.has(b.id);
+      if (inA !== inB) return inA ? -1 : 1;
+      const redDiff = (b.redStars || 0) - (a.redStars || 0);
+      if (redDiff !== 0) return redDiff;
+      const lvlDiff = (b.level || 1) - (a.level || 1);
+      if (lvlDiff !== 0) return lvlDiff;
+      return (b.exp || 0) - (a.exp || 0);
+    });
+
+    const mainHero = sameNameCards[0];
+    const maxRed = mainHero.star || 5;
+
+    if ((mainHero.redStars || 0) >= maxRed) {
+      alert(`⚠️【进阶封顶】武将【${mainHero.name}】已达到 ${maxRed} 星满红状态，无法继续进阶！多余同名卡已安全为您留存。`);
+      return;
+    }
+
+    // 3. 严格筛选可消耗的白板材料卡：非主卡、未出征、且必须是0红白板
+    const candidateMaterials = sameNameCards.slice(1).filter(other => 
+      !currentTroopHeroIds.has(other.id) && (other.redStars || 0) === 0
+    );
+
+    if (candidateMaterials.length === 0) {
+      alert(`⚠️ 未找到可作为进阶狗粮的【${mainHero.name}】白板副卡！已进阶的高红卡或出征部队已受到安全保护。`);
+      return;
+    }
+
+    // 优先使用传入的合法材料卡，否则取第一张可用白板副卡
+    const chosenMaterial = (materialCard && candidateMaterials.some(m => m.id === materialCard.id))
+      ? materialCard
+      : candidateMaterials[0];
+
+    const matIdx = this.state.ownedGenerals.findIndex(x => x.id === chosenMaterial.id);
     if (matIdx < 0) return;
 
-    // 消耗材料卡
+    // 4. 消耗材料副卡
     this.state.ownedGenerals.splice(matIdx, 1);
 
-    // 进阶属性暴涨
-    targetHero.redStars = (targetHero.redStars || 0) + 1;
-    targetHero.force += 5;
-    targetHero.intel += 5;
-    targetHero.command += 5;
-    targetHero.speed += 5;
+    // 5. 主力卡进阶属性暴涨
+    mainHero.redStars = (mainHero.redStars || 0) + 1;
+    mainHero.force = (mainHero.force || 50) + 5;
+    mainHero.intel = (mainHero.intel || 50) + 5;
+    mainHero.command = (mainHero.command || 50) + 5;
+    mainHero.speed = (mainHero.speed || 50) + 5;
+
+    // 6. 实时同步已上阵部队中的武将对象
+    (this.state.troops || []).forEach(t => {
+      (t.heroes || []).forEach(h => {
+        if (h && (h.id === mainHero.id || (h.name === mainHero.name && h.star === mainHero.star))) {
+          h.redStars = mainHero.redStars;
+          h.force = mainHero.force;
+          h.intel = mainHero.intel;
+          h.command = mainHero.command;
+          h.speed = mainHero.speed;
+        }
+      });
+    });
 
     sound.playVictoryHorn();
     this.save();
     this.renderGenerals();
     this.renderTroops();
     this.renderHUD();
-    alert(`🌟【升星大捷】消耗 1 张同名卡，【${targetHero.name}】成功进阶为 ${targetHero.redStars} 红！\n武力/智力/统率/速度全面提升 5 点！`);
+    const isNowFull = (mainHero.redStars >= maxRed);
+    alert(isNowFull 
+      ? `👑【满红大成】消耗 1 张白板副卡，【${mainHero.name}】成功晋升为 ${maxRed} 星满红名宿！\n武力/智力/统率/速度全面提升 5 点！`
+      : `🌟【进阶大捷】消耗 1 张白板副卡，【${mainHero.name}】成功进阶为 ${mainHero.redStars} 红！\n武力/智力/统率/速度全面提升 5 点！`
+    );
   }
 
-  // 一键同名卡升星进阶
+  // 一键同名卡升星进阶 (严密分组选拔主力，保护高红，杜绝白板吃满红)
   quickAutoPromote() {
     let promotedCount = 0;
     const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
 
-    // 优先以已上阵或高星卡作为进阶主体
-    for (const mainHero of this.state.ownedGenerals) {
-      if ((mainHero.redStars || 0) >= 5) continue;
+    // 1. 按武将名称分组 (Name -> 卡牌列表)
+    const heroGroups = new Map();
+    (this.state.ownedGenerals || []).forEach(g => {
+      if (!heroGroups.has(g.name)) {
+        heroGroups.set(g.name, []);
+      }
+      heroGroups.get(g.name).push(g);
+    });
 
-      while ((mainHero.redStars || 0) < 5) {
-        const matIdx = this.state.ownedGenerals.findIndex(other => 
-          other.name === mainHero.name && other.id !== mainHero.id && !currentTroopHeroIds.has(other.id)
-        );
+    // 2. 逐组安全进阶
+    for (const [name, cards] of heroGroups.entries()) {
+      if (cards.length <= 1) continue;
+
+      // 选拔唯一进阶主体主卡：
+      // 优先已上阵 > 红星数最高 > 等级最高 > 经验最高
+      cards.sort((a, b) => {
+        const inA = currentTroopHeroIds.has(a.id);
+        const inB = currentTroopHeroIds.has(b.id);
+        if (inA !== inB) return inA ? -1 : 1;
+        const redDiff = (b.redStars || 0) - (a.redStars || 0);
+        if (redDiff !== 0) return redDiff;
+        const lvlDiff = (b.level || 1) - (a.level || 1);
+        if (lvlDiff !== 0) return lvlDiff;
+        return (b.exp || 0) - (a.exp || 0);
+      });
+
+      const mainHero = cards[0];
+      const maxRed = mainHero.star || 5;
+
+      // 若主力卡已满红，同名卡全部安全保留在背包中供传承或解甲，绝不反向吞噬
+      if ((mainHero.redStars || 0) >= maxRed) continue;
+
+      // 筛选合法材料卡：同名组中排除主卡、未上阵、且为白板卡 (redStars === 0)
+      const materialCandidates = cards.slice(1).filter(other => 
+        !currentTroopHeroIds.has(other.id) && (other.redStars || 0) === 0
+      );
+
+      while (materialCandidates.length > 0 && (mainHero.redStars || 0) < maxRed) {
+        const matCard = materialCandidates.shift();
+        const matIdx = this.state.ownedGenerals.findIndex(x => x.id === matCard.id);
         if (matIdx >= 0) {
           this.state.ownedGenerals.splice(matIdx, 1);
           mainHero.redStars = (mainHero.redStars || 0) + 1;
@@ -2528,14 +2703,12 @@ class GameApp {
           mainHero.command += 5;
           mainHero.speed += 5;
           promotedCount++;
-        } else {
-          break;
         }
       }
     }
 
     if (promotedCount === 0) {
-      alert('背包中暂无满足条件的重复同名武将卡！');
+      alert('背包中暂无满足条件的白板重复同名武将卡！\n已满红武将的多余同名卡已安全为您留存，可用于传承战法或遣散解甲换取铜币。');
       return;
     }
 
@@ -2544,7 +2717,7 @@ class GameApp {
     this.renderGenerals();
     this.renderTroops();
     this.renderHUD();
-    alert(`🎉【一键升星圆满】共计完成 ${promotedCount} 次红度进阶！麾下核心武将战力大幅跃升！`);
+    alert(`🎉【一键进阶圆满】共计完成 ${promotedCount} 次红度进阶！\n全员进阶属性已同步提升，已满红武将的富余卡牌已安全留存背包！`);
   }
 
   // 单卡售出 (自由解甲：3星300 / 4星1000 / 5星5000)
@@ -2698,6 +2871,7 @@ class GameApp {
             const tac = TACTICS_MAP.get(tId);
             if (!tac) return '';
 
+            const isBuiltIn = (hero.builtInTacticId === tId);
             const isCurrentSlot = (currentEquippedId === tId);
             const isOtherSlot = (otherSlotEquippedId === tId);
             const occupier = tacticOccupiedMap.get(tId);
@@ -2711,7 +2885,12 @@ class GameApp {
             let btnDisabled = false;
             let statusBadge = '';
 
-            if (isCurrentSlot) {
+            if (isBuiltIn) {
+              btnText = '与自带战法冲突';
+              btnStyle = 'background:#374151; color:#9ca3af; opacity:0.6;';
+              btnDisabled = true;
+              statusBadge = `<span style="font-size:10px; color:#f87171; background:rgba(239,68,68,0.15); border:1px solid #ef4444; padding:1px 5px; border-radius:3px;">与本将自带战法冲突</span>`;
+            } else if (isCurrentSlot) {
               btnText = '当前装配中';
               btnStyle = 'background:#1f2937; color:#9ca3af; border:1px solid #374151;';
               btnDisabled = true;
@@ -2914,8 +3093,12 @@ class GameApp {
           }
         }
 
-        // 装配到当前武将
+        // 装配到当前武将 (严格校验自带战法互斥)
         const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
+        if (realHero.builtInTacticId === id) {
+          alert(`⚠️【${realHero.name}】自带战法与该战法相同，无法重复装配！`);
+          return;
+        }
         if (slot === 1) {
           realHero.equippedTactic1 = id;
           hero.equippedTactic1 = id;

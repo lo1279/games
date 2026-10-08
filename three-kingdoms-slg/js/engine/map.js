@@ -150,9 +150,9 @@ export function createLandGuardTroop(tileOrLevel, resType = 'wood') {
         currentSoldiers: subSoldiers,
         maxSoldiers: subSoldiers,
         aptitude: { cavalry: 'A', shield: 'A', bow: 'A', spear: 'A', siege: 'B' },
-        builtInTacticId: isHighTier ? 'tac_zuo_you_kai_gong' : 'tac_fen_fa',
-        equippedTactic1: isHighTier ? 'tac_zi_yu' : null,
-        equippedTactic2: isBossTier ? 'tac_shou_qi_dao_luo' : null
+        builtInTacticId: isHighTier ? 'tac_zuo_you_kai_gong' : 'tac_qiang_gong',
+        equippedTactic1: isHighTier ? 'tac_hou_fa_zhi_ren' : null,
+        equippedTactic2: isBossTier ? 'tac_bai_lian_cheng_gang' : null
       },
       {
         id: `guard_sub2_lv${level}_${resType}`,
@@ -168,9 +168,9 @@ export function createLandGuardTroop(tileOrLevel, resType = 'wood') {
         currentSoldiers: subSoldiers,
         maxSoldiers: subSoldiers,
         aptitude: { cavalry: 'A', shield: 'A', bow: 'A', spear: 'A', siege: 'B' },
-        builtInTacticId: 'tac_yu_di_ping_zhang',
-        equippedTactic1: isHighTier ? 'tac_shou_qi_dao_luo' : null,
-        equippedTactic2: isBossTier ? 'tac_fen_fa' : null
+        builtInTacticId: isHighTier ? 'tac_chen_huo_da_jie' : 'tac_an_cang_xian_ji',
+        equippedTactic1: isHighTier ? 'tac_bi_shi_ji_xu' : null,
+        equippedTactic2: isBossTier ? 'tac_ji_lue_zong_heng' : null
       }
     ]
   };

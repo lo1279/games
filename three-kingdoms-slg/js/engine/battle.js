@@ -3,7 +3,7 @@
  * 严格按照 兵种克制、适性加成、阵营国家队加成、速度先手顺序、四类战法判定、状态控制与斩首机制执行
  */
 
-import { GENERAL_APTITUDE_MODIFIERS, ARMS } from '../data/generals.js';
+import { GENERAL_APTITUDE_MODIFIERS, ARMS, CAMPS } from '../data/generals.js';
 import { TACTICS_DATA, getTacticEffectiveProps } from '../data/tactics.js';
 import { checkActiveBonds } from '../data/bonds.js';
 
@@ -39,7 +39,7 @@ export function getArmAdvantageMultiplier(attackerArm, defenderArm) {
 /**
  * 战前部队实例初始化
  */
-function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels = {}) {
+function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels = {}, teamSeenTactics = new Set()) {
   const aptGrade = heroData.aptitude[troopArm] || 'C';
   const aptMod = GENERAL_APTITUDE_MODIFIERS[aptGrade] || 1.0;
 
@@ -78,12 +78,18 @@ function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels =
     command: Math.round(rawCommand * aptMod),
     speed: Math.round(rawSpeed * aptMod),
 
-    // 装备战法 (按战法研习等级强化实际战法属性)
+    // 装备战法 (按战法研习等级强化实际战法属性，同一队伍内严格唯一排重)
     tactics: [
       heroData.builtInTacticId,
       heroData.equippedTactic1,
       heroData.equippedTactic2
-    ].filter(Boolean).map(id => {
+    ].filter(Boolean).filter(id => {
+      if (teamSeenTactics.has(id)) {
+        return false; // 同一队伍内已存在相同战法，忽略过滤
+      }
+      teamSeenTactics.add(id);
+      return true;
+    }).map(id => {
       const raw = TACTICS_MAP.get(id);
       if (!raw) return null;
       // 若武将自身显式指定了统一战法等级(如试炼模式强制拉满10级)，优先采用；否则按配置字典或默认值读取
@@ -144,9 +150,11 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
   const pArmName = ARMS[pArm]?.name || pArm;
   const eArmName = ARMS[eArm]?.name || eArm;
 
-  // 实例化双方战斗武将 (主将必须位于首位)
-  const playerHeroes = playerTroop.heroes.map((h, i) => createBattleHero(h, pArm, i === 0, true, options.tacticLevels || {}));
-  const enemyHeroes = enemyTroop.heroes.map((h, i) => createBattleHero(h, eArm, i === 0, false, options.enemyTacticLevels || {}));
+  // 实例化双方战斗武将 (主将必须位于首位，同队战法严格唯一去重)
+  const playerSeenTactics = new Set();
+  const enemySeenTactics = new Set();
+  const playerHeroes = playerTroop.heroes.map((h, i) => createBattleHero(h, pArm, i === 0, true, options.tacticLevels || {}, playerSeenTactics));
+  const enemyHeroes = enemyTroop.heroes.map((h, i) => createBattleHero(h, eArm, i === 0, false, options.enemyTacticLevels || {}, enemySeenTactics));
 
   // 每次推演前清空最近伤害上下文
   lastDamageContext = null;
@@ -212,7 +220,8 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         h.command = Math.round(h.command * 1.1);
         h.speed = Math.round(h.speed * 1.1);
       });
-      log(0, `🏰 ${teamName}激活【${camp.toUpperCase()}国国家队】阵营加成！全员核心属性提升 10%！`, 'camp');
+      const campName = CAMPS[camp]?.name || '阵营';
+      log(0, `🏰 ${teamName}激活【${campName}国家队】阵营加成！全员核心属性提升 10%！`, 'camp');
     }
   };
   checkCampBonus(playerHeroes, '我军');

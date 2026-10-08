@@ -675,7 +675,7 @@ export const TACTICS_DATA = [
     target: 'enemy_leader',
     quality: 'S',
     damageType: 'debuff',
-    desc: '【程昱专属传承】战斗开始前4回合，嘲讽敌军主将迫使其普通攻击自身，并提高自身统率40点！'
+    desc: '【程昱/程普传承】战斗开始前4回合，嘲讽敌军主将迫使其普通攻击自身，并提高自身统率40点！'
   },
   {
     id: 'tac_he_jun_ju_zhong',
@@ -1233,7 +1233,7 @@ export const TACTIC_INHERIT_SOURCES = {
   tac_huang_tian_tai_ping: { names: ['张角'], tacticName: '黄天泰平' },
   tac_bao_li_wu_ren: { names: ['董卓'], tacticName: '暴戾无仁' },
   tac_yi_li_ju_shou: { names: ['典韦'], tacticName: '一力拒守' },
-  tac_shou_er_bi_gu: { names: ['程昱'], tacticName: '守而必固' },
+  tac_shou_er_bi_gu: { names: ['程昱', '程普'], tacticName: '守而必固' },
   tac_he_jun_ju_zhong: { names: ['袁绍'], tacticName: '合军聚众' },
   tac_bai_lian_cheng_gang: { names: ['甘宁', '鲁肃'], tacticName: '百炼成钢' },
   tac_yu_di_ping_zhang: { names: ['郭淮', '孙静', '刘禅'], tacticName: '御敌屏障' },
@@ -1319,7 +1319,7 @@ export const HERO_INHERIT_MAP = {
   '周泰': 'tac_rou_shen_tie_bi',
   '孙尚香': 'tac_jie_meng',
   '凌统': 'tac_yong_zhe_de_qian',
-  '程普': 'tac_yu_di_ping_zhang',
+  '程普': 'tac_shou_er_bi_gu',
 
   // 群雄
   '吕布': 'tac_yi_qi_dang_qian',

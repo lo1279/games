@@ -321,14 +321,35 @@ export function loadGameState() {
         }
       }
 
-      if (g.equippedTactic2) {
-        if (seenTactics.has(g.equippedTactic2) || g.equippedTactic2 === g.equippedTactic1) {
-          g.equippedTactic2 = null; // 重复占用，清空
-        } else {
-          seenTactics.add(g.equippedTactic2);
+      // 🌟 红星进阶上限与数据自愈校准 (严格上限: 5星限5红、4星限4红、3星限3红)
+      const maxRed = g.star || 5;
+      if (g.redStars !== undefined && g.redStars !== null) {
+        if (g.redStars > maxRed) {
+          const over = g.redStars - maxRed;
+          g.redStars = maxRed;
+          g.force = Math.max(1, (g.force || 50) - over * 5);
+          g.intel = Math.max(1, (g.intel || 50) - over * 5);
+          g.command = Math.max(1, (g.command || 50) - over * 5);
+          g.speed = Math.max(1, (g.speed || 50) - over * 5);
         }
       }
     });
+
+    // 🌟 针对因一键进阶反向吞噬Bug受损的关平进行无损补偿修复：
+    // 若玩家拥有关平且关平红星小于 4，自动恢复至 4 星满红 (4红)，并补齐应有的进阶属性
+    const guanPingList = (data.ownedGenerals || []).filter(g => g.name === '关平');
+    if (guanPingList.length > 0) {
+      const mainGuanPing = guanPingList.reduce((prev, curr) => ((curr.level || 1) > (prev.level || 1) ? curr : prev), guanPingList[0]);
+      if ((mainGuanPing.redStars || 0) < 4) {
+        const addedRed = 4 - (mainGuanPing.redStars || 0);
+        mainGuanPing.redStars = 4;
+        mainGuanPing.force = (mainGuanPing.force || 82) + addedRed * 5;
+        mainGuanPing.intel = (mainGuanPing.intel || 65) + addedRed * 5;
+        mainGuanPing.command = (mainGuanPing.command || 80) + addedRed * 5;
+        mainGuanPing.speed = (mainGuanPing.speed || 60) + addedRed * 5;
+        console.log(`[数据补偿] 成功将因Bug受损的【关平】无损修复至 4 星满红 (+4红)！属性已补偿到位！`);
+      }
+    }
 
     data.lastSavedTime = now;
     return data;
