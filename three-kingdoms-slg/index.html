@@ -15,7 +15,7 @@
       <span style="font-size:24px;">⚔️</span>
       <div>
         <div class="game-title">三国·战略版</div>
-        <div style="font-size: 10px; color: #9ca3af;">历史战役 · 策略卡牌对决</div>
+        <div class="game-sub-title" style="font-size: 10px; color: #9ca3af;">历史战役 · 策略卡牌对决</div>
       </div>
     </div>
 
@@ -117,8 +117,8 @@
     
     <!-- 1. 征战天下 (Battle & Campaigns) -->
     <section class="slg-tab-page" id="tabBattle">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="battle-subtabs-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div class="battle-subtabs-nav" style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="nav-tab-btn active" id="subTabCampaigns" style="padding:6px 14px; border:1px solid #374151; font-size:13px;">
             📜 经典战役
           </button>
@@ -129,7 +129,7 @@
             🎯 假想敌演习沙盒
           </button>
         </div>
-        <div style="font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div class="battle-subtabs-hints" style="font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span style="background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px; font-weight:bold;">📜 战役：真实练级突破</span>
           <span style="background:rgba(56,189,248,0.15); border:1px solid #0284c7; color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:bold;">🏛️ 演武：满级满兵对决</span>
           <span style="background:rgba(251,191,36,0.15); border:1px solid #d97706; color:#fbbf24; padding:2px 8px; border-radius:4px; font-weight:bold;">🎯 沙盒：全武将战法演习</span>
@@ -170,14 +170,14 @@
         </div>
 
         <!-- 阵容对垒工作台 (我方军团 VS 自定义敌军) -->
-        <div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:14px; align-items:stretch;">
+        <div class="sandbox-battlefield-grid" style="display:grid; grid-template-columns: 1fr auto 1fr; gap:14px; align-items:stretch;">
           <!-- 我方当前出征军团展示 -->
           <div style="background:#11141a; border:1px solid #10b981; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px;" id="sandboxPlayerTroopPreview">
             <!-- 动态渲染我方出战队伍 -->
           </div>
 
           <!-- 中间推演开战中枢 -->
-          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-width:120px;">
+          <div class="sandbox-vs-divider" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-width:120px;">
             <div style="font-size:32px; font-weight:900; color:#fbbf24; text-shadow:0 0 15px rgba(251,191,36,0.6);">VS</div>
             <button class="upgrade-btn" id="btnLaunchSandboxBattle" style="background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); font-weight:800; font-size:14px; padding:12px 18px; border-radius:8px; box-shadow:0 0 16px rgba(220,38,38,0.5); cursor:pointer;">
               ⚔️ 开启演习对决
