@@ -439,6 +439,11 @@ class GameApp {
   }
 
   renderAll() {
+    const chkAuto3 = document.getElementById('chkAutoConvert3Star');
+    const chkAuto4 = document.getElementById('chkAutoConvert4Star');
+    if (chkAuto3) chkAuto3.checked = this.state.gachaAutoConvert?.star3 !== false;
+    if (chkAuto4) chkAuto4.checked = !!this.state.gachaAutoConvert?.star4;
+
     this.renderHUD();
     this.renderWorldMap();
     this.renderCityBuildings();
@@ -508,23 +513,17 @@ class GameApp {
 
     // 招募统计数据刷新
     const elTotal = document.getElementById('gachaTotalCount');
-    if (elTotal) elTotal.innerHTML = `${(this.state.totalGachaCount || 0).toLocaleString()} <span class="card-note">次</span>`;
+    if (elTotal) elTotal.innerHTML = `${(this.state.totalGachaCount || 0).toLocaleString()} <span class="stat-tile-unit">次</span>`;
     const elFive = document.getElementById('gachaTotalFiveCount');
-    if (elFive) elFive.innerHTML = `${(this.state.totalFiveStarCount || 0).toLocaleString()} <span class="card-note">位</span>`;
+    if (elFive) elFive.innerHTML = `${(this.state.totalFiveStarCount || 0).toLocaleString()} <span class="stat-tile-unit">位</span>`;
     const elCore = document.getElementById('gachaTotalCoreCount');
-    if (elCore) elCore.innerHTML = `${(this.state.totalCoreCount || 0).toLocaleString()} <span class="card-note">位</span>`;
-
-    // 同步招募自动转化开关勾选状态
-    const chkAuto3 = document.getElementById('chkAutoConvert3Star');
-    const chkAuto4 = document.getElementById('chkAutoConvert4Star');
-    if (chkAuto3) chkAuto3.checked = this.state.gachaAutoConvert?.star3 !== false;
-    if (chkAuto4) chkAuto4.checked = !!this.state.gachaAutoConvert?.star4;
+    if (elCore) elCore.innerHTML = `${(this.state.totalCoreCount || 0).toLocaleString()} <span class="stat-tile-unit">位</span>`;
 
     // 城建状态横幅
     if (this.cityStatsBanner) {
       const palaceLvl = this.state.buildings?.palace || 1;
       const barracksLvl = this.state.buildings?.barracks || 0;
-      this.cityStatsBanner.innerHTML = `部队统御上限: <b class="val-gold">>统御 ${14 + palaceLvl}</b> · 兵营加成: <b class="val-copper">>+${barracksLvl * 300} 兵/将</b>`;
+      this.cityStatsBanner.innerHTML = `部队统御上限: <b class="val-gold">统御 ${14 + palaceLvl}</b> · 兵营加成: <b class="val-copper">+${barracksLvl * 300} 兵/将</b>`;
     }
   }
 
@@ -703,8 +702,8 @@ class GameApp {
               </div>
               <div style="font-size:11px; color:#9ca3af; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap;">
                 <span>守将: <b style="color:#e2e8f0;">${leadHero.name}</b></span>
-                <span>守备兵力: <b class="val-damage">>${cfg.soldiers.toLocaleString()}</b></span>
-                <span class="val-copper">>+${cfg.prodPerHour}/h</span>
+                <span>守备兵力: <b class="val-damage">${cfg.soldiers.toLocaleString()}</b></span>
+                <span class="val-copper">+${cfg.prodPerHour}/h</span>
               </div>
               <div style="font-size:10px; color:#a1a1aa; margin-top:2px;">
                 克制关系: ${restTip}
@@ -1227,7 +1226,7 @@ class GameApp {
             <div class="campaign-desc">${cfg.desc}</div>
             <div style="font-size:11px; color:#38bdf8;">
               当前功效: <b>${cfg.effect(currentLvl)}</b>
-              ${!isMax ? ` ➔ 下级: <b class="val-gold">>${cfg.effect(nextLvl)}</b>` : ''}
+              ${!isMax ? ` ➔ 下级: <b class="val-gold">${cfg.effect(nextLvl)}</b>` : ''}
             </div>
             ${!isMax ? `<div style="margin-top:6px; font-size:11px; color:#9ca3af;">升级所需: ${costStr}</div>` : ''}
           </div>
@@ -1561,9 +1560,9 @@ class GameApp {
               <span style="font-size:24px;">${h.avatar}</span>
               <div>
                 <div style="font-size:13px; font-weight:bold; color:#fff;">
-                  ${h.name} <span class="card-micro">>(Lv.${h.level || 50})</span>
+                  ${h.name} <span class="card-micro">(Lv.${h.level || 50})</span>
                 </div>
-                <div>
+                <div class="card-note card-note--tight">
                   战法: ${bTactic?.name || '自带战法'} · ${t1?.name || '无'} · ${t2?.name || '无'}
                 </div>
               </div>
@@ -1577,7 +1576,7 @@ class GameApp {
         <div class="card-row--split" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px">
           <div>
             <div style="font-weight:800; font-size:15px; color:#10b981;">🛡️ 我方参战：${playerTroop.name}</div>
-            <div>兵种：<b class="val-copper">>${armMeta.icon} ${armMeta.name}</b> (可在【编队】自由换将)</div>
+            <div class="card-note card-note--tight">兵种：<b class="val-copper">${armMeta.icon} ${armMeta.name}</b> (可在【编队】自由换将)</div>
           </div>
           <span style="font-size:11px; background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px;">
             满状态推演
@@ -1634,10 +1633,10 @@ class GameApp {
                 <div style="font-size:13px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:6px;">
                   <span>${gen.name}</span>
                   <span style="font-size:10px; background:${camp.color}; padding:1px 4px; border-radius:3px;">${camp.name}</span>
-                  <span class="card-micro">>${'★'.repeat(gen.star)}</span>
+                  <span class="card-micro">${'★'.repeat(gen.star)}</span>
                 </div>
-                <div>
-                  自带: <b class="val-gold">>${bTactic?.name || '自带战法'}</b> (Lv.10)
+                <div class="card-note card-note--tight">
+                  自带: <b class="val-gold">${bTactic?.name || '自带战法'}</b> (Lv.10)
                 </div>
               </div>
             </div>
@@ -1661,7 +1660,7 @@ class GameApp {
         <div class="card-row--split card-row--wrap" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; flex-wrap:wrap; gap:6px">
           <div>
             <div style="font-weight:800; font-size:15px; color:#f87171;">⚔️ 敌方假想军团</div>
-            <div>等级：Lv.50 · 兵力：30,000 · 战法：Lv.10</div>
+            <div class="card-note card-note--tight">等级：Lv.50 · 兵力：30,000 · 战法：Lv.10</div>
           </div>
           <div style="display:flex; gap:4px;">
             ${armsHtml}
@@ -1773,8 +1772,8 @@ class GameApp {
                   <span style="font-size:10px; background:${camp.color}; padding:1px 5px; border-radius:3px;">${camp.name}</span>
                   <span style="font-size:11px; color:#fbbf24;">${'★'.repeat(g.star)}</span>
                 </div>
-                <div>
-                  自带战法: <b class="val-gold">>${bTactic?.name || '自带战法'}</b> · 统御: ${g.cost}御
+                <div class="card-note card-note--tight">
+                  自带战法: <b class="val-gold">${bTactic?.name || '自带战法'}</b> · 统御: ${g.cost}御
                 </div>
               </div>
             </div>
@@ -1826,7 +1825,7 @@ class GameApp {
                 <span>${t.name}</span>
                 <span style="font-size:10px; background:${typeMeta.color}25; border:1px solid ${typeMeta.color}; color:${typeMeta.color}; padding:1px 5px; border-radius:3px;">${typeMeta.name}</span>
                 <span style="font-size:10px; background:${dmgMeta.color}25; border:1px solid ${dmgMeta.color}; color:${dmgMeta.color}; padding:1px 5px; border-radius:3px;">${dmgMeta.name}</span>
-                <span class="card-micro">>发动率: ${t.rate}%</span>
+                <span class="card-micro">发动率: ${t.rate}%</span>
               </div>
               <div style="font-size:11px; color:#9ca3af; margin-top:3px; line-height:1.4;">
                 ${t.desc || ''}
@@ -2177,7 +2176,7 @@ class GameApp {
     modal.innerHTML = `
       <div class="modal-content" style="max-width:880px; width:95%; max-height:88vh;">
         <div class="modal-header">
-          <div class="modal-title">🎴 名将全息军略档案 · ${realHero.name}</div>
+          <div class="modal-title"><span class="title-emoji">🎴 </span>🎴</div>
           <button class="modal-close-btn" id="btnHeroDetailClose">✕</button>
         </div>
         <div class="modal-body" style="padding:16px; overflow-y:auto;">
@@ -2211,13 +2210,13 @@ class GameApp {
               <!-- 带兵上限与历练进度 -->
               <div style="background:rgba(0,0,0,0.4); border:1px solid #2d3340; border-radius:6px; padding:8px 10px;">
                 <div class="card-row--split" style="font-size:11px">
-                  <span class="val-muted">>带兵上限</span>
+                  <span class="val-muted">带兵上限</span>
                   <span style="font-size:15px; font-weight:bold; color:#34d399;">${(realHero.maxSoldiers || 3000).toLocaleString()}</span>
                 </div>
                 <div style="margin-top:6px;">
                   <div class="card-row--split" style="font-size:10px; margin-bottom:3px">
                     <span style="color:#fbbf24;">⚔️ 历练经验</span>
-                    <span class="val-muted">>${hLvl>=MAX_GENERAL_LEVEL?'Lv.50 (满级)':`${hExp}/${reqExp} (${expPct}%)`}</span>
+                    <span class="val-muted">${hLvl>=MAX_GENERAL_LEVEL?'Lv.50 (满级)':`${hExp}/${reqExp} (${expPct}%)`}</span>
                   </div>
                   <div class="hero-exp-track" style="height:5px;">
                     <div class="hero-exp-progress" style="width:${expPct}%;"></div>
@@ -2271,7 +2270,7 @@ class GameApp {
                   </div>
                   <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
                     <span>🛡️ 统率: <b style="color:#34d399; font-size:15px;">${realHero.command}</b></span>
-                    <span class="hero-growth-tag val-copper">>(+${realHero.commandGrowth || 1.0}/级)</span>
+                    <span class="hero-growth-tag val-copper">(+${realHero.commandGrowth || 1.0}/级)</span>
                   </div>
                   <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
                     <span>⚡ 速度: <b style="color:#f472b6; font-size:15px;">${realHero.speed}</b></span>
@@ -2290,7 +2289,7 @@ class GameApp {
                   <span>枪兵 <b class="apt-tag ${realHero.aptitude.spear}">${realHero.aptitude.spear}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.spear]||1)*100)}%)</span>
                   <span>器械 <b class="apt-tag ${realHero.aptitude.siege || 'B'}">${realHero.aptitude.siege || 'B'}</b></span>
                 </div>
-                <div>适性加成说明：S级 120% 全属性 · A级 100% · B级 85% · C级 70%</div>
+                <div class="card-note card-note--tight">适性加成说明：S级 120% 全属性 · A级 100% · B级 85% · C级 70%</div>
               </div>
 
               <!-- 三大战法配置槽位 -->
@@ -2328,28 +2327,28 @@ class GameApp {
                       const nxtP = isBuiltInMax ? null : getTacticEffectiveProps(builtInTac, builtInLvl + 1);
                       const parts = [];
                       if (builtInTac.rate && builtInTac.rate < 100) {
-                        parts.push(`<span>发动率: <b style="color:#f472b6;">${curP.rate}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${nxtP.rate}%</span>`}</span>`);
+                        parts.push(`<span>发动率: <b style="color:#f472b6;">${curP.rate}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${nxtP.rate}%</span>`}</span>`);
                       }
                       if (builtInTac.damageRate) {
-                        parts.push(`<span>伤害率: <b class="val-gold">>${Math.round(curP.damageRate * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${Math.round(nxtP.damageRate * 100)}%</span>`}</span>`);
+                        parts.push(`<span>伤害率: <b class="val-gold">${Math.round(curP.damageRate * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtP.damageRate * 100)}%</span>`}</span>`);
                       }
                       if (builtInTac.healRate || builtInTac.emergencyHealRate) {
                         const curHeal = curP.healRate || curP.emergencyHealRate;
                         const nxtHeal = nxtP ? (nxtP.healRate || nxtP.emergencyHealRate) : 0;
-                        parts.push(`<span>治疗率: <b class="val-copper">>${Math.round(curHeal * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${Math.round(nxtHeal * 100)}%</span>`}</span>`);
+                        parts.push(`<span>治疗率: <b class="val-copper">${Math.round(curHeal * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtHeal * 100)}%</span>`}</span>`);
                       }
                       if (builtInTac.statBoost || builtInTac.statBoostForce || builtInTac.statBoostCmd) {
                         const curStat = curP.statBoost || curP.statBoostForce || curP.statBoostCmd;
                         const nxtStat = nxtP ? (nxtP.statBoost || nxtP.statBoostForce || nxtP.statBoostCmd) : 0;
-                        parts.push(`<span>属性加成: <b style="color:#38bdf8;">+${curStat}</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ +${nxtStat}</span>`}</span>`);
+                        parts.push(`<span>属性加成: <b style="color:#38bdf8;">+${curStat}</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ +${nxtStat}</span>`}</span>`);
                       }
                       if (builtInTac.teamDamageBonus || builtInTac.selfDamageReduction || builtInTac.shareDamageRate) {
                         const curBonus = curP.teamDamageBonus || curP.selfDamageReduction || curP.shareDamageRate;
                         const nxtBonus = nxtP ? (nxtP.teamDamageBonus || nxtP.selfDamageReduction || nxtP.shareDamageRate) : 0;
-                        parts.push(`<span>核心增益: <b style="color:#fb923c;">${Math.round(curBonus * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${Math.round(nxtBonus * 100)}%</span>`}</span>`);
+                        parts.push(`<span>核心增益: <b style="color:#fb923c;">${Math.round(curBonus * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtBonus * 100)}%</span>`}</span>`);
                       }
                       if (parts.length === 0) {
-                        parts.push(`<span>战法效能倍率: <b style="color:#38bdf8;">${Math.round(curP.scale * 100)}%</b>${isBuiltInMax ? ' (已满额)' : ` <span class="val-ok">>➜ ${Math.round(nxtP.scale * 100)}%</span>`}</span>`);
+                        parts.push(`<span>战法效能倍率: <b style="color:#38bdf8;">${Math.round(curP.scale * 100)}%</b>${isBuiltInMax ? ' (已满额)' : ` <span class="val-ok">➜ ${Math.round(nxtP.scale * 100)}%</span>`}</span>`);
                       }
                       builtInCompareHtml = parts.join('<span style="color:#4b5563; margin:0 6px;">|</span>');
                     }
@@ -2622,8 +2621,8 @@ class GameApp {
               <span>选拔上阵 · ${slotIdx===0?'★ 主将位 ★':`副将位 ${slotIdx}`}</span>
               <span id="assignModalTotalBadge" style="font-size:11px; background:#d97706; color:#fff; padding:1px 8px; border-radius:4px; font-weight:normal;"></span>
             </div>
-            <div>
-              当前军团兵种：<b class="val-copper">>${currentArmMeta.icon} ${currentArmMeta.name}</b> · 同名武将已按【👑满红 ➔ 高红 ➔ 白板】与等级优先排列
+            <div class="card-note card-note--tight">
+              当前军团兵种：<b class="val-copper">${currentArmMeta.icon} ${currentArmMeta.name}</b> · 同名武将已按【👑满红 ➔ 高红 ➔ 白板】与等级优先排列
             </div>
           </div>
           <button class="modal-close-btn" id="btnAssignModalClose">✕</button>
@@ -2767,12 +2766,12 @@ class GameApp {
                 <span class="hero-level-badge" style="font-size:10px;">Lv.${cLvl}</span>
                 <span style="font-size:10px; background:${campMeta.color}; color:#fff; padding:1px 5px; border-radius:3px;">${campMeta.name}</span>
                 <span style="font-size:12px; letter-spacing:1px;">${starsHtml}</span>
-                <span class="card-micro">>${c.cost}御</span>
+                <span class="card-micro">${c.cost}御</span>
               </div>
               <div style="font-size:11px; color:#9ca3af; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 <span>${currentArmMeta.name}适性: <b class="apt-tag ${apt}">${apt}</b> <span style="color:#6ee7b7; font-size:10px;">(${aptModPct}%)</span></span>
-                <span>武:<b class="val-gold">>${c.force}</b> 智:<b style="color:#60a5fa;">${c.intel}</b> 统:<b class="val-ok">>${c.command}</b> 速:<b style="color:#f472b6;">${c.speed}</b></span>
-                <span class="val-ok">>兵力:${(c.maxSoldiers || 3000).toLocaleString()}</span>
+                <span>武:<b class="val-gold">${c.force}</b> 智:<b style="color:#60a5fa;">${c.intel}</b> 统:<b class="val-ok">${c.command}</b> 速:<b style="color:#f472b6;">${c.speed}</b></span>
+                <span class="val-ok">兵力:${(c.maxSoldiers || 3000).toLocaleString()}</span>
                 <span style="color:#e2e8f0;">[自带] <b style="color:${c.star === 5 ? '#fde047' : (c.star === 4 ? '#c084fc' : '#93c5fd')};">${tacName}</b> <span style="color:#6ee7b7; font-size:10px;">Lv.${builtInLvl}</span></span>
                 ${eqTacTags ? `<span>配法: ${eqTacTags}</span>` : ''}
               </div>
@@ -3793,37 +3792,37 @@ class GameApp {
         let statCompareHtml = '';
         if (tac.damageRate) {
           const label = tac.id === 'tac_jue_di_fan_ji' ? '反击爆发' : '伤害率';
-          statCompareHtml += `<div>${label}: <b class="val-gold">>${(currentProps.damageRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${(nextProps.damageRate * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>${label}: <b class="val-gold">${(currentProps.damageRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">➜ ${(nextProps.damageRate * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.healRate) {
-          statCompareHtml += `<div>治疗率: <b class="val-copper">>${(currentProps.healRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${(nextProps.healRate * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>治疗率: <b class="val-copper">${(currentProps.healRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">➜ ${(nextProps.healRate * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.damageReduction || tac.teamDamageReduction) {
           const curRed = currentProps.damageReduction || currentProps.teamDamageReduction;
           const nextRed = nextProps ? (nextProps.damageReduction || nextProps.teamDamageReduction) : 0;
-          statCompareHtml += `<div>减伤率: <b style="color:#60a5fa;">${(curRed * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${(nextRed * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>减伤率: <b style="color:#60a5fa;">${(curRed * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">➜ ${(nextRed * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.statBuff) {
           if (tac.id === 'tac_jue_di_fan_ji') {
-            statCompareHtml += `<div>受击武力: <b class="val-gold">>+${currentProps.statBuff}/次</b> ${isMax ? '' : `<span class="val-ok">>➜ +${nextProps.statBuff}/次</span>`}</div>`;
+            statCompareHtml += `<div>受击武力: <b class="val-gold">+${currentProps.statBuff}/次</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.statBuff}/次</span>`}</div>`;
           } else {
-            statCompareHtml += `<div>属性提升: <b style="color:#38bdf8;">+${currentProps.statBuff}</b> ${isMax ? '' : `<span class="val-ok">>➜ +${nextProps.statBuff}</span>`}</div>`;
+            statCompareHtml += `<div>属性提升: <b style="color:#38bdf8;">+${currentProps.statBuff}</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.statBuff}</span>`}</div>`;
           }
         }
         if (tac.statDebuff) {
-          statCompareHtml += `<div>属性削减: <b class="val-damage">>-${currentProps.statDebuff}</b> ${isMax ? '' : `<span class="val-ok">>➜ -${nextProps.statDebuff}</span>`}</div>`;
+          statCompareHtml += `<div>属性削减: <b class="val-damage">-${currentProps.statDebuff}</b> ${isMax ? '' : `<span class="val-ok">➜ -${nextProps.statDebuff}</span>`}</div>`;
         }
         if (tac.damageBonus) {
-          statCompareHtml += `<div>伤害增幅: <b style="color:#fb923c;">+${(currentProps.damageBonus * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ +${(nextProps.damageBonus * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>伤害增幅: <b style="color:#fb923c;">+${(currentProps.damageBonus * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">➜ +${(nextProps.damageBonus * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.activeRateBonus) {
-          statCompareHtml += `<div>主动几率加成: <b style="color:#a78bfa;">+${currentProps.activeRateBonus}%</b> ${isMax ? '' : `<span class="val-ok">>➜ +${nextProps.activeRateBonus}%</span>`}</div>`;
+          statCompareHtml += `<div>主动几率加成: <b style="color:#a78bfa;">+${currentProps.activeRateBonus}%</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.activeRateBonus}%</span>`}</div>`;
         }
         if (tac.disarmRate && tac.disarmRate < 100) {
-          statCompareHtml += `<div>缴械几率: <b style="color:#fb7185;">${currentProps.disarmRate}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${nextProps.disarmRate}%</span>`}</div>`;
+          statCompareHtml += `<div>缴械几率: <b style="color:#fb7185;">${currentProps.disarmRate}%</b> ${isMax ? '' : `<span class="val-ok">➜ ${nextProps.disarmRate}%</span>`}</div>`;
         }
         if (tac.rate && tac.rate < 100) {
-          statCompareHtml += `<div>发动几率: <b style="color:#f472b6;">${currentProps.rate}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${nextProps.rate}%</span>`}</div>`;
+          statCompareHtml += `<div>发动几率: <b style="color:#f472b6;">${currentProps.rate}%</b> ${isMax ? '' : `<span class="val-ok">➜ ${nextProps.rate}%</span>`}</div>`;
         }
 
         const canAfford = (this.state.resources.copper || 0) >= nextCost;
@@ -3853,7 +3852,7 @@ class GameApp {
 
             <!-- 升级效果增益对比 -->
             <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; border-radius:6px; padding:6px 10px; font-size:11px; margin-bottom:10px; display:flex; flex-direction:column; gap:2px;">
-              ${statCompareHtml || '<div class="val-muted">>持续战术生效中，属性随等级提升</div>'}
+              ${statCompareHtml || '<div class="val-muted">持续战术生效中，属性随等级提升</div>'}
             </div>
           </div>
 
@@ -3899,7 +3898,7 @@ class GameApp {
             <div style="background:rgba(0,0,0,0.4); border:1px dashed #4b5563; border-radius:6px; padding:8px 10px; font-size:11px; margin-bottom:12px;">
               <div style="color:#d8b4fe; font-weight:bold; margin-bottom:3px;">📖 传承来源武将：</div>
               <div style="color:#e5e7eb;">【${sourceNames.join('】、【')}】</div>
-              <div>献祭 1 位对应闲置武将即可领悟传承该战法！</div>
+              <div class="card-note card-note--tight">献祭 1 位对应闲置武将即可领悟传承该战法！</div>
             </div>
           </div>
 
@@ -4029,7 +4028,7 @@ class GameApp {
             
             <div style="background:rgba(0,0,0,0.35); border-radius:6px; padding:6px 8px; font-size:11px; margin-bottom:10px;">
               <div style="color:#d1d5db;">基础金珠: <b>${tier.baseGold.toLocaleString()}</b></div>
-              <div class="val-damage">>双倍赠送: <b class="val-ok">>+${doubleBonus.toLocaleString()}</b></div>
+              <div class="val-damage">双倍赠送: <b class="val-ok">+${doubleBonus.toLocaleString()}</b></div>
               <div style="color:#fde047; font-weight:bold; margin-top:2px; border-top:1px dashed #374151; padding-top:2px;">
                 实际到账: <span style="font-size:13px; color:#fbbf24;">${totalGet.toLocaleString()}</span> 金珠
               </div>
@@ -4061,8 +4060,8 @@ class GameApp {
       } else {
         historyList.innerHTML = hist.slice(0, 5).map(item => `
           <div class="card-row--split" style="background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px; border:1px solid #374151">
-            <span class="val-muted">>⏱️ ${item.time}</span>
-            <span style="color:#e5e7eb;">模拟支付: <b class="val-ok">>¥${item.price}</b></span>
+            <span class="val-muted">⏱️ ${item.time}</span>
+            <span style="color:#e5e7eb;">模拟支付: <b class="val-ok">¥${item.price}</b></span>
             <span style="color:#fbbf24; font-weight:bold;">到账 +${item.gold.toLocaleString()} 金珠</span>
           </div>
         `).join('');
@@ -4777,12 +4776,12 @@ class GameApp {
                     <span style="font-size:9px; background:${campObj.color}; color:#fff; border-radius:3px; padding:0 3px;">${campObj.name}</span>
                     ${h.isLeader ? '<span style="font-size:9px; background:#d97706; color:#fff; border-radius:3px; padding:0 3px;">主将</span>' : ''}
                   </div>
-                  <div class="card-micro">>${starStr}</div>
+                  <div class="card-micro">${starStr}</div>
                 </div>
               </div>
               <div style="text-align:right; font-size:11px;">
                 <div style="color:${isPlayer ? '#34d399' : '#f87171'}; font-weight:bold;">余兵: ${h.remaining} / ${h.initial}</div>
-                <div style="color:#9ca3af; font-size:10px;">造成伤害: <b class="battle-num-dmg val-danger">>${h.damage || 0}</b> | 治疗: <b class="battle-num-heal" style="color:#10b981;">${h.heals || 0}</b></div>
+                <div style="color:#9ca3af; font-size:10px;">造成伤害: <b class="battle-num-dmg val-danger">${h.damage || 0}</b> | 治疗: <b class="battle-num-heal" style="color:#10b981;">${h.heals || 0}</b></div>
               </div>
             </div>
             <div class="lineup-hero-tactics">
@@ -4889,8 +4888,8 @@ class GameApp {
             ${renderHeroList(s.playerHeroStats, true)}
           </div>
           <div class="card-row--split" style="margin-top:auto; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#9ca3af">
-            <span>总兵力: <b class="val-ok">>${s.playerInitialSoldiers}</b></span>
-            <span>总战损: <b class="val-danger">>-${s.playerLosses}</b></span>
+            <span>总兵力: <b class="val-ok">${s.playerInitialSoldiers}</b></span>
+            <span>总战损: <b class="val-danger">-${s.playerLosses}</b></span>
           </div>
         </div>
 
@@ -4918,8 +4917,8 @@ class GameApp {
             ${renderHeroList(s.enemyHeroStats, false)}
           </div>
           <div class="card-row--split" style="margin-top:auto; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#9ca3af">
-            <span>守备兵力: <b class="val-damage">>${s.enemyInitialSoldiers}</b></span>
-            <span>被歼灭: <b class="val-ok">>-${s.enemyLosses}</b></span>
+            <span>守备兵力: <b class="val-damage">${s.enemyInitialSoldiers}</b></span>
+            <span>被歼灭: <b class="val-ok">-${s.enemyLosses}</b></span>
           </div>
         </div>
       </div>
@@ -5051,7 +5050,7 @@ class GameApp {
                       <span style="font-size:9px; background:${campObj.color}; color:#fff; border-radius:2px; padding:0 3px;">${campObj.name}</span>
                       ${h.isLeader ? '<span style="font-size:9px; background:#d97706; color:#fff; border-radius:2px; padding:0 2px;">主</span>' : ''}
                     </div>
-                    <div>
+                    <div class="card-note card-note--tight">
                       ${heroTacticsColored}
                     </div>
                   </div>
@@ -5061,7 +5060,7 @@ class GameApp {
                 <div style="font-weight:bold; color:${h.remaining > 0 ? (isPlayer ? '#34d399' : '#f87171') : '#6b7280'};">
                   ${h.remaining} <span style="font-size:10px; color:#6b7280;">/ ${h.initial}</span>
                 </div>
-                <div>战损 -${h.losses}</div>
+                <div class="card-note">战损 -${h.losses}</div>
               </td>
               <td style="min-width:110px;">
                 <div style="font-weight:800; color:#ef4444; font-size:13px;">${(h.damage || 0).toLocaleString()}</div>
@@ -5142,7 +5141,7 @@ class GameApp {
           <div class="stats-table-header player">
             <span>🛡️ 我军出征军团 · 数据统计 (${pArmObj.icon} ${pArmObj.name})</span>
             <span style="font-size:11px; font-weight:normal; color:#a7f3d0;">
-              总输出: <b class="val-danger">>${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
+              总输出: <b class="val-danger">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
             </span>
           </div>
           <table class="stats-grid-table">
@@ -5166,7 +5165,7 @@ class GameApp {
           <div class="stats-table-header enemy">
             <span>🏯 敌军守备军团 · 数据统计 (${eArmObj.icon} ${eArmObj.name})</span>
             <span style="font-size:11px; font-weight:normal; color:#fca5a5;">
-              总输出: <b class="val-danger">>${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
+              总输出: <b class="val-danger">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
             </span>
           </div>
           <table class="stats-grid-table">

@@ -96,7 +96,17 @@ class MarioGame {
     this.clearSeqTimer = 0;
     this.dieTimer = 0;
 
-    // 1-2 地下关卡马里奥从左上管口自然下落，1-1 和 1-3 则出生在地面上
+    // 城堡专属状态
+    this.firebars = this.tileMap.firebars || [];
+    this.bowser = this.tileMap.bowserSpawn ? new Bowser(this.tileMap.bowserSpawn.x, this.tileMap.bowserSpawn.y) : null;
+    this.toad = this.tileMap.toadSpawn ? new Toad(this.tileMap.toadSpawn.x, this.tileMap.toadSpawn.y) : null;
+    this.bowserFires = [];
+    this.bridgeCollapseStep = 0;
+    this.bridgeCollapseTimer = 0;
+    this.castleClearSeqTimer = 0;
+    this.axeTriggered = false;
+
+    // 1-2 地下关卡马里奥从左上管口自然下落，1-1、1-3 和 1-4 则出生在地面上
     const spawnY = (this.currentStage === 2) ? (4 * 16) : (11 * 16);
     this.mario = new Mario(40, spawnY);
 
@@ -104,7 +114,7 @@ class MarioGame {
       this.mario.powerUp();
     }
 
-    // 初始化敌人列表 (支持敌人自定义 Y 轴出生高度，适配树冠平台)
+    // 初始化敌人列表 (支持敌人自定义 Y 轴出生高度，适配树冠平台与地牢)
     this.enemies = [];
     this.tileMap.enemiesSpawnConfig.forEach(cfg => {
       const defaultY = (cfg.type === 'koopa') ? (10 * 16 + 8) : (11 * 16);
@@ -119,7 +129,7 @@ class MarioGame {
     this.items = [];
     this.particles = [];
 
-    // 启动对应关卡主题的 BGM (地表 / 地下)
+    // 启动对应关卡主题的 BGM (地表 / 地下 / 城堡)
     window.marioAudio.startBGM(this.tileMap.theme);
   }
 
@@ -274,10 +284,53 @@ class MarioGame {
         return;
       }
 
-      // 检查是否到达终点旗杆
-      if (this.mario.x >= this.tileMap.flagPoleX - 2 && this.mario.x <= this.tileMap.flagPoleX + 8) {
+      // 检查是否到达终点旗杆 (仅前三关)
+      if (this.currentStage !== 4 && this.mario.x >= this.tileMap.flagPoleX - 2 && this.mario.x <= this.tileMap.flagPoleX + 8) {
         this.triggerStageClear();
         return;
+      }
+
+      // 检查是否触碰第四关金飞斧机关 (Axe)
+      if (this.currentStage === 4 && this.tileMap.axePos && !this.axeTriggered) {
+        if (Math.abs(this.mario.x - this.tileMap.axePos.x) < 14 && Math.abs(this.mario.y - this.tileMap.axePos.y) < 24) {
+          this.triggerCastleClear();
+          return;
+        }
+      }
+
+      // 更新城堡旋转火球棒
+      if (this.firebars && this.firebars.length > 0) {
+        this.firebars.forEach(fb => {
+          fb.update();
+          if (fb.checkCollision(this.mario)) {
+            this.mario.takeDamage();
+          }
+        });
+      }
+
+      // 更新库巴吐火弹
+      if (this.bowserFires && this.bowserFires.length > 0) {
+        for (let i = this.bowserFires.length - 1; i >= 0; i--) {
+          const bf = this.bowserFires[i];
+          bf.update(this.cameraX);
+          if (bf.checkCollision(this.mario)) {
+            this.mario.takeDamage();
+          }
+          if (bf.isDead) {
+            this.bowserFires.splice(i, 1);
+          }
+        }
+      }
+
+      // 更新大魔王库巴
+      if (this.bowser && !this.bowser.isDead) {
+        this.bowser.update(this.tileMap, this.mario.x, (fx, fy) => {
+          this.bowserFires.push(new BowserFire(fx, fy));
+          window.marioAudio.playBowserFire();
+        });
+        if (this.checkCollision(this.mario, this.bowser)) {
+          this.mario.takeDamage();
+        }
       }
 
       // 更新并检测道具拾取
@@ -305,7 +358,7 @@ class MarioGame {
       }
     }
 
-    // 3. 通关旗杆下滑与进入城堡过场动画
+    // 3. 通关旗杆下滑与进入城堡过场动画 (1-1 ~ 1-3)
     else if (this.gameState === 'STAGE_CLEAR') {
       this.clearSeqTimer++;
       this.tileMap.updateBumpingBlocks();
@@ -349,14 +402,105 @@ class MarioGame {
             } else if (this.currentStage === 2) {
               // 1-2 通关，平滑晋升至 World 1-3 高空树冠悬崖世界！
               this.startLevelTransition(1, 3, true);
+            } else if (this.currentStage === 3) {
+              // 1-3 通关，平滑晋升至 World 1-4 终极库巴熔岩城堡！
+              this.startLevelTransition(1, 4, true);
             } else {
-              // 1-3 也通关，进入三连关大满贯全通关界面
               this.gameState = 'ALL_CLEAR';
             }
           }
         }
       }
     }
+
+    // 4. 第四关城堡断桥与救出奇诺比奥过场动画
+    else if (this.gameState === 'CASTLE_CLEAR') {
+      this.castleClearSeqTimer++;
+      this.tileMap.updateBumpingBlocks();
+      this.updateParticles();
+
+      // 阶段 1：熔岩吊桥自右向左逐块碎裂坍塌 (0 ~ 80 帧)
+      const bridgeCols = this.tileMap.bridgeCols || [];
+      if (this.bridgeCollapseStep < bridgeCols.length) {
+        this.bridgeCollapseTimer++;
+        if (this.bridgeCollapseTimer >= 3) { // 每 3 帧碎裂一块桥板
+          this.bridgeCollapseTimer = 0;
+          const targetCol = bridgeCols[bridgeCols.length - 1 - this.bridgeCollapseStep];
+          this.tileMap.setTile(targetCol, 12, CONFIG.TILE.EMPTY);
+          const px = targetCol * 16;
+          const py = 12 * 16;
+          this.particles.push(new DebrisParticle(px, py, -1.5, -3.5));
+          this.particles.push(new DebrisParticle(px + 8, py, 1.5, -3.5));
+          window.marioAudio.playBreakBlock();
+          this.bridgeCollapseStep++;
+
+          // 吊桥断裂到库巴脚下时，库巴坠落熔岩！
+          if (this.bowser && !this.bowser.isFallingInLava) {
+            const bowserCol = Math.floor(this.bowser.x / 16);
+            if (targetCol <= bowserCol + 2) {
+              this.bowser.dropIntoLava();
+              window.marioAudio.playBowserFall();
+            }
+          }
+        }
+      }
+
+      // 更新库巴坠入岩浆翻滚下沉
+      if (this.bowser) {
+        this.bowser.update(this.tileMap, this.mario.x);
+      }
+
+      // 阶段 2：库巴掉下熔岩后，马里奥欢快奔跑走向右侧觐见厅 (100 ~ 210 帧)
+      if (this.castleClearSeqTimer > 100 && this.castleClearSeqTimer < 210) {
+        this.mario.facingRight = true;
+        this.mario.state = 'run';
+        this.mario.runAnimFrame += 0.2;
+        const targetX = (this.toad ? this.toad.x - 24 : 160 * 16);
+        if (this.mario.x < targetX) {
+          this.mario.x += 1.2;
+        } else {
+          this.mario.state = 'idle';
+        }
+      }
+
+      // 阶段 3：到达奇诺比奥身前，立正并奏响城堡胜利号角 (帧 210)
+      if (this.castleClearSeqTimer === 210) {
+        this.mario.state = 'idle';
+        window.marioAudio.playCastleClear();
+      }
+
+      // 阶段 4：剩余时间结算与最终晋升大满贯
+      if (this.castleClearSeqTimer > 250) {
+        if (this.timeLeft > 0) {
+          this.timeLeft = Math.max(0, this.timeLeft - 4);
+          this.score += 200;
+          if (this.timeLeft % 8 === 0) {
+            window.marioAudio.playCoin();
+          }
+        } else if (this.castleClearSeqTimer > 390) {
+          // 全部四关大圆满通关！
+          this.gameState = 'ALL_CLEAR';
+        }
+      }
+    }
+  }
+
+  // 触发第四关城堡熔岩断桥与解救奇诺比奥通关
+  triggerCastleClear() {
+    this.gameState = 'CASTLE_CLEAR';
+    this.axeTriggered = true;
+    this.castleClearSeqTimer = 0;
+    this.bridgeCollapseStep = 0;
+    this.bridgeCollapseTimer = 0;
+    this.mario.vx = 0;
+    this.mario.vy = 0;
+    if (this.tileMap.axePos) {
+      this.tileMap.setTile(this.tileMap.axePos.col, this.tileMap.axePos.row, CONFIG.TILE.EMPTY);
+    }
+    this.enemies = [];
+    this.bowserFires = [];
+    this.addScore(5000, this.mario.x, this.mario.y);
+    window.marioAudio.stopBGM();
   }
 
   // 触发终点通关
@@ -459,8 +603,8 @@ class MarioGame {
   render() {
     const ctx = this.ctx;
 
-    // 1. 根据关卡主题清屏 (地表：天际渐变蓝；地下：深渊黑)
-    if (this.tileMap && this.tileMap.theme === 'underground') {
+    // 1. 根据关卡主题清屏 (地表与高空：天际渐变蓝；地下与城堡：地牢黑)
+    if (this.tileMap && (this.tileMap.theme === 'underground' || this.tileMap.theme === 'castle')) {
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, this.width, this.height);
     } else {
@@ -477,24 +621,44 @@ class MarioGame {
       this.tileMap.render(ctx, this.cameraX, this.animClock);
     }
 
-    // 3. 渲染道具
+    // 3. 渲染旋转火球棒 Firebar
+    if (this.firebars) {
+      this.firebars.forEach(fb => fb.render(ctx, this.cameraX));
+    }
+
+    // 4. 渲染奇诺比奥 NPC
+    if (this.toad) {
+      this.toad.render(ctx, this.cameraX);
+    }
+
+    // 5. 渲染大魔王库巴
+    if (this.bowser) {
+      this.bowser.render(ctx, this.cameraX);
+    }
+
+    // 6. 渲染库巴吐火弹
+    if (this.bowserFires) {
+      this.bowserFires.forEach(bf => bf.render(ctx, this.cameraX));
+    }
+
+    // 7. 渲染道具
     this.items.forEach(item => item.render(ctx, this.cameraX));
 
-    // 4. 渲染敌人
+    // 8. 渲染敌人
     this.enemies.forEach(enemy => enemy.render(ctx, this.cameraX));
 
-    // 5. 渲染马里奥
+    // 9. 渲染马里奥
     if (this.mario) {
       this.mario.render(ctx, this.cameraX);
     }
 
-    // 6. 渲染飘字与飞溅粒子
+    // 10. 渲染飘字与飞溅粒子
     this.particles.forEach(p => p.render(ctx, this.cameraX));
 
-    // 7. 渲染顶部经典 HUD 状态栏
+    // 11. 渲染顶部经典 HUD 状态栏
     this.renderHUD(ctx);
 
-    // 8. 渲染游戏标题 / 过渡 / 结束 / 暂停 / 通关弹窗
+    // 12. 渲染游戏标题 / 过渡 / 结束 / 暂停 / 通关弹窗
     this.renderOverlays(ctx);
   }
 
@@ -556,7 +720,7 @@ class MarioGame {
 
       ctx.fillStyle = '#38bdf8';
       ctx.font = '7px "Press Start 2P", monospace';
-      ctx.fillText('WORLD 1-1 ~ 1-3 TRILOGY EDITION', this.width / 2, 104);
+      ctx.fillText('WORLD 1-1 ~ 1-4 COMPLETE EDITION', this.width / 2, 104);
 
       if (Math.floor(this.animClock * 2) % 2 === 0) {
         ctx.fillStyle = '#fce000';
@@ -568,7 +732,24 @@ class MarioGame {
       ctx.font = '6px "Press Start 2P", monospace';
       ctx.fillText('© 1985 NINTENDO / GAME HUB', this.width / 2, 192);
     }
-    // 3. 暂停状态
+    // 3. 城堡救出奇诺比奥过场彩蛋对话框
+    else if (this.gameState === 'CASTLE_CLEAR' && this.castleClearSeqTimer > 210) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(20, 60, this.width - 40, 75);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(20, 60, this.width - 40, 75);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '7px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('THANK YOU MARIO!', this.width / 2, 82);
+
+      ctx.fillStyle = '#fc9838';
+      ctx.fillText('BUT OUR PRINCESS IS', this.width / 2, 102);
+      ctx.fillText('IN ANOTHER CASTLE!', this.width / 2, 118);
+    }
+    // 4. 暂停状态
     else if (this.gameState === 'PAUSED') {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, 0, this.width, this.height);
@@ -578,7 +759,7 @@ class MarioGame {
       ctx.textAlign = 'center';
       ctx.fillText('PAUSED', this.width / 2, this.height / 2);
     }
-    // 4. 游戏结束 Game Over
+    // 5. 游戏结束 Game Over
     else if (this.gameState === 'GAME_OVER') {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
       ctx.fillRect(0, 0, this.width, this.height);
@@ -593,30 +774,31 @@ class MarioGame {
       ctx.fillText(`SCORE: ${this.score}`, this.width / 2, 130);
       ctx.fillText('PRESS ENTER TO RESTART', this.width / 2, 160);
     }
-    // 5. 三连关大满贯全通关庆祝画面
+    // 6. 四大关大满贯全通关庆祝画面
     else if (this.gameState === 'ALL_CLEAR') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-      ctx.fillRect(16, 45, this.width - 32, 140);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+      ctx.fillRect(16, 40, this.width - 32, 150);
       ctx.strokeStyle = '#fc9838';
       ctx.lineWidth = 2;
-      ctx.strokeRect(16, 45, this.width - 32, 140);
+      ctx.strokeRect(16, 40, this.width - 32, 150);
 
       ctx.fillStyle = '#fce000';
       ctx.font = '10px "Press Start 2P", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('CONGRATULATIONS!', this.width / 2, 70);
+      ctx.fillText('CONGRATULATIONS!', this.width / 2, 65);
 
       ctx.fillStyle = '#38bdf8';
       ctx.font = '8px "Press Start 2P", monospace';
-      ctx.fillText('TRILOGY MASTER CLEARED!', this.width / 2, 92);
+      ctx.fillText('WORLD 1 ALL CLEARED!', this.width / 2, 85);
+      ctx.fillText('BOWSER DEFEATED!', this.width / 2, 100);
 
       ctx.fillStyle = '#ffffff';
       ctx.font = '7px "Press Start 2P", monospace';
-      ctx.fillText(`FINAL SCORE: ${this.score}`, this.width / 2, 116);
-      ctx.fillText(`TOTAL COINS: ${this.coins}`, this.width / 2, 132);
+      ctx.fillText(`FINAL SCORE: ${this.score}`, this.width / 2, 122);
+      ctx.fillText(`TOTAL COINS: ${this.coins}`, this.width / 2, 138);
 
       ctx.fillStyle = '#4ade80';
-      ctx.fillText('PRESS ENTER OR R TO PLAY AGAIN', this.width / 2, 160);
+      ctx.fillText('PRESS ENTER OR R TO PLAY AGAIN', this.width / 2, 168);
     }
 
     ctx.restore();

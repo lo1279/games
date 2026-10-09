@@ -6,13 +6,18 @@ class LevelTileMap {
   constructor(world = 1, stage = 1) {
     this.world = world;
     this.stage = stage;
-    this.theme = (world === 1 && stage === 2) ? 'underground' : ((world === 1 && stage === 3) ? 'treetop' : 'overworld');
-    this.cols = 212; // 关卡总宽度 (约 3392 像素)
+    this.theme = (world === 1 && stage === 2) ? 'underground' : ((world === 1 && stage === 3) ? 'treetop' : ((world === 1 && stage === 4) ? 'castle' : 'overworld'));
+    this.cols = (stage === 4) ? 176 : 212; // 城堡关总宽度
     this.rows = 15;  // 经典 NES 视口垂直 15 格 (每格 16 像素，共 240 高)
     this.grid = [];  // 二维瓦片矩阵 [row][col]
     this.bumpingBlocks = []; // 正在被顶动弹跳的砖块
     this.enemiesSpawnConfig = []; // 初始怪物生成点配置
-    this.flagPoleX = 198 * CONFIG.TILE_SIZE; // 胜利旗杆 X 坐标
+    this.firebars = []; // 旋转火球棒机关
+    this.bridgeCols = []; // 库巴熔岩吊桥列索引
+    this.axePos = null; // 金飞斧坐标
+    this.bowserSpawn = null;
+    this.toadSpawn = null;
+    this.flagPoleX = 198 * CONFIG.TILE_SIZE; // 胜利旗杆 X 坐标 (1-1 ~ 1-3)
     this.flagY = 3 * CONFIG.TILE_SIZE + 4; // 旗帜当前滑动位置
     this.flagBottomY = 12 * CONFIG.TILE_SIZE;
     this.castleDoorX = 206 * CONFIG.TILE_SIZE;
@@ -21,6 +26,8 @@ class LevelTileMap {
       this.initUndergroundMap();
     } else if (this.stage === 3) {
       this.initTreetopMap();
+    } else if (this.stage === 4) {
+      this.initCastleMap();
     } else {
       this.initOverworldMap();
     }
@@ -345,6 +352,137 @@ class LevelTileMap {
     ];
   }
 
+  // 初始化 World 1-4 (经典终极库巴熔岩城堡关 Bowser's Castle)
+  initCastleMap() {
+    this.grid = [];
+    for (let r = 0; r < this.rows; r++) {
+      this.grid[r] = new Uint8Array(this.cols);
+    }
+    this.firebars = [];
+    this.bridgeCols = [];
+
+    // 1. 铺设坚固石砖天花板 (全封闭城堡压迫感)
+    for (let c = 0; c < this.cols; c++) {
+      this.grid[0][c] = CONFIG.TILE.HARD_BLOCK;
+      this.grid[1][c] = CONFIG.TILE.HARD_BLOCK;
+    }
+
+    // 2. 基础地面与初始长廊 (c=0..125)
+    for (let c = 0; c <= 125; c++) {
+      // 熔岩裂谷 1 (c=22..25) 与 熔岩裂谷 2 (c=64..68)
+      const isLavaPit = (c >= 22 && c <= 25) || (c >= 64 && c <= 68);
+      if (isLavaPit) {
+        this.grid[13][c] = CONFIG.TILE.LAVA_TOP;
+        this.grid[14][c] = CONFIG.TILE.LAVA_BODY;
+      } else {
+        this.grid[13][c] = CONFIG.TILE.GROUND;
+        this.grid[14][c] = CONFIG.TILE.GROUND;
+      }
+    }
+
+    // 3. 第一区域：火球棒石柱长廊 (c=0..35)
+    // 旋转火球柱 1 (c=12, row=10)
+    this.grid[10][12] = CONFIG.TILE.HARD_BLOCK;
+    this.firebars.push(new Firebar(12, 10, 5, 0.045, 0));
+
+    // 熔岩裂谷 1 前后的跳板与悬空砖
+    this.grid[9][19] = CONFIG.TILE.BRICK;
+    this.grid[9][20] = CONFIG.TILE.QUESTION_MUSHROOM;
+    this.grid[9][21] = CONFIG.TILE.BRICK;
+
+    // 熔岩坑上方悬空踏脚石 (c=23..24, row=9)
+    this.grid[9][23] = CONFIG.TILE.HARD_BLOCK;
+    this.grid[9][24] = CONFIG.TILE.HARD_BLOCK;
+
+    // 旋转火球柱 2 (c=28, row=9)
+    this.grid[9][28] = CONFIG.TILE.HARD_BLOCK;
+    this.firebars.push(new Firebar(28, 9, 5, -0.05, Math.PI / 2));
+
+    // 4. 第二区域：三层迷宫回廊 (c=36..75)
+    // 经典城堡上中下三路台阶
+    for (let c = 36; c <= 48; c++) {
+      this.grid[5][c] = CONFIG.TILE.HARD_BLOCK;
+      this.grid[9][c] = CONFIG.TILE.HARD_BLOCK;
+    }
+    // 旋转火球柱 3 (中层迷宫中心 c=42, row=9)
+    this.firebars.push(new Firebar(42, 9, 4, 0.05, Math.PI));
+
+    // 金币问号砖
+    this.grid[3][40] = CONFIG.TILE.QUESTION_COIN;
+    this.grid[7][45] = CONFIG.TILE.QUESTION_COIN;
+
+    // 跨越熔岩裂谷 2 (c=64..68)
+    for (let c = 58; c <= 63; c++) {
+      this.grid[8][c] = CONFIG.TILE.HARD_BLOCK;
+    }
+    this.grid[8][66] = CONFIG.TILE.HARD_BLOCK; // 坑中单格落脚点
+    this.firebars.push(new Firebar(66, 8, 4, 0.06, 0)); // 坑中极险火球棒
+
+    // 5. 第三区域：高低压迫回廊与库巴殿堂前厅 (c=76..125)
+    for (let c = 76; c <= 92; c++) {
+      this.grid[9][c] = CONFIG.TILE.HARD_BLOCK;
+    }
+    this.grid[5][84] = CONFIG.TILE.QUESTION_COIN;
+    this.grid[5][86] = CONFIG.TILE.QUESTION_COIN;
+    // 旋转火球柱 4 (前厅通道 c=98, row=10)
+    this.grid[10][98] = CONFIG.TILE.HARD_BLOCK;
+    this.firebars.push(new Firebar(98, 10, 5, -0.045, Math.PI / 4));
+
+    // 悬空石台阶 (c=106..122)
+    this.placeStairs(108, 13, 4, 1);
+    this.placeStairs(116, 13, 4, -1);
+    this.firebars.push(new Firebar(112, 8, 5, 0.05, 0));
+
+    // 6. 最终决战殿堂：大魔王库巴熔岩吊桥 (c=126..150)
+    // 殿堂无底熔岩深渊 (c=126..148 全部为岩浆)
+    for (let c = 126; c <= 148; c++) {
+      this.grid[13][c] = CONFIG.TILE.LAVA_TOP;
+      this.grid[14][c] = CONFIG.TILE.LAVA_BODY;
+    }
+    // 熔岩吊桥桥面 (c=130..144, row=12 全部为 BRIDGE)
+    for (let c = 130; c <= 144; c++) {
+      this.grid[12][c] = CONFIG.TILE.BRIDGE;
+      this.bridgeCols.push(c);
+    }
+
+    // 吊桥左侧入口基座
+    this.grid[12][126] = CONFIG.TILE.HARD_BLOCK;
+    this.grid[12][127] = CONFIG.TILE.HARD_BLOCK;
+    this.grid[12][128] = CONFIG.TILE.HARD_BLOCK;
+    this.grid[12][129] = CONFIG.TILE.HARD_BLOCK;
+
+    // 吊桥右侧尽头机关控制台 (c=145..152)
+    for (let c = 145; c <= 152; c++) {
+      this.grid[12][c] = CONFIG.TILE.HARD_BLOCK;
+      this.grid[13][c] = CONFIG.TILE.HARD_BLOCK;
+      this.grid[14][c] = CONFIG.TILE.HARD_BLOCK;
+    }
+
+    // 关键通关机关：金飞斧 (Axe) 位于 col 148, row 11
+    this.grid[11][148] = CONFIG.TILE.AXE;
+    this.axePos = { col: 148, row: 11, x: 148 * 16, y: 11 * 16 };
+
+    // 库巴 Boss 出生配置 (站在吊桥右半区 c=140, row=10)
+    this.bowserSpawn = { x: 140 * 16, y: 10 * 16 };
+
+    // 7. 终点觐见厅与解救奇诺比奥 (c=153..175)
+    for (let c = 153; c < this.cols; c++) {
+      this.grid[13][c] = CONFIG.TILE.GROUND;
+      this.grid[14][c] = CONFIG.TILE.GROUND;
+    }
+    // 奇诺比奥 NPC 出生点
+    this.toadSpawn = { x: 164 * 16, y: 11 * 16 + 8 };
+
+    // 城堡内部少量顽抗巡逻兵
+    this.enemiesSpawnConfig = [
+      { type: 'goomba', x: 20 * 16, y: 11 * 16 },
+      { type: 'koopa',  x: 34 * 16, y: 11 * 16 },
+      { type: 'goomba', x: 74 * 16, y: 11 * 16 },
+      { type: 'koopa',  x: 90 * 16, y: 7 * 16 },
+      { type: 'goomba', x: 102 * 16, y: 11 * 16 }
+    ];
+  }
+
   // 辅助函数：放置高空树冠浮岛平台与支撑树干
   placeTreetopPlatform(startCol, width, row, trunkStart = null, trunkEnd = null) {
     // 树冠平台顶板 (坚固的绿色蘑菇树冠平台)
@@ -423,7 +561,8 @@ class LevelTileMap {
       tile === CONFIG.TILE.PIPE_TL ||
       tile === CONFIG.TILE.PIPE_TR ||
       tile === CONFIG.TILE.PIPE_BL ||
-      tile === CONFIG.TILE.PIPE_BR
+      tile === CONFIG.TILE.PIPE_BR ||
+      tile === CONFIG.TILE.BRIDGE
     );
   }
 
@@ -471,13 +610,15 @@ class LevelTileMap {
       this.renderScenery(ctx, cameraX);
     }
 
-    // 2. 绘制终点城堡
-    const castlePixelX = 202 * CONFIG.TILE_SIZE - cameraX;
-    if (castlePixelX > -100 && castlePixelX < CONFIG.VIEWPORT_WIDTH + 100) {
-      SpriteRenderer.drawCastle(ctx, castlePixelX, 8 * CONFIG.TILE_SIZE);
+    // 2. 绘制终点城堡 (仅 1-1 ~ 1-3 渲染)
+    if (this.theme !== 'castle') {
+      const castlePixelX = 202 * CONFIG.TILE_SIZE - cameraX;
+      if (castlePixelX > -100 && castlePixelX < CONFIG.VIEWPORT_WIDTH + 100) {
+        SpriteRenderer.drawCastle(ctx, castlePixelX, 8 * CONFIG.TILE_SIZE);
+      }
     }
 
-    // 3. 绘制瓦片层 (支持关卡主题风格)
+    // 3. 绘制瓦片层 (支持地表、地下、高空与城堡主题风格)
     for (let r = 0; r < this.rows; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const tile = this.grid[r][c];
@@ -510,6 +651,18 @@ class LevelTileMap {
           case CONFIG.TILE.PIPE_BR:
             SpriteRenderer.drawPipePart(ctx, x, y, tile);
             break;
+          case CONFIG.TILE.LAVA_TOP:
+            SpriteRenderer.drawLavaTop(ctx, x, y, animFrame);
+            break;
+          case CONFIG.TILE.LAVA_BODY:
+            SpriteRenderer.drawLavaBody(ctx, x, y);
+            break;
+          case CONFIG.TILE.BRIDGE:
+            SpriteRenderer.drawBridge(ctx, x, y);
+            break;
+          case CONFIG.TILE.AXE:
+            SpriteRenderer.drawAxe(ctx, x, y, animFrame);
+            break;
           case CONFIG.TILE.FLAG_POLE:
             ctx.fillStyle = '#00a800';
             ctx.fillRect(x + 7, y, 2, 16);
@@ -524,16 +677,18 @@ class LevelTileMap {
       }
     }
 
-    // 4. 绘制终点胜利旗帜 (跟随下降状态)
-    const flagScreenX = this.flagPoleX - cameraX - 12;
-    const flagScreenY = this.flagY;
-    if (flagScreenX > -20 && flagScreenX < CONFIG.VIEWPORT_WIDTH + 20) {
-      ctx.fillStyle = '#00a800';
-      ctx.beginPath();
-      ctx.moveTo(flagScreenX, flagScreenY);
-      ctx.lineTo(flagScreenX + 14, flagScreenY + 6);
-      ctx.lineTo(flagScreenX, flagScreenY + 12);
-      ctx.fill();
+    // 4. 绘制终点胜利旗帜 (非城堡关跟随下降状态)
+    if (this.stage !== 4) {
+      const flagScreenX = this.flagPoleX - cameraX - 12;
+      const flagScreenY = this.flagY;
+      if (flagScreenX > -20 && flagScreenX < CONFIG.VIEWPORT_WIDTH + 20) {
+        ctx.fillStyle = '#00a800';
+        ctx.beginPath();
+        ctx.moveTo(flagScreenX, flagScreenY);
+        ctx.lineTo(flagScreenX + 14, flagScreenY + 6);
+        ctx.lineTo(flagScreenX, flagScreenY + 12);
+        ctx.fill();
+      }
     }
   }
 

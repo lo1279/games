@@ -39,7 +39,11 @@ const CONFIG = {
     PIPE_BL: 9,
     PIPE_BR: 10,
     FLAG_POLE: 11,
-    FLAG_TOP: 12
+    FLAG_TOP: 12,
+    LAVA_TOP: 13,
+    LAVA_BODY: 14,
+    AXE: 15,
+    BRIDGE: 16
   },
 
   // 经典 NES 色板
@@ -78,28 +82,30 @@ const SpriteRenderer = {
   drawGroundTile(ctx, x, y, theme = 'overworld') {
     const isUnder = theme === 'underground';
     const isTree = theme === 'treetop';
-    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#00a800' : CONFIG.PALETTE.BRICK_BROWN);
+    const isCastle = theme === 'castle';
+    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#00a800' : (isCastle ? '#808080' : CONFIG.PALETTE.BRICK_BROWN));
     ctx.fillRect(x, y, 16, 16);
     // 高光与纹理
-    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#80d010' : '#fc9838');
+    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#80d010' : (isCastle ? '#c0c0c0' : '#fc9838'));
     ctx.fillRect(x, y, 15, 1);
     ctx.fillRect(x, y, 1, 15);
     ctx.fillStyle = '#000000';
     ctx.fillRect(x, y + 15, 16, 1);
     ctx.fillRect(x + 15, y, 1, 16);
     // 内部斑纹
-    ctx.fillStyle = isUnder ? '#004050' : (isTree ? '#005800' : '#602000');
+    ctx.fillStyle = isUnder ? '#004050' : (isTree ? '#005800' : (isCastle ? '#484848' : '#602000'));
     ctx.fillRect(x + 3, y + 4, 3, 3);
     ctx.fillRect(x + 9, y + 7, 3, 3);
     ctx.fillRect(x + 4, y + 11, 3, 3);
   },
 
-  // 绘制普通砖块 (支持地表、地下与高空主题)
+  // 绘制普通砖块 (支持地表、地下、高空与城堡主题)
   drawBrick(ctx, x, y, offsetY = 0, theme = 'overworld') {
     const drawY = y + offsetY;
     const isUnder = theme === 'underground';
     const isTree = theme === 'treetop';
-    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#b84418' : CONFIG.PALETTE.BRICK_BROWN);
+    const isCastle = theme === 'castle';
+    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#b84418' : (isCastle ? '#8c8c8c' : CONFIG.PALETTE.BRICK_BROWN));
     ctx.fillRect(x, drawY, 16, 16);
     // 砖块黑色缝隙线条
     ctx.fillStyle = '#000000';
@@ -109,24 +115,82 @@ const SpriteRenderer = {
     ctx.fillRect(x + 3, drawY + 8, 2, 7);
     ctx.fillRect(x + 12, drawY + 8, 2, 7);
     // 高光边缘
-    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#fc9838' : '#fc9838');
+    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#fc9838' : (isCastle ? '#d0d0d0' : '#fc9838'));
     ctx.fillRect(x, drawY, 15, 1);
     ctx.fillRect(x, drawY + 8, 15, 1);
   },
 
-  // 绘制坚硬石块 (台阶、浮岛与障碍)
+  // 绘制坚硬石块 (台阶、浮岛、城堡障碍)
   drawHardBlock(ctx, x, y, theme = 'overworld') {
     const isUnder = theme === 'underground';
     const isTree = theme === 'treetop';
-    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#00a800' : '#b84418');
+    const isCastle = theme === 'castle';
+    ctx.fillStyle = isUnder ? '#008088' : (isTree ? '#00a800' : (isCastle ? '#707070' : '#b84418'));
     ctx.fillRect(x, y, 16, 16);
-    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#80d010' : '#fc9838');
+    ctx.fillStyle = isUnder ? '#00e8d8' : (isTree ? '#80d010' : (isCastle ? '#b0b0b0' : '#fc9838'));
     ctx.fillRect(x, y, 15, 2);
     ctx.fillRect(x, y, 2, 15);
     ctx.fillStyle = '#000000';
     ctx.fillRect(x, y + 14, 16, 2);
     ctx.fillRect(x + 14, y, 2, 16);
     ctx.fillRect(x + 4, y + 4, 8, 8);
+  },
+
+  // 绘制翻滚熔岩表面 (顶部带波浪动画)
+  drawLavaTop(ctx, x, y, animClock = 0) {
+    // 熔岩深红底色
+    ctx.fillStyle = '#d82800';
+    ctx.fillRect(x, y + 4, 16, 12);
+    // 动态起伏的橘黄烈焰波浪
+    const waveShift = Math.floor(animClock * 4) % 4;
+    ctx.fillStyle = '#fce000';
+    for (let i = 0; i < 16; i += 4) {
+      const offset = (i + waveShift) % 8 < 4 ? 2 : 4;
+      ctx.fillRect(x + i, y + offset, 4, 2);
+    }
+    ctx.fillStyle = '#fc7400';
+    ctx.fillRect(x, y + 6, 16, 2);
+  },
+
+  // 绘制深层熔岩内部
+  drawLavaBody(ctx, x, y) {
+    ctx.fillStyle = '#d82800';
+    ctx.fillRect(x, y, 16, 16);
+    ctx.fillStyle = '#a01800';
+    ctx.fillRect(x + 2, y + 4, 5, 4);
+    ctx.fillRect(x + 9, y + 9, 5, 4);
+  },
+
+  // 绘制库巴熔岩吊桥方块 (带链条连接纹路)
+  drawBridge(ctx, x, y) {
+    ctx.fillStyle = '#885020';
+    ctx.fillRect(x, y, 16, 16);
+    // 木板纹理与暗边
+    ctx.fillStyle = '#502800';
+    ctx.fillRect(x, y + 14, 16, 2);
+    ctx.fillRect(x + 14, y, 2, 16);
+    // 吊桥铁链扣环
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(x + 2, y + 2, 12, 3);
+    ctx.fillStyle = '#202020';
+    ctx.fillRect(x + 4, y + 3, 8, 1);
+  },
+
+  // 绘制通关机关：金飞斧 (Axe)
+  drawAxe(ctx, x, y, animClock = 0) {
+    const flash = Math.floor(animClock * 3) % 2 === 0;
+    // 斧柄 (木质长柄)
+    ctx.fillStyle = '#804010';
+    ctx.fillRect(x + 7, y + 4, 2, 12);
+    // 双刃斧头金身
+    ctx.fillStyle = flash ? '#fce000' : '#fc9838';
+    ctx.fillRect(x + 2, y + 2, 12, 4);
+    ctx.fillRect(x + 1, y + 3, 2, 6);
+    ctx.fillRect(x + 13, y + 3, 2, 6);
+    // 斧尖闪光
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + 2, y + 3, 1, 2);
+    ctx.fillRect(x + 13, y + 3, 1, 2);
   },
 
   // 绘制问号砖块
@@ -650,5 +714,184 @@ const SpriteRenderer = {
     ctx.fillStyle = '#000000';
     ctx.fillRect(px + 32, py + 48, 16, 32);
     ctx.fillRect(px + 36, py + 10, 8, 10);
+  },
+
+  // 绘制旋转火球棒中的单颗火球 (8x8)
+  drawFirebarBall(ctx, x, y, animClock = 0) {
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    const flash = Math.floor(animClock * 6) % 2 === 0;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(px, py + 1, 8, 6);
+    ctx.fillRect(px + 1, py, 6, 8);
+    // 火球外焰 (鲜红)
+    ctx.fillStyle = flash ? '#fc3800' : '#e45c10';
+    ctx.fillRect(px + 1, py + 1, 6, 6);
+    // 火球内核 (亮黄/白光)
+    ctx.fillStyle = flash ? '#fce000' : '#ffffff';
+    ctx.fillRect(px + 2, py + 2, 4, 4);
+  },
+
+  // 绘制大魔王库巴喷射的横向长条烈焰 (24x8)
+  drawBowserFire(ctx, x, y, animClock = 0) {
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    const flicker = Math.floor(animClock * 8) % 3;
+    ctx.save();
+    // 烈焰黑边轮廓
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(px, py + 1, 24, 6);
+    ctx.fillRect(px + 2, py, 20, 8);
+    // 烈焰外层红/橙
+    ctx.fillStyle = flicker === 0 ? '#fc3800' : '#fc7400';
+    ctx.fillRect(px + 1, py + 1, 22, 6);
+    // 烈焰核心金黄与白热光芒
+    ctx.fillStyle = '#fce000';
+    ctx.fillRect(px + 3, py + 2, 16, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px + 5, py + 3, 10, 2);
+    ctx.restore();
+  },
+
+  // 绘制大魔王库巴 (32x32 经典 FC 像素形象)
+  drawBowser(ctx, x, y, facingLeft = true, animClock = 0, isRoaring = false, isDead = false) {
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    const walkFrame = Math.floor(animClock * 3) % 2;
+
+    ctx.save();
+    ctx.translate(px + 16, py + 16);
+    if (!facingLeft) {
+      ctx.scale(-1, 1);
+    }
+    if (isDead) {
+      // 坠落熔岩翻滚倒转
+      ctx.scale(1, -1);
+    }
+    ctx.translate(-16, -16);
+
+    // 1. 背后带刺绿龟壳 (Shell)
+    ctx.fillStyle = '#00a800'; // 库巴绿
+    ctx.fillRect(14, 6, 14, 18);
+    ctx.fillStyle = '#005800'; // 龟壳暗纹
+    ctx.fillRect(26, 8, 2, 14);
+    // 龟壳上的白色骨刺 (Spikes)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(20, 4, 3, 3);
+    ctx.fillRect(25, 5, 3, 3);
+    ctx.fillRect(26, 12, 3, 3);
+    ctx.fillRect(26, 19, 3, 3);
+    ctx.fillRect(20, 23, 3, 3);
+
+    // 2. 腹部鳞片与胸膛 (黄色皮肤)
+    ctx.fillStyle = '#fc9838'; // 橙黄腹皮
+    ctx.fillRect(8, 12, 10, 12);
+    ctx.fillStyle = '#e45c10'; // 腹部纹理
+    ctx.fillRect(10, 15, 6, 2);
+    ctx.fillRect(10, 19, 6, 2);
+
+    // 3. 粗壮下肢与脚爪
+    ctx.fillStyle = '#00a800';
+    if (walkFrame === 0) {
+      ctx.fillRect(8, 24, 7, 6);
+      ctx.fillRect(18, 24, 7, 6);
+    } else {
+      ctx.fillRect(6, 24, 7, 5);
+      ctx.fillRect(20, 23, 7, 7);
+    }
+    // 白爪子
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(6, 28, 3, 3);
+    ctx.fillRect(18, 28, 3, 3);
+
+    // 4. 头部、尖角与红色发冠
+    ctx.fillStyle = '#00a800'; // 绿头
+    ctx.fillRect(4, 5, 10, 9);
+    // 红色鬃毛/发冠
+    ctx.fillStyle = '#b81800';
+    ctx.fillRect(11, 1, 5, 6);
+    ctx.fillRect(8, 2, 4, 4);
+    // 白色尖角
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(14, 2, 3, 3);
+
+    // 5. 凶悍眼神
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(6, 6, 3, 3);
+    ctx.fillStyle = '#b81800'; // 红血丝瞳孔
+    ctx.fillRect(6, 7, 2, 2);
+
+    // 6. 巨口与尖牙
+    ctx.fillStyle = '#e45c10'; // 嘴鼻
+    ctx.fillRect(1, 9, 7, 7);
+    if (isRoaring) {
+      // 张开巨口吐火
+      ctx.fillStyle = '#000000'; // 口腔深处
+      ctx.fillRect(0, 11, 6, 6);
+      ctx.fillStyle = '#ffffff'; // 上下锋利獠牙
+      ctx.fillRect(1, 11, 2, 2);
+      ctx.fillRect(4, 11, 2, 2);
+      ctx.fillRect(2, 15, 2, 2);
+    } else {
+      // 闭口露獠牙
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(1, 13, 6, 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(2, 11, 2, 2);
+      ctx.fillRect(4, 13, 2, 2);
+    }
+
+    // 7. 前爪臂膀
+    ctx.fillStyle = '#00a800';
+    ctx.fillRect(6, 14, 5, 5);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(5, 17, 2, 2);
+
+    ctx.restore();
+  },
+
+  // 绘制蘑菇侍从奇诺比奥 (Toad, 16x24 经典形象)
+  drawToad(ctx, x, y) {
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    ctx.save();
+    // 1. 白底大红波点蘑菇帽 (Mushroom Cap)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px + 1, py + 2, 14, 11);
+    ctx.fillRect(px + 3, py, 10, 14);
+    // 红色波斑
+    ctx.fillStyle = '#b81800';
+    ctx.fillRect(px + 2, py + 4, 3, 5);
+    ctx.fillRect(px + 11, py + 4, 3, 5);
+    ctx.fillRect(px + 6, py + 1, 4, 4);
+
+    // 2. 脸庞与呆萌表情
+    ctx.fillStyle = '#fc9838'; // 肤色
+    ctx.fillRect(px + 3, py + 11, 10, 6);
+    // 黑眼睛与微笑
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(px + 5, py + 13, 1, 3);
+    ctx.fillRect(px + 10, py + 13, 1, 3);
+    ctx.fillRect(px + 7, py + 16, 2, 1);
+
+    // 3. 蓝色小马甲
+    ctx.fillStyle = '#0038b8';
+    ctx.fillRect(px + 3, py + 17, 10, 4);
+    // 白色前襟
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px + 6, py + 17, 4, 4);
+
+    // 4. 白色小短裤与褐色鞋子
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px + 4, py + 20, 8, 2);
+    ctx.fillStyle = '#603000';
+    ctx.fillRect(px + 3, py + 22, 4, 2);
+    ctx.fillRect(px + 9, py + 22, 4, 2);
+
+    // 5. 欢呼抬起的小手
+    ctx.fillStyle = '#fc9838';
+    ctx.fillRect(px + 1, py + 15, 2, 3);
+    ctx.fillRect(px + 13, py + 15, 2, 3);
+    ctx.restore();
   }
 };

@@ -649,3 +649,216 @@ class Mario {
     }
   }
 }
+
+// 8. 城堡经典旋转火球棒 (Firebar)
+class Firebar {
+  constructor(blockCol, blockRow, length = 5, speed = 0.045, initialAngle = 0) {
+    // 旋转中心位于方块中心
+    this.centerX = blockCol * 16 + 8;
+    this.centerY = blockRow * 16 + 8;
+    this.length = length; // 火球颗数
+    this.speed = speed;   // 角速度 (正数顺时针，负数逆时针)
+    this.angle = initialAngle;
+    this.spacing = 8;     // 相邻火球间距
+    this.animClock = 0;
+  }
+
+  update() {
+    this.angle += this.speed;
+    this.animClock += 0.1;
+  }
+
+  // 检测火球是否碰触马里奥 (马里奥 AABB 碰撞盒)
+  checkCollision(mario) {
+    if (mario.isDead || mario.invulnerableTimer > 0) return false;
+    const mbLeft = mario.x;
+    const mbRight = mario.x + mario.width;
+    const mbTop = mario.y;
+    const mbBottom = mario.y + mario.height;
+
+    for (let i = 1; i <= this.length; i++) {
+      const dist = i * this.spacing;
+      const bx = this.centerX + Math.cos(this.angle) * dist;
+      const by = this.centerY + Math.sin(this.angle) * dist;
+
+      // 每颗火球 8x8，中心半径 4px
+      if (bx + 3 >= mbLeft && bx - 3 <= mbRight && by + 3 >= mbTop && by - 3 <= mbBottom) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  render(ctx, cameraX) {
+    const scx = this.centerX - cameraX;
+    if (scx < -60 || scx > CONFIG.VIEWPORT_WIDTH + 60) return;
+
+    // 绘制中心固定轴承黑点
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(scx - 2, this.centerY - 2, 4, 4);
+
+    // 绘制沿半径旋转的一串火球
+    for (let i = 1; i <= this.length; i++) {
+      const dist = i * this.spacing;
+      const bx = this.centerX + Math.cos(this.angle) * dist;
+      const by = this.centerY + Math.sin(this.angle) * dist;
+      SpriteRenderer.drawFirebarBall(ctx, bx - cameraX - 4, by - 4, this.animClock);
+    }
+  }
+}
+
+// 9. 大魔王库巴横向飞行的炙热火球
+class BowserFire {
+  constructor(x, y, vx = -2.2) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.width = 24;
+    this.height = 8;
+    this.isDead = false;
+    this.animClock = 0;
+  }
+
+  update(cameraX) {
+    this.x += this.vx;
+    this.animClock += 0.15;
+    // 飞出屏幕左侧销毁
+    if (this.x < cameraX - 40) {
+      this.isDead = true;
+    }
+  }
+
+  checkCollision(mario) {
+    if (mario.isDead || mario.invulnerableTimer > 0) return false;
+    return (
+      this.x < mario.x + mario.width &&
+      this.x + this.width > mario.x &&
+      this.y < mario.y + mario.height &&
+      this.y + this.height > mario.y
+    );
+  }
+
+  render(ctx, cameraX) {
+    SpriteRenderer.drawBowserFire(ctx, this.x - cameraX, this.y, this.animClock);
+  }
+}
+
+// 10. 关底终极大魔王库巴 (Bowser Boss)
+class Bowser {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = 28;
+    this.height = 32;
+    this.vx = -0.4;
+    this.vy = 0;
+    this.facingLeft = true;
+
+    // 巡逻踱步边界 (在熔岩吊桥上来回巡视)
+    this.startX = x;
+    this.minX = x - 48;
+    this.maxX = x + 16;
+
+    this.jumpTimer = 0;
+    this.roarTimer = 0;
+    this.fireTimer = 0;
+    this.fireCooldown = 110;
+    this.isRoaring = false;
+    this.isDead = false;
+    this.isFallingInLava = false;
+    this.animClock = 0;
+  }
+
+  // 触发断桥坠落岩浆
+  dropIntoLava() {
+    this.isFallingInLava = true;
+    this.isDead = true;
+    this.vy = -2.0; // 悬空受惊挣扎小跳然后笔直坠亡
+    this.vx = 0;
+  }
+
+  update(tileMap, marioX, onSpawnFire = () => {}) {
+    this.animClock += 0.05;
+
+    // 1. 坠入熔岩处理
+    if (this.isFallingInLava) {
+      this.vy += 0.22;
+      this.y += this.vy;
+      if (this.y > CONFIG.VIEWPORT_HEIGHT + 40) {
+        this.isDead = true;
+      }
+      return;
+    }
+
+    // 2. 正常踱步与跳跃
+    this.x += this.vx;
+    if (this.x <= this.minX) {
+      this.x = this.minX;
+      this.vx = 0.4;
+    } else if (this.x >= this.maxX) {
+      this.x = this.maxX;
+      this.vx = -0.4;
+    }
+
+    // 面向马里奥
+    this.facingLeft = marioX < this.x + 16;
+
+    // 周期性小跳跃
+    this.jumpTimer++;
+    if (this.jumpTimer > 120 && Math.abs(this.vy) < 0.1) {
+      this.jumpTimer = 0;
+      this.vy = -3.2; // 腾空跳跃
+    }
+
+    // 重力下落与吊桥地面吸附
+    this.vy += 0.25;
+    if (this.vy > 4.5) this.vy = 4.5;
+    this.y += this.vy;
+
+    // 站在桥面 (吊桥在 row 11 或 12)
+    const bridgeY = 11 * 16;
+    if (this.y >= bridgeY) {
+      this.y = bridgeY;
+      this.vy = 0;
+    }
+
+    // 3. 喷吐烈焰火球机制
+    this.fireTimer++;
+    if (this.fireTimer >= this.fireCooldown - 25) {
+      this.isRoaring = true; // 张嘴前摇
+    }
+    if (this.fireTimer >= this.fireCooldown) {
+      this.fireTimer = 0;
+      this.isRoaring = false;
+      // 从嘴部生成一颗向左喷射的火球
+      const fireY = this.y + 10 + (Math.random() > 0.5 ? 0 : 8);
+      onSpawnFire(this.x - 16, fireY);
+    }
+  }
+
+  render(ctx, cameraX) {
+    SpriteRenderer.drawBowser(
+      ctx,
+      this.x - cameraX,
+      this.y,
+      this.facingLeft,
+      this.animClock,
+      this.isRoaring,
+      this.isFallingInLava
+    );
+  }
+}
+
+// 11. 终点被解救的蘑菇侍从奇诺比奥 (Toad)
+class Toad {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = 16;
+    this.height = 24;
+  }
+
+  render(ctx, cameraX) {
+    SpriteRenderer.drawToad(ctx, this.x - cameraX, this.y);
+  }
+}

@@ -73,9 +73,21 @@
      本项目标题全是系统黑体。--font-serif 供阶段 4 切换标题用。 */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  /* 宋体/明朝体栈：按可用性降级，末尾回落到无衬线避免缺字豆腐块 */
+  /* 宋体/明朝体栈：按可用性降级，末尾回落到无衬线避免缺字豆腐块。
+     阶段 4 落地说明（实测 Windows 11 字体文件）：
+       - "Songti SC"      macOS 才有，Windows 跳过
+       - "SimSun"         ✅ Windows 实测命中（simsun.ttc）
+       - "Noto Serif SC"  本机未安装，跳过
+       - "STZhongsong"    部分 Windows 繁体版有，本机未命中
+     即 Windows 实际落到 SimSun。SimSun 中文笔画细密、字面偏小，
+     直接用于 18-22px 标题会显得单薄，故标题层统一配 fw-bold + 0.02em
+     字距补偿（见下方「标题衬线层」）。 */
   --font-serif: "Songti SC", "SimSun", "Noto Serif SC", "Source Han Serif SC",
     "STZhongsong", "Georgia", "Times New Roman", serif;
+  /* 标题专用：强制中文字重，避免 SimSun 细笔画在深色底上发虚 */
+  --fw-title: 700;
+  /* 标题字距：宋体字面偏小，正字距能让标题显得舒展 */
+  --ls-title: 0.02em;
   --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Courier New", monospace;
 
   /* ---------- 字号刻度（9 档）----------
@@ -5407,3 +5419,100 @@ body {
 .val-damage  { color: #f87171; }   /* 兵刃伤害、减益 */
 .val-danger  { color: #ef4444; }   /* 危险、敌方、扣减 */
 .val-muted   { color: #9ca3af; }   /* 次级说明 */
+
+/* ============================================================
+   标题衬线层（阶段 4 · A）
+   ------------------------------------------------------------
+   审计发现：--font-serif 从阶段 1 起就定义好了，但全项目 3 处
+   font-family 没有一处引用它，body 至今是系统无衬线。
+   这是「像网页不像游戏」的直接来源——三国策略游戏的字骨应当
+   有宋体的横细竖粗与顿笔，换成衬线后标题层级会立刻立起来。
+
+   为什么不用 body 全局换衬线？
+   ——正文与数值（--fs-xs 10px 的说明文字、表格数字）在 SimSun
+   下笔画过细、深色底上发虚。全局换会让密集信息区可读性下降。
+   只换标题是「保留信息密度、改变气质」的最小改动。
+
+   三个必须处理的细节：
+   1) 14/18 处标题以 emoji 开头（🗺️🏯🛡️🏮📜⚔️🎯🪙🎴）。
+      emoji 走 Segoe UI Emoji 字体，会脱离 font-family 继承，
+      与衬线中文并排时基线错位。解法见下方 .title-emoji。
+   2) SimSun 字面偏小、笔画细，配fw-bold + 0.02em 字距补偿。
+   3) .nav-tab-btn 是顶部导航标签，属于操作控件而非标题，
+      刻意保持无衬线——按钮用宋体会显得像静态文本、点击感变弱。
+   ============================================================ */
+
+/* ---------- 各标题接入 ---------- */
+/* 逐类声明而非抽基类：本层覆盖 6 个标题类共 18 处使用，
+   但各类的字重/字距/阴影需求都不同（渐变填充、层次区分），
+   抽基类反而要靠更多变体覆盖差异，收益为负。 */
+
+/* 页面主标题：18px/22px，最能体现字体气质 */
+.page-title,
+.page-title--hero {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* 游戏主标题「三国·战略版」：唯一使用 background-clip:text 渐变填充的标题。
+   ⚠️ 该技术下 -webkit-text-fill-color:transparent 使 text-shadow 不可见
+   （阴影画在透明填充之下），因此这里刻意**不加** text-shadow，
+   也**不降级**字重——原800 比 --fw-title(700) 更饱满，保留。 */
+.game-title {
+  font-family: var(--font-serif);
+  font-weight: 800;
+  letter-spacing: 0.06em;   /* 主标题字距放大，强化仪式感 */
+}
+
+/* 副标题：衬线但字重降一级，与主标题拉开层次 */
+.game-sub-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-normal);
+  letter-spacing: var(--ls-title);
+}
+
+/* 弹窗标题：沉浸感最强的地方，衬线最能出效果 */
+.modal-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* 面板标题：14px/16px，衬线仍成立（面板多为区块名，非密集数据） */
+.panel-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+}
+
+/* 建筑卡标题：建筑名是三国题材的核心信息，衬线强化代入感 */
+.b-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+}
+
+/* ---------- emoji 与衬线中文的基线对齐 ----------
+   emoji 使用系统彩色字体，字面宽度与高度都和衬线中文不一致，
+   直接并排会出现「emoji 偏上、文字居中」的错位感。
+   处理方式：emoji 降一级字号 + 轻微下移，使其视觉中心与中文对齐。
+   ⚠️ 这是纯视觉补偿，无浏览器工具验证，字号/位移量可能需微调。 */
+.title-emoji {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 0.88em;
+  vertical-align: -0.04em;
+  margin-right: 0.28em;
+  /* emoji 默认无边距，紧贴中文会显得拥挤 */
+  letter-spacing: 0;
+}
+
+/* 徽标/标签类：字体类不做衬线，保持紧凑与功能性。
+   .game-badge 在本项目不存在，故只声明确实在用的三类。 */
+.nav-tab-btn,
+.filter-btn,
+.upgrade-btn {
+  font-family: var(--font-sans);
+}

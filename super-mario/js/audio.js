@@ -364,7 +364,91 @@ class MarioAudio {
     });
   }
 
-  // 13. 经典地表与地下 BGM 循环生成器 (8-Bit 经典旋律)
+  // 14. 库巴喷吐火球呼啸音效
+  playBowserFire() {
+    if (this.muted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.28);
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+
+  // 15. 熔岩吊桥断裂与库巴坠落音效
+  playBowserFall() {
+    if (this.muted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    this.stopBGM();
+    const now = this.ctx.currentTime;
+    // 连续断桥咔嚓
+    for (let i = 0; i < 6; i++) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const t = now + i * 0.08;
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(140 - i * 15, t);
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.07);
+    }
+  }
+
+  // 16. 城堡通关解救奇诺比奥胜利号角
+  playCastleClear() {
+    if (this.muted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    this.stopBGM();
+    const now = this.ctx.currentTime;
+    const notes = [
+      { f: 392.00, d: 0.15 }, // G4
+      { f: 523.25, d: 0.15 }, // C5
+      { f: 659.25, d: 0.15 }, // E5
+      { f: 783.99, d: 0.15 }, // G5
+      { f: 659.25, d: 0.15 }, // E5
+      { f: 783.99, d: 0.45 }, // G5
+      { f: 1046.50, d: 0.6 }  // C6
+    ];
+
+    let offset = 0;
+    notes.forEach((note) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const t = now + offset;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(note.f, t);
+      gain.gain.setValueAtTime(0.24, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + note.d);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + note.d + 0.02);
+      offset += note.d + 0.04;
+    });
+  }
+
+  // 17. 经典地表、地下与城堡 BGM 循环生成器 (8-Bit 经典旋律)
   startBGM(theme = 'overworld') {
     if (this.currentTheme !== theme && this.bgmPlaying) {
       this.stopBGM();
@@ -380,26 +464,41 @@ class MarioAudio {
       if (!this.ctx) return;
 
       const isUnderground = this.currentTheme === 'underground';
-      const tempo = isUnderground ? 0.09 : 0.11;
+      const isCastle = this.currentTheme === 'castle';
+      const tempo = isCastle ? 0.08 : (isUnderground ? 0.09 : 0.11);
       
-      const melody = isUnderground ? [
+      let melody;
+      if (isCastle) {
+        // 经典城堡地下低沉半音阶急速脉冲
+        melody = [
+          { f: 110.00, d: 1 }, { f: 116.54, d: 1 }, { f: 123.47, d: 1 }, { f: 130.81, d: 1 },
+          { f: 110.00, d: 1 }, { f: 116.54, d: 1 }, { f: 123.47, d: 1 }, { f: 130.81, d: 1 },
+          { f: 103.83, d: 1 }, { f: 110.00, d: 1 }, { f: 116.54, d: 1 }, { f: 123.47, d: 1 },
+          { f: 98.00, d: 2 },  { f: 0, d: 2 },
+          { f: 110.00, d: 1 }, { f: 116.54, d: 1 }, { f: 123.47, d: 1 }, { f: 130.81, d: 1 },
+          { f: 146.83, d: 2 }, { f: 138.59, d: 2 }, { f: 0, d: 2 }
+        ];
+      } else if (isUnderground) {
         // 经典地下洞穴 8-Bit 短促快奏脉冲
-        { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 110.00, d: 1 }, { f: 220.00, d: 1 },
-        { f: 116.54, d: 1 }, { f: 233.08, d: 1 }, { f: 0, d: 2 },
-        { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 110.00, d: 1 }, { f: 220.00, d: 1 },
-        { f: 116.54, d: 1 }, { f: 233.08, d: 1 }, { f: 0, d: 2 },
-        { f: 146.83, d: 1 }, { f: 293.66, d: 1 }, { f: 123.47, d: 1 }, { f: 246.94, d: 1 },
-        { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 0, d: 2 }
-      ] : [
-        // 地表第一小节：经典的 E E - E - C E - G ---
-        { f: 659.25, d: 1 }, { f: 659.25, d: 1 }, { f: 0, d: 1 }, { f: 659.25, d: 1 },
-        { f: 0, d: 1 }, { f: 523.25, d: 1 }, { f: 659.25, d: 1 }, { f: 0, d: 1 },
-        { f: 783.99, d: 2 }, { f: 0, d: 2 }, { f: 392.00, d: 2 }, { f: 0, d: 2 },
-        // 地表第二小节：C - - G - - E - - A - B - Bb A
-        { f: 523.25, d: 1.5 }, { f: 0, d: 0.5 }, { f: 392.00, d: 1.5 }, { f: 0, d: 0.5 },
-        { f: 329.63, d: 1.5 }, { f: 0, d: 0.5 }, { f: 440.00, d: 1 }, { f: 493.88, d: 1 },
-        { f: 466.16, d: 1 }, { f: 440.00, d: 1.5 }, { f: 0, d: 0.5 }
-      ];
+        melody = [
+          { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 110.00, d: 1 }, { f: 220.00, d: 1 },
+          { f: 116.54, d: 1 }, { f: 233.08, d: 1 }, { f: 0, d: 2 },
+          { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 110.00, d: 1 }, { f: 220.00, d: 1 },
+          { f: 116.54, d: 1 }, { f: 233.08, d: 1 }, { f: 0, d: 2 },
+          { f: 146.83, d: 1 }, { f: 293.66, d: 1 }, { f: 123.47, d: 1 }, { f: 246.94, d: 1 },
+          { f: 130.81, d: 1 }, { f: 261.63, d: 1 }, { f: 0, d: 2 }
+        ];
+      } else {
+        // 地表主旋律
+        melody = [
+          { f: 659.25, d: 1 }, { f: 659.25, d: 1 }, { f: 0, d: 1 }, { f: 659.25, d: 1 },
+          { f: 0, d: 1 }, { f: 523.25, d: 1 }, { f: 659.25, d: 1 }, { f: 0, d: 1 },
+          { f: 783.99, d: 2 }, { f: 0, d: 2 }, { f: 392.00, d: 2 }, { f: 0, d: 2 },
+          { f: 523.25, d: 1.5 }, { f: 0, d: 0.5 }, { f: 392.00, d: 1.5 }, { f: 0, d: 0.5 },
+          { f: 329.63, d: 1.5 }, { f: 0, d: 0.5 }, { f: 440.00, d: 1 }, { f: 493.88, d: 1 },
+          { f: 466.16, d: 1 }, { f: 440.00, d: 1.5 }, { f: 0, d: 0.5 }
+        ];
+      }
 
       const now = this.ctx.currentTime;
       let totalTime = 0;
@@ -409,9 +508,9 @@ class MarioAudio {
         if (item.f > 0) {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
-          osc.type = isUnderground ? 'triangle' : 'square';
+          osc.type = (isUnderground || isCastle) ? 'triangle' : 'square';
           osc.frequency.setValueAtTime(item.f, now + totalTime);
-          gain.gain.setValueAtTime(isUnderground ? 0.12 : 0.06, now + totalTime);
+          gain.gain.setValueAtTime(isCastle ? 0.16 : (isUnderground ? 0.12 : 0.06), now + totalTime);
           gain.gain.exponentialRampToValueAtTime(0.005, now + totalTime + dur * 0.9);
 
           osc.connect(gain);
