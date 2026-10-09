@@ -78,8 +78,12 @@ function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels =
   }).map(id => {
     const raw = TACTICS_MAP.get(id);
     if (!raw) return null;
-    // 若武将自身显式指定了统一战法等级(如试炼模式强制拉满10级)，优先采用；否则按配置字典或默认值读取
-    const lvl = heroData.tacticLevel || (isPlayer ? (tacticLevels[id] || 1) : (tacticLevels[id] || 5));
+    // 若武将自身显式指定了统一战法等级(如试炼/演习模式强制拉满10级)，优先采用；自带战法优先读取武将实例的 builtInTacticLevel
+    const isBuiltIn = (id === heroData.builtInTacticId);
+    const playerTacLvl = isBuiltIn
+      ? (heroData.builtInTacticLevel || tacticLevels[id] || 1)
+      : (tacticLevels[id] || 1);
+    const lvl = heroData.tacticLevel || (isPlayer ? playerTacLvl : (tacticLevels[id] || 5));
     return getTacticEffectiveProps(raw, lvl);
   }).filter(Boolean);
 
@@ -98,9 +102,9 @@ function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels =
       }
     };
     equippedTactics.forEach((tac, idx) => {
-      const tacQuality = (idx === 0 && heroData.star === 3)
-        ? 'B'
-        : (tac.quality || (heroData.star === 5 ? 'S' : (heroData.star === 4 ? 'A' : 'B')));
+      const tacQuality = (idx === 0)
+        ? ((heroData.star || 4) >= 5 ? 'S' : ((heroData.star || 4) === 4 ? 'A' : 'B'))
+        : (tac.quality || 'A');
       tacticStats[tac.id] = {
         id: tac.id,
         name: tac.name,
@@ -991,11 +995,11 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       damage: h.stats.damageDealt,
       kills: h.stats.kills,
       heals: h.stats.healDone,
-      tactics: h.tactics.map(t => ({
+      tactics: h.tactics.map((t, idx) => ({
         id: t.id,
         name: t.name,
         type: t.type,
-        quality: t.quality,
+        quality: (idx === 0) ? (h.star >= 5 ? 'S' : (h.star === 4 ? 'A' : 'B')) : (t.quality || 'A'),
         level: t.level || 1
       })),
       tacticStats: Object.values(h.tacticStats || {})
@@ -1013,11 +1017,11 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       damage: h.stats.damageDealt,
       kills: h.stats.kills,
       heals: h.stats.healDone,
-      tactics: h.tactics.map(t => ({
+      tactics: h.tactics.map((t, idx) => ({
         id: t.id,
         name: t.name,
         type: t.type,
-        quality: t.quality,
+        quality: (idx === 0) ? (h.star >= 5 ? 'S' : (h.star === 4 ? 'A' : 'B')) : (t.quality || 'A'),
         level: t.level || 1
       })),
       tacticStats: Object.values(h.tacticStats || {})

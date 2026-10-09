@@ -18,6 +18,7 @@ export const GACHA_CONFIG = {
     copperFiftyCost: 13500,
     copperHundredCost: 27000,
     threeStarCopperValue: 300, // 3星卡招募时自动转化铜币数额
+    fourStarCopperValue: 1000, // 4星卡招募时自动转化铜币数额
     hardPityFiveStar: 30, // 广州灵犀官方正统：30抽必出5星名将大保底
     hardPityFourStar: 5,  // 广州灵犀官方正统：5抽必出4星良将小保底
     coreRateInFiveStar: 12, // 5星出货时，大核心稀有名将基础出现率为 12%

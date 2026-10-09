@@ -115,6 +115,10 @@ export function createInitialGameState() {
     totalGachaCount: 0, // 历史累计抽卡总次数
     totalFiveStarCount: 0, // 历史累计获得5星总数
     totalCoreCount: 0, // 历史累计获得大核心总数
+    gachaAutoConvert: { // 招募自动转化铜币设置（三战原版：可选转化3星/4星）
+      star3: true,
+      star4: false
+    },
     customEnemyTroop: { // 自定义敌方演习阵容 (默认预设经典名将阵容：诸葛亮+刘备+关羽)
       name: '演习假想敌·天王神武军',
       arm: 'spear',
@@ -173,6 +177,12 @@ export function loadGameState() {
     }
 
     if (data.currentTroopIndex === undefined) data.currentTroopIndex = 0;
+    if (!data.gachaAutoConvert || typeof data.gachaAutoConvert !== 'object') {
+      data.gachaAutoConvert = { star3: true, star4: false };
+    } else {
+      if (data.gachaAutoConvert.star3 === undefined) data.gachaAutoConvert.star3 = true;
+      if (data.gachaAutoConvert.star4 === undefined) data.gachaAutoConvert.star4 = false;
+    }
 
     // 确保抽卡累计次数完整
     if (data.totalGachaCount === undefined) data.totalGachaCount = 0;

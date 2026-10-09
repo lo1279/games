@@ -1204,12 +1204,21 @@ export function getTacticEffectiveProps(tactic, level = 1) {
     effective.rate = Math.min(75, Math.round(tactic.rate - 9 + (lvl * 1)));
   }
 
-  // 伤害率与治疗率成长
+  // 伤害率与治疗率成长（含自带战法专属溅射、急救、灼烧率）
   if (tactic.damageRate) {
     effective.damageRate = parseFloat((tactic.damageRate * scale).toFixed(2));
   }
   if (tactic.healRate) {
     effective.healRate = parseFloat((tactic.healRate * scale).toFixed(2));
+  }
+  if (tactic.emergencyHealRate) {
+    effective.emergencyHealRate = parseFloat((tactic.emergencyHealRate * scale).toFixed(2));
+  }
+  if (tactic.splashRate) {
+    effective.splashRate = parseFloat((tactic.splashRate * scale).toFixed(2));
+  }
+  if (tactic.burnDamage) {
+    effective.burnDamage = parseFloat((tactic.burnDamage * scale).toFixed(2));
   }
   if (tactic.damageReduction) {
     effective.damageReduction = parseFloat((tactic.damageReduction * scale).toFixed(2));
@@ -1217,8 +1226,32 @@ export function getTacticEffectiveProps(tactic, level = 1) {
   if (tactic.teamDamageReduction) {
     effective.teamDamageReduction = parseFloat((tactic.teamDamageReduction * scale).toFixed(2));
   }
+  if (tactic.selfDamageReduction) {
+    effective.selfDamageReduction = parseFloat((tactic.selfDamageReduction * scale).toFixed(2));
+  }
+  if (tactic.teamDamageBonus) {
+    effective.teamDamageBonus = parseFloat((tactic.teamDamageBonus * scale).toFixed(2));
+  }
+  if (tactic.shareDamageRate) {
+    effective.shareDamageRate = parseFloat((tactic.shareDamageRate * scale).toFixed(2));
+  }
+  if (tactic.critRateBonus) {
+    effective.critRateBonus = parseFloat((tactic.critRateBonus * scale).toFixed(2));
+  }
   if (tactic.disarmRate && tactic.disarmRate < 100) {
     effective.disarmRate = Math.min(100, Math.round(tactic.disarmRate * scale));
+  }
+  if (tactic.counterActiveRate) {
+    effective.counterActiveRate = Math.round(tactic.counterActiveRate * scale);
+  }
+  if (tactic.retaliateRate) {
+    effective.retaliateRate = Math.round(tactic.retaliateRate * scale);
+  }
+  if (tactic.lockLeaderRate) {
+    effective.lockLeaderRate = Math.round(tactic.lockLeaderRate * scale);
+  }
+  if (tactic.assaultRateBonus) {
+    effective.assaultRateBonus = Math.round(tactic.assaultRateBonus * scale);
   }
 
   // 全维属性与战斗增减益成长 (四舍五入或保留两位小数)
@@ -1237,8 +1270,14 @@ export function getTacticEffectiveProps(tactic, level = 1) {
   if (tactic.activeRateBonus) {
     effective.activeRateBonus = Math.round(tactic.activeRateBonus * scale);
   }
+  if (tactic.statBoost) {
+    effective.statBoost = Math.round(tactic.statBoost * scale);
+  }
   if (tactic.statBoostForce) {
     effective.statBoostForce = Math.round(tactic.statBoostForce * scale);
+  }
+  if (tactic.statBoostCmd) {
+    effective.statBoostCmd = Math.round(tactic.statBoostCmd * scale);
   }
   if (tactic.statBoostSpeed) {
     effective.statBoostSpeed = Math.round(tactic.statBoostSpeed * scale);
