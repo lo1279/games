@@ -5447,13 +5447,24 @@ body {
    但各类的字重/字距/阴影需求都不同（渐变填充、层次区分），
    抽基类反而要靠更多变体覆盖差异，收益为负。 */
 
-/* 页面主标题：18px/22px，最能体现字体气质 */
+/* 页面主标题：18px/22px，最能体现字体气质
+   ⚠️ 必须用 !important：既有的 .slg-tab-page h2（L4174）带
+   font-size:20px !important，特异性 (0,1,1) 且优先级最高，
+   不加important 会把本页的 18px/22px 全部压成 20px——
+   那样 hero 变体与普通标题将毫无字号差异，
+   招募页作为主视觉入口的层级定位就失效了。
+   这里是「既有important 规则的必要对齐」，不是提升优先级。 */
 .page-title,
 .page-title--hero {
   font-family: var(--font-serif);
   font-weight: var(--fw-title);
   letter-spacing: var(--ls-title);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  font-size: var(--fs-xl) !important;
+  font-weight: var(--fw-title) !important;
+}
+.page-title--hero {
+  font-size: var(--fs-2xl) !important;   /* 22px，与普通标题拉开层级 */
 }
 
 /* 游戏主标题「三国·战略版」：唯一使用 background-clip:text 渐变填充的标题。
@@ -5516,3 +5527,64 @@ body {
 .upgrade-btn {
   font-family: var(--font-sans);
 }
+
+/* ============================================================
+   页面切换动效层（阶段 4 · B）
+   ------------------------------------------------------------
+   审计发现：20 个 @keyframes 全用于抽卡特效，页面切换本身
+   零动效——.slg-tab-page 靠 display:none/block 硬切，7 个 tab
+   来回切换时像在翻静态网页。
+
+   为什么用 animation 而不是 transition？
+   —— 元素从 display:none 变为 block 时，transition 不会触发
+   （元素此前不参与渲染，没有「旧状态」可过渡）。
+   必须在 .active 生效的那一帧用 animation 触发一次。
+   这是 display 切换场景下唯一可行的方案。
+
+   为什么不改用 opacity/visibility 代替 display？
+   —— 阶段 2 已确立铁律：**凡 JS 会写 .style.display 的元素，
+   显隐必须留在内联**。审计确认 7 个 .slg-tab-page 均无 JS 写
+   display（switchTab 只 toggle class），但改动显隐机制的风险
+   远大于收益，故保持 display 方案不动，只叠加 animation。
+
+   时长选择：--t-mid(0.2s)。比按钮反馈略长，比页面内容重绘快，
+   符合「切页是导航动作」的直觉——太快像闪烁，太慢像卡顿。
+   ============================================================ */
+
+/* 页面淡入：透明度 0→1 + 6px 上移。
+   位移刻意做小（6px 而非 12px+）：页面上有大量卡片，
+   大位移会让整屏内容「飘」一下，反而显得轻浮。
+   ⚠️ keyframes 不能按媒体查询分别同名定义——后定义的会全局覆盖前者。
+   故拆成两个不同名字的动画，由下方媒体查询选择启用哪个。 */
+@keyframes slgPageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 触屏版：只淡入不位移。移动端切页常伴随手指滑动，
+   页面自身再做纵向位移会与手势方向叠加，产生「双重滑动」眩晕。 */
+@keyframes slgPageEnterTouch {
+  from { opacity: 0; transform: none; }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 默认（指针设备）：淡入 + 微上移。
+   animation-fill-mode: both 让首帧保持透明，
+   避免动画开始前的瞬间闪现未淡入的内容。 */
+.slg-tab-page.active {
+  animation: slgPageEnter var(--t-mid) var(--ease-out) both;
+}
+
+/* 触屏降级：换成只淡入的动画 */
+@media (hover: none), (pointer: coarse) {
+  .slg-tab-page.active {
+    animation-name: slgPageEnterTouch;
+  }
+}
+
+/* ---------- 关于二级 tab ----------
+   审计结论：**不做二级 tab 动效**。战斗页/武将页的子标签
+   （战役/试炼/沙盒、武将/战法）切换时，只 toggle 按钮的 .active，
+   内容区是 renderCampaigns() / renderTrials() 等整体重渲染，
+   没有独立的内容容器元素——加了animation 也没有作用对象。
+   若后续把这些子视图拆成独立容器，届时再加。 */
