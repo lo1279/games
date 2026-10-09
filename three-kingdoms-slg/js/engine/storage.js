@@ -259,20 +259,30 @@ export function loadGameState() {
       };
     }
 
-    // 无限金铢模式加持
-    data.infiniteGold = true;
-    if (!data.resources.gold || data.resources.gold < 999999) {
-      data.resources.gold = 999999;
+    // 清理历史残留的 infiniteGold 异常标记与虚高金铢
+    if (data.infiniteGold) {
+      delete data.infiniteGold;
+      const rechargedGold = data.rechargeStats?.totalGold || 0;
+      if ((data.resources?.gold || 0) >= 900000 && rechargedGold < 900000) {
+        data.resources.gold = (data.totalGachaCount || 0) > 0 ? 0 : 3000;
+      }
+    }
+
+    // 仅在字段缺失时赋初始默认值，严禁在金铢或铜币消耗至 0 时刷新篡改余额
+    if (!data.resources || typeof data.resources !== 'object') {
+      data.resources = {};
+    }
+    if (data.resources.gold === undefined || data.resources.gold === null || Number.isNaN(data.resources.gold)) {
+      data.resources.gold = 3000;
+    }
+    if (data.resources.copper === undefined || data.resources.copper === null || Number.isNaN(data.resources.copper)) {
+      data.resources.copper = 20000;
     }
     if (!data.campaignProgress) {
       data.campaignProgress = {};
     }
     if (!data.trialFloor) {
       data.trialFloor = 1;
-    }
-    // 铜币与金铢确保充盈
-    if (!data.resources.copper || data.resources.copper < 5000) {
-      data.resources.copper = Math.max(data.resources.copper || 0, 20000);
     }
     // 确保基础传承战法已解锁 (A级良品起步)
     const baseTactics = ['tac_yu_di_ping_zhang', 'tac_shou_qi_dao_luo', 'tac_zi_yu'];
@@ -304,10 +314,10 @@ export function loadGameState() {
         farm: 1
       };
     }
-    if (!data.resources.wood) data.resources.wood = 8000;
-    if (!data.resources.iron) data.resources.iron = 8000;
-    if (!data.resources.stone) data.resources.stone = 10000;
-    if (!data.resources.grain) data.resources.grain = 8000;
+    if (data.resources.wood === undefined || data.resources.wood === null) data.resources.wood = 8000;
+    if (data.resources.iron === undefined || data.resources.iron === null) data.resources.iron = 8000;
+    if (data.resources.stone === undefined || data.resources.stone === null) data.resources.stone = 10000;
+    if (data.resources.grain === undefined || data.resources.grain === null) data.resources.grain = 8000;
 
     // 保证武将 level 与 exp 兼容，并清洗历史重复装配战法的脏数据与同 ID 冲突
     const seenTactics = new Set();
@@ -364,6 +374,7 @@ export function loadGameState() {
     }
 
     data.lastSavedTime = now;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     return data;
   } catch (e) {
     console.warn('读取存档失败，初始化新游戏:', e);

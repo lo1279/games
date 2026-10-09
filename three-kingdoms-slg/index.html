@@ -413,22 +413,31 @@
             <div class="pool-rates" style="line-height:1.6; margin-top:8px;">
               • <b>综合概率</b>：5★名将 <b>5.6%</b> · 4★良将 <b>36.0%</b> · 3★裨将 <b>58.4%</b><br>
               • <b>核心卡机制</b>：5星出货中，大核心名将（如诸葛亮、刘备、曹操、孙权、吕布等）权重为 12%，普通5星权重为 88%！<br>
-              • <b>保底承诺</b>：连续 29 抽未出 5 星，第 30 抽<b>必出 5 星名将</b>；每 5 抽必出紫卡或橙卡！
+              • <b>保底承诺</b>：连续 29 抽未出 5 星，第 30 抽<b>必出 5 星名将</b>；每 5 抽必出紫卡或橙卡！<br>
+              • <b>♻️ 极速减负</b>：招募出的 3★ 武将<b>自动转化为 300 铜币/张</b>；50/100连抽仅展示紫卡与橙卡！
             </div>
             <div class="gacha-btn-group">
               <button class="gacha-btn" id="btnGachaFamousSingle">招募 1 次<br><small>198 金铢</small></button>
               <button class="gacha-btn" id="btnGachaFamousFive" style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);">招募 5 次<br><small>948 金铢</small></button>
               <button class="gacha-btn" id="btnGachaFamousTen" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">招募 10 次<br><small>1896 金铢</small></button>
             </div>
+            <div class="gacha-btn-group gacha-btn-group-fast">
+              <button class="gacha-btn gacha-btn-fast50" id="btnGachaFamousFifty">⚡ 招募 50 次<br><small>9,480 金铢</small></button>
+              <button class="gacha-btn gacha-btn-fast100" id="btnGachaFamousHundred">🔥 招募 100 次<br><small>18,960 金铢</small></button>
+            </div>
           </div>
 
           <!-- 良将卡池 (铜币) -->
           <div class="gacha-banner copper">
             <h3>🪙 良将招募 · 招贤纳士</h3>
-            <div class="pool-rates">招募随军武将 (3星50.0% · 2星49.5% · 4星0.5%)<br>可一键解甲为铜币，研习战法进阶！</div>
+            <div class="pool-rates">招募随军武将 (3星50.0% · 2星49.5% · 4星0.5%)<br>3★ 卡招募时自动解甲转化为 300 铜币/张，4★ 良将直接入库！</div>
             <div class="gacha-btn-group">
               <button class="gacha-btn" id="btnGachaCopperSingle" style="background:#475569;">招募 1 次<br><small>300 铜币</small></button>
               <button class="gacha-btn" id="btnGachaCopperTen" style="background:#334155;">招募 10 次<br><small>2700 铜币</small></button>
+            </div>
+            <div class="gacha-btn-group gacha-btn-group-fast">
+              <button class="gacha-btn gacha-btn-copper-fast" id="btnGachaCopperFifty">⚡ 招募 50 次<br><small>13,500 铜币</small></button>
+              <button class="gacha-btn gacha-btn-copper-fast" id="btnGachaCopperHundred">🔥 招募 100 次<br><small>27,000 铜币</small></button>
             </div>
           </div>
         </div>
@@ -510,6 +519,7 @@
   <div class="gacha-showcase-mask" id="gachaShowcase" style="display: none;">
     <button class="modal-close-btn" id="btnGachaShowcaseClose" style="position: fixed; top: 16px; right: 20px; font-size: 22px; color: #fbbf24; z-index: 320; cursor: pointer; width: 38px; height: 38px; background: rgba(0,0,0,0.6); border: 1px solid rgba(251,191,36,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" title="收归麾下并关闭">✕</button>
     <div class="gacha-title-banner" id="gachaShowcaseTitle">🎉 英雄集结 · 恭获名将</div>
+    <div class="gacha-summary-bar" id="gachaSummaryBar" style="display: none;"></div>
     <div class="gacha-cards-display" id="gachaCardsContainer"></div>
     <button class="gacha-confirm-seal-btn" id="btnGachaShowcaseConfirm">
       <span>📜</span>

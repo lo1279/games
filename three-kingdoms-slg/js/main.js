@@ -79,7 +79,9 @@ class GameApp {
     this.battleDetailBody = document.getElementById('battleDetailBody');
     this.gachaShowcase = document.getElementById('gachaShowcase');
     this.gachaShowcaseTitle = document.getElementById('gachaShowcaseTitle');
+    this.gachaSummaryBar = document.getElementById('gachaSummaryBar');
     this.gachaCardsContainer = document.getElementById('gachaCardsContainer');
+    this.gachaAutoFlipTimers = [];
 
     // 🎯 假想敌自定义沙盒演习容器与模态框
     this.sandboxContainer = document.getElementById('sandboxContainer');
@@ -183,6 +185,10 @@ class GameApp {
 
     // 确认并关闭抽卡开箱（支持底部大按钮与右上角快捷关闭按钮）
     const closeGachaShowcase = () => {
+      if (this.gachaAutoFlipTimers && this.gachaAutoFlipTimers.length > 0) {
+        this.gachaAutoFlipTimers.forEach(tid => clearTimeout(tid));
+        this.gachaAutoFlipTimers = [];
+      }
       this.gachaShowcase.style.display = 'none';
       // 必须卸载粒子画布：其 RAF 循环会一直跑到页面结束，
       // 空转的 requestAnimationFrame 在移动端是实打实的耗电与发热源
@@ -203,15 +209,17 @@ class GameApp {
       }
     });
 
-    // 招募按钮绑定
-    document.getElementById('btnGachaFamousSingle').addEventListener('click', () => this.doGacha('famous', 1));
-    document.getElementById('btnGachaFamousFive').addEventListener('click', () => this.doGacha('famous', 5));
-    const btnFamousTen = document.getElementById('btnGachaFamousTen');
-    if (btnFamousTen) {
-      btnFamousTen.addEventListener('click', () => this.doGacha('famous', 10));
-    }
-    document.getElementById('btnGachaCopperSingle').addEventListener('click', () => this.doGacha('copper', 1));
-    document.getElementById('btnGachaCopperTen').addEventListener('click', () => this.doGacha('copper', 10));
+    // 招募按钮绑定 (1 / 5 / 10 / 50 / 100 连抽)
+    document.getElementById('btnGachaFamousSingle')?.addEventListener('click', () => this.doGacha('famous', 1));
+    document.getElementById('btnGachaFamousFive')?.addEventListener('click', () => this.doGacha('famous', 5));
+    document.getElementById('btnGachaFamousTen')?.addEventListener('click', () => this.doGacha('famous', 10));
+    document.getElementById('btnGachaFamousFifty')?.addEventListener('click', () => this.doGacha('famous', 50));
+    document.getElementById('btnGachaFamousHundred')?.addEventListener('click', () => this.doGacha('famous', 100));
+
+    document.getElementById('btnGachaCopperSingle')?.addEventListener('click', () => this.doGacha('copper', 1));
+    document.getElementById('btnGachaCopperTen')?.addEventListener('click', () => this.doGacha('copper', 10));
+    document.getElementById('btnGachaCopperFifty')?.addEventListener('click', () => this.doGacha('copper', 50));
+    document.getElementById('btnGachaCopperHundred')?.addEventListener('click', () => this.doGacha('copper', 100));
 
     // 👑 名将卡池全景预览弹窗入口
     const btnPreviewFamous = document.getElementById('btnPreviewFamousPool');
@@ -2617,21 +2625,31 @@ class GameApp {
     }
   }
 
-  // 升星进阶单个武将 (智能选拔培养主力，保护高红，严格消耗白板副卡)
+  // 升星进阶单个武将 (智能选拔未满红培养主体，保护满红与高红，严格消耗白板副卡)
   promoteHero(targetHero, materialCard) {
     if (!targetHero) return;
     const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
 
-    // 1. 汇集该武将的所有同名卡
+    // 1. 汇集该武将的所有同名卡，并过滤掉已满红的卡牌（已满红卡牌独立留存，不阻塞后续同名卡继续培养）
     const sameNameCards = (this.state.ownedGenerals || []).filter(x => x.name === targetHero.name);
     if (sameNameCards.length <= 1) {
       alert(`⚠️ 背包中没有多余的【${targetHero.name}】同名卡可供进阶！`);
       return;
     }
 
-    // 2. 选拔唯一进阶培养主体主卡：
-    // 优先：已上阵 > 红星最高 > 等级最高 > 经验最高
-    sameNameCards.sort((a, b) => {
+    const nonFullSameNameCards = sameNameCards.filter(x => (x.redStars || 0) < (x.star || 5));
+    if (nonFullSameNameCards.length === 0) {
+      alert(`⚠️【进阶封顶】麾下所有【${targetHero.name}】均已达到满红状态，无需继续进阶！`);
+      return;
+    }
+    if (nonFullSameNameCards.length <= 1) {
+      alert(`⚠️ 背包中没有多余的未满红【${targetHero.name}】同名卡可供进阶消耗！`);
+      return;
+    }
+
+    // 2. 在未满红同名卡中选拔进阶培养主体主卡：
+    // 优先：已上阵 > 红星最高 > 等级最高 > 经验最高 > 当前点击的目标卡
+    nonFullSameNameCards.sort((a, b) => {
       const inA = currentTroopHeroIds.has(a.id);
       const inB = currentTroopHeroIds.has(b.id);
       if (inA !== inB) return inA ? -1 : 1;
@@ -2639,31 +2657,30 @@ class GameApp {
       if (redDiff !== 0) return redDiff;
       const lvlDiff = (b.level || 1) - (a.level || 1);
       if (lvlDiff !== 0) return lvlDiff;
-      return (b.exp || 0) - (a.exp || 0);
+      const expDiff = (b.exp || 0) - (a.exp || 0);
+      if (expDiff !== 0) return expDiff;
+      if (a.id === targetHero.id) return -1;
+      if (b.id === targetHero.id) return 1;
+      return 0;
     });
 
-    const mainHero = sameNameCards[0];
+    const mainHero = nonFullSameNameCards[0];
     const maxRed = mainHero.star || 5;
 
-    if ((mainHero.redStars || 0) >= maxRed) {
-      alert(`⚠️【进阶封顶】武将【${mainHero.name}】已达到 ${maxRed} 星满红状态，无法继续进阶！多余同名卡已安全为您留存。`);
-      return;
-    }
-
     // 3. 严格筛选可消耗的白板材料卡：非主卡、未出征、且必须是0红白板
-    const candidateMaterials = sameNameCards.slice(1).filter(other => 
-      !currentTroopHeroIds.has(other.id) && (other.redStars || 0) === 0
+    const candidateMaterials = nonFullSameNameCards.slice(1).filter(other => 
+      other.id !== mainHero.id && !currentTroopHeroIds.has(other.id) && (other.redStars || 0) === 0
     );
 
     if (candidateMaterials.length === 0) {
-      alert(`⚠️ 未找到可作为进阶狗粮的【${mainHero.name}】白板副卡！已进阶的高红卡或出征部队已受到安全保护。`);
+      alert(`⚠️ 未找到可作为进阶材料的【${mainHero.name}】白板副卡！已进阶的高红卡或出征部队已受到安全保护。`);
       return;
     }
 
-    // 优先使用传入的合法材料卡，否则取第一张可用白板副卡
-    const chosenMaterial = (materialCard && candidateMaterials.some(m => m.id === materialCard.id))
+    // 优先使用传入的合法材料卡，否则取最后一张（优先级最低的）可用白板副卡
+    const chosenMaterial = (materialCard && materialCard.id !== mainHero.id && candidateMaterials.some(m => m.id === materialCard.id))
       ? materialCard
-      : candidateMaterials[0];
+      : candidateMaterials[candidateMaterials.length - 1];
 
     const matIdx = this.state.ownedGenerals.findIndex(x => x.id === chosenMaterial.id);
     if (matIdx < 0) return;
@@ -2678,10 +2695,10 @@ class GameApp {
     mainHero.command = (mainHero.command || 50) + 5;
     mainHero.speed = (mainHero.speed || 50) + 5;
 
-    // 6. 实时同步已上阵部队中的武将对象
+    // 6. 实时同步已上阵部队中的同一武将实例 (严格匹配唯一 id，避免覆盖部队中的其他同名满红卡)
     (this.state.troops || []).forEach(t => {
       (t.heroes || []).forEach(h => {
-        if (h && (h.id === mainHero.id || (h.name === mainHero.name && h.star === mainHero.star))) {
+        if (h && h.id === mainHero.id) {
           h.redStars = mainHero.redStars;
           h.force = mainHero.force;
           h.intel = mainHero.intel;
@@ -2703,7 +2720,7 @@ class GameApp {
     );
   }
 
-  // 一键同名卡升星进阶 (严密分组选拔主力，保护高红，杜绝白板吃满红)
+  // 一键同名卡升星进阶 (严密分组选拔未满红主力，支持满红后多余同名卡递进培养第2/第3只)
   quickAutoPromote() {
     let promotedCount = 0;
     const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
@@ -2717,13 +2734,14 @@ class GameApp {
       heroGroups.get(g.name).push(g);
     });
 
-    // 2. 逐组安全进阶
-    for (const [name, cards] of heroGroups.entries()) {
-      if (cards.length <= 1) continue;
+    // 2. 逐组安全递进进阶
+    for (const [, cards] of heroGroups.entries()) {
+      // 过滤掉已满红的卡牌，仅对未满红的同名卡执行进阶合成
+      const availablePool = cards.filter(c => (c.redStars || 0) < (c.star || 5));
+      if (availablePool.length <= 1) continue;
 
-      // 选拔唯一进阶主体主卡：
-      // 优先已上阵 > 红星数最高 > 等级最高 > 经验最高
-      cards.sort((a, b) => {
+      // 选拔进阶主体优先级：已上阵 > 红星数最高 > 等级最高 > 经验最高
+      availablePool.sort((a, b) => {
         const inA = currentTroopHeroIds.has(a.id);
         const inB = currentTroopHeroIds.has(b.id);
         if (inA !== inB) return inA ? -1 : 1;
@@ -2734,34 +2752,53 @@ class GameApp {
         return (b.exp || 0) - (a.exp || 0);
       });
 
-      const mainHero = cards[0];
-      const maxRed = mainHero.star || 5;
+      // 支持将第1张升至满红后，剩余白板卡继续递进升星第2张、第3张同名卡
+      while (availablePool.length > 1) {
+        const mainHero = availablePool.shift();
+        const maxRed = mainHero.star || 5;
 
-      // 若主力卡已满红，同名卡全部安全保留在背包中供传承或解甲，绝不反向吞噬
-      if ((mainHero.redStars || 0) >= maxRed) continue;
+        while ((mainHero.redStars || 0) < maxRed) {
+          // 从队尾查找未上阵且为0红白板的材料卡
+          let matPoolIdx = -1;
+          for (let i = availablePool.length - 1; i >= 0; i--) {
+            const candidate = availablePool[i];
+            if (!currentTroopHeroIds.has(candidate.id) && (candidate.redStars || 0) === 0) {
+              matPoolIdx = i;
+              break;
+            }
+          }
+          if (matPoolIdx === -1) break;
 
-      // 筛选合法材料卡：同名组中排除主卡、未上阵、且为白板卡 (redStars === 0)
-      const materialCandidates = cards.slice(1).filter(other => 
-        !currentTroopHeroIds.has(other.id) && (other.redStars || 0) === 0
-      );
-
-      while (materialCandidates.length > 0 && (mainHero.redStars || 0) < maxRed) {
-        const matCard = materialCandidates.shift();
-        const matIdx = this.state.ownedGenerals.findIndex(x => x.id === matCard.id);
-        if (matIdx >= 0) {
-          this.state.ownedGenerals.splice(matIdx, 1);
-          mainHero.redStars = (mainHero.redStars || 0) + 1;
-          mainHero.force += 5;
-          mainHero.intel += 5;
-          mainHero.command += 5;
-          mainHero.speed += 5;
-          promotedCount++;
+          const [matCard] = availablePool.splice(matPoolIdx, 1);
+          const matIdx = this.state.ownedGenerals.findIndex(x => x.id === matCard.id);
+          if (matIdx >= 0) {
+            this.state.ownedGenerals.splice(matIdx, 1);
+            mainHero.redStars = (mainHero.redStars || 0) + 1;
+            mainHero.force = (mainHero.force || 50) + 5;
+            mainHero.intel = (mainHero.intel || 50) + 5;
+            mainHero.command = (mainHero.command || 50) + 5;
+            mainHero.speed = (mainHero.speed || 50) + 5;
+            promotedCount++;
+          }
         }
+
+        // 同步已上阵部队中对应的唯一武将实例
+        (this.state.troops || []).forEach(t => {
+          (t.heroes || []).forEach(h => {
+            if (h && h.id === mainHero.id) {
+              h.redStars = mainHero.redStars;
+              h.force = mainHero.force;
+              h.intel = mainHero.intel;
+              h.command = mainHero.command;
+              h.speed = mainHero.speed;
+            }
+          });
+        });
       }
     }
 
     if (promotedCount === 0) {
-      alert('背包中暂无满足条件的白板重复同名武将卡！\n已满红武将的多余同名卡已安全为您留存，可用于传承战法或遣散解甲换取铜币。');
+      alert('背包中暂无满足条件的白板重复同名武将卡！\n单张闲置同名卡已安全为您留存，可用于传承战法或遣散解甲换取铜币。');
       return;
     }
 
@@ -2770,7 +2807,7 @@ class GameApp {
     this.renderGenerals();
     this.renderTroops();
     this.renderHUD();
-    alert(`🎉【一键进阶圆满】共计完成 ${promotedCount} 次红度进阶！\n全员进阶属性已同步提升，已满红武将的富余卡牌已安全留存背包！`);
+    alert(`🎉【一键进阶圆满】共计完成 ${promotedCount} 次红度进阶！\n全员进阶属性已同步提升！`);
   }
 
   // 单卡售出 (自由解甲：3星300 / 4星1000 / 5星5000)
@@ -3597,16 +3634,29 @@ class GameApp {
 
   doGacha(poolType, count) {
     const isFamous = (poolType === 'famous');
-    const cost = isFamous 
-      ? (count === 1 ? GACHA_CONFIG.goldSingleCost : (count === 10 ? GACHA_CONFIG.goldTenCost : GACHA_CONFIG.goldFiveCost))
-      : (count === 1 ? GACHA_CONFIG.copperSingleCost : GACHA_CONFIG.copperTenCost);
+    const isFastBatch = (count >= 50);
+    let cost = 0;
+    if (isFamous) {
+      if (count === 1) cost = GACHA_CONFIG.goldSingleCost;
+      else if (count === 5) cost = GACHA_CONFIG.goldFiveCost;
+      else if (count === 10) cost = GACHA_CONFIG.goldTenCost;
+      else if (count === 50) cost = GACHA_CONFIG.goldFiftyCost;
+      else if (count === 100) cost = GACHA_CONFIG.goldHundredCost;
+      else cost = count * GACHA_CONFIG.goldSingleCost;
+    } else {
+      if (count === 1) cost = GACHA_CONFIG.copperSingleCost;
+      else if (count === 10) cost = GACHA_CONFIG.copperTenCost;
+      else if (count === 50) cost = GACHA_CONFIG.copperFiftyCost;
+      else if (count === 100) cost = GACHA_CONFIG.copperHundredCost;
+      else cost = count * GACHA_CONFIG.copperSingleCost;
+    }
 
     // 严谨校验与扣减资源 (关闭无限金珠)
     if (isFamous) {
       const curGold = this.state.resources.gold || 0;
       if (curGold < cost) {
         sound.playDrum();
-        if (confirm(`⚠️ 金铢不足！\n\n招募 ${count} 次需要 ${cost} 金铢，当前拥有 ${curGold.toLocaleString()} 金铢。\n是否立即前往【金铢钱庄】模拟充值？(享受始终双倍金珠)`)) {
+        if (confirm(`⚠️ 金铢不足！\n\n招募 ${count} 次需要 ${cost.toLocaleString()} 金铢，当前拥有 ${curGold.toLocaleString()} 金铢。\n是否立即前往【金铢钱庄】模拟充值？(享受始终双倍金珠)`)) {
           this.openRechargeModal();
         }
         return;
@@ -3616,13 +3666,24 @@ class GameApp {
       const curCopper = this.state.resources.copper || 0;
       if (curCopper < cost) {
         sound.playDrum();
-        alert(`⚠️ 铜币不足！良将招募 ${count} 次需要 ${cost} 铜币，当前拥有 ${curCopper.toLocaleString()} 铜币。\n可通过解甲武将或通关战役赚取铜币！`);
+        alert(`⚠️ 铜币不足！良将招募 ${count} 次需要 ${cost.toLocaleString()} 铜币，当前拥有 ${curCopper.toLocaleString()} 铜币。\n可通过解甲武将或通关战役赚取铜币！`);
         return;
       }
       this.state.resources.copper -= cost;
     }
 
+    // 清理上一轮未完成的自动翻牌定时器
+    if (this.gachaAutoFlipTimers && this.gachaAutoFlipTimers.length > 0) {
+      this.gachaAutoFlipTimers.forEach(tid => clearTimeout(tid));
+      this.gachaAutoFlipTimers = [];
+    }
+
     const pulledCards = [];
+    const copperPerThreeStar = GACHA_CONFIG.threeStarCopperValue || 300;
+    let fiveStarCount = 0;
+    let coreStarCount = 0;
+    let fourStarCount = 0;
+    let threeStarCount = 0;
 
     for (let i = 0; i < count; i++) {
       this.state.totalGachaCount = (this.state.totalGachaCount || 0) + 1;
@@ -3655,24 +3716,47 @@ class GameApp {
         }
       }
 
-      pulledCards.push(res.general);
-      const instanceId = `${res.general.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-      this.state.ownedGenerals.push({
-        ...res.general,
-        id: instanceId,
-        templateId: res.general.id,
-        level: res.general.star >= 5 ? 10 : 5,
-        exp: 0,
-        currentSoldiers: (res.general.star >= 5 ? 10 : 5) * 200,
-        maxSoldiers: (res.general.star >= 5 ? 10 : 5) * 200,
-        equippedTactic1: null,
-        equippedTactic2: null
-      });
+      if (res.general.star <= 3) {
+        // ♻️ 3星卡招募时自动转换铜币，不进入武将背包
+        threeStarCount++;
+        pulledCards.push({
+          ...res.general,
+          autoConvertedCopper: copperPerThreeStar
+        });
+      } else {
+        if (res.general.star >= 5) {
+          fiveStarCount++;
+          if (res.isCore) coreStarCount++;
+        } else if (res.general.star === 4) {
+          fourStarCount++;
+        }
+
+        const instanceId = `${res.general.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const newHeroInstance = {
+          ...res.general,
+          id: instanceId,
+          templateId: res.general.id,
+          level: res.general.star >= 5 ? 10 : 5,
+          exp: 0,
+          currentSoldiers: (res.general.star >= 5 ? 10 : 5) * 200,
+          maxSoldiers: (res.general.star >= 5 ? 10 : 5) * 200,
+          equippedTactic1: null,
+          equippedTactic2: null
+        };
+        this.state.ownedGenerals.push(newHeroInstance);
+        pulledCards.push(newHeroInstance);
+      }
+    }
+
+    // 结算 3 星卡自动转化的铜币
+    const convertedCopperTotal = threeStarCount * copperPerThreeStar;
+    if (convertedCopperTotal > 0) {
+      this.state.resources.copper = (this.state.resources.copper || 0) + convertedCopperTotal;
     }
 
     // 判定本次抽卡最高品质（出金 / 出紫）
-    const hasFiveStar = pulledCards.some(c => c.star >= 5);
-    const hasFourStar = pulledCards.some(c => c.star === 4);
+    const hasFiveStar = (fiveStarCount > 0);
+    const hasFourStar = (fourStarCount > 0);
 
     // 播放专属音效与视听反馈
     if (hasFiveStar) {
@@ -3690,7 +3774,41 @@ class GameApp {
     this.gachaShowcase.classList.remove('has-gold', 'has-purple');
     if (this.gachaShowcaseTitle) {
       this.gachaShowcaseTitle.className = 'gacha-title-banner';
-      this.gachaShowcaseTitle.innerHTML = '🎴 天命所归 · 点击翻开名将令';
+      this.gachaShowcaseTitle.innerHTML = isFastBatch
+        ? `⚡ 极速招募 ${count} 连抽 · 紫橙名将检阅`
+        : '🎴 天命所归 · 点击翻开名将令';
+    }
+
+    // 50抽 / 100抽仅展示抽出来的紫卡(4★)和橙卡(5★)，并按 5★大核心 -> 5★普通 -> 4★良将 排序
+    const displayCards = isFastBatch
+      ? pulledCards
+          .filter(c => c.star >= 4)
+          .sort((a, b) => {
+            if (b.star !== a.star) return b.star - a.star;
+            if ((b.isCore ? 1 : 0) !== (a.isCore ? 1 : 0)) return (b.isCore ? 1 : 0) - (a.isCore ? 1 : 0);
+            return (b.cost || 0) - (a.cost || 0);
+          })
+      : pulledCards;
+
+    // 渲染顶部战果汇总与 3 星自动转铜币提示栏
+    if (this.gachaSummaryBar) {
+      if (isFastBatch || threeStarCount > 0) {
+        this.gachaSummaryBar.style.display = 'flex';
+        this.gachaSummaryBar.innerHTML = `
+          <div class="gacha-summary-stats">
+            <span class="summary-chip chip-total">📊 招募 <b>${count}</b> 次</span>
+            ${isFastBatch || fiveStarCount > 0 ? `<span class="summary-chip chip-five">🌟 5★橙卡: <b>${fiveStarCount}</b> 张${coreStarCount > 0 ? ` <em>(👑核心 ${coreStarCount})</em>` : ''}</span>` : ''}
+            ${isFastBatch || fourStarCount > 0 ? `<span class="summary-chip chip-four">💜 4★紫卡: <b>${fourStarCount}</b> 张</span>` : ''}
+            <span class="summary-chip chip-three">♻️ 3★三星卡: <b>${threeStarCount}</b> 张（已自动转为 🪙 <b>+${convertedCopperTotal.toLocaleString()}</b> 铜币）</span>
+          </div>
+          ${displayCards.length > 1 ? `
+            <button type="button" class="gacha-fast-flip-btn" id="btnGachaFlipAll">⚡ 一键全翻</button>
+          ` : ''}
+        `;
+      } else {
+        this.gachaSummaryBar.style.display = 'none';
+        this.gachaSummaryBar.innerHTML = '';
+      }
     }
 
     // 弹出开箱展示，先展示神秘虎符卡背，支持手动点击翻牌或按序自动翻开
@@ -3698,10 +3816,26 @@ class GameApp {
     // 重抽时先清掉上一轮残留粒子，否则新旧爆发会叠加在同一帧
     goldFX.clear();
 
+    // 若 50/100 抽未抽出紫卡或橙卡（如铜币池全为3星），展示专属的3星自动转化铜币结算卡
+    if (isFastBatch && displayCards.length === 0) {
+      this.gachaCardsContainer.innerHTML = `
+        <div class="gacha-three-star-summary-card">
+          <div style="font-size:48px; margin-bottom:8px;">🪙</div>
+          <div style="font-size:17px; font-weight:900; color:#fbbf24;">本次 ${count} 连抽共获得 3★ 三星卡 ${threeStarCount} 张</div>
+          <div style="font-size:13px; color:#94a3b8; margin-top:4px;">未产出 4★ 紫卡或 5★ 橙卡</div>
+          <div style="margin-top:12px; padding:8px 16px; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:8px; color:#34d399; font-weight:800; font-size:14px;">
+            ♻️ 全部 ${threeStarCount} 张三星卡已自动转化为 +${convertedCopperTotal.toLocaleString()} 铜币！
+          </div>
+        </div>
+      `;
+      this.gachaShowcase.style.display = 'flex';
+      return;
+    }
+
     // 跟踪已翻牌状态
     const cardElements = [];
 
-    pulledCards.forEach((c, idx) => {
+    displayCards.forEach((c, idx) => {
       const isFive = (c.star >= 5);
       const isCore = c.isCore;
       const isFour = (c.star === 4);
@@ -3709,31 +3843,26 @@ class GameApp {
 
       const wrapper = document.createElement('div');
       wrapper.className = 'gacha-card-wrapper gacha-anim-card';
-      wrapper.style.animationDelay = `${idx * 0.1}s`;
+      wrapper.style.animationDelay = isFastBatch ? `${Math.min(idx * 0.025, 0.5)}s` : `${idx * 0.1}s`;
 
       const campInfo = CAMPS[c.camp] || { color: '#888', badge: '群' };
       const starStr = isFive ? '★★★★★' : (isFour ? '★★★★' : '★★★');
       const starClass = isFive ? 'color:#fbbf24; text-shadow:0 0 8px rgba(251,191,36,0.8);' : (isFour ? 'color:#c084fc; text-shadow:0 0 6px rgba(192,132,252,0.6);' : 'color:#9ca3af;');
 
       // ★ 仪式感特效元素：仅 4/5 星卡牌才注入，3 星卡保持朴素
-      // 金屑粒子由 JS 生成随机方向/延迟/摆动量，避免在 CSS 里写死数十套重复规则
-      const SPARKLE_COUNT = 56;
+      const SPARKLE_COUNT = isFastBatch ? 32 : 56;
       let sparkleHtml = '';
       if (isFive) {
         const bits = [];
         for (let i = 0; i < SPARKLE_COUNT; i++) {
-          // 角度均分 + 随机抖动，让迸射呈圆锥形而非杂乱
           const angle = (i / SPARKLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
           const dist = 70 + Math.random() * 130;
           const tx = Math.cos(angle) * dist;
-          // 上抛后再下坠：ty 取正值并叠加一点随机，制造抛物线
           const ty = Math.abs(Math.sin(angle)) * dist * 0.55 + dist * 0.42 + Math.random() * 30;
           const delay = (Math.random() * 0.3).toFixed(3);
           const dur = (0.9 + Math.random() * 0.7).toFixed(2);
-          // 每 4 粒掺 1 枚大亮片，制造大中小三级层次（原版粒子系统同样分档）
           const isBig = i % 4 === 0;
           const size = isBig ? 5 + Math.random() * 4 : 2 + Math.random() * 2.2;
-          // 横向摆动量：模拟湍流，让轨迹不是完美抛物线（纯 CSS 逼近粒子物理的关键近似）
           const sway = (Math.random() - 0.5) * 46;
           bits.push(
             `<div class="gacha-sparkle${isBig ? ' big' : ''}" style="--tx:${tx.toFixed(1)}px;--ty:${ty.toFixed(1)}px;--sway:${sway.toFixed(1)}px;--delay:${delay}s;--dur:${dur}s;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;"></div>`
@@ -3742,9 +3871,6 @@ class GameApp {
         sparkleHtml = bits.join('');
       }
 
-      // 光环 + 白闪 + 泛光 + 光柱 + 霸业横幅（核心名将专属）
-      // .gacha-bloom 为新增泛光层：中心白热→金→透明的大径向渐变，
-      // 配合 screen 混合让亮部向四周"溢出"，逼近原版 bloom 后处理的观感
       const fxHtml = (isFive || isFour) ? `
         <div class="gacha-burst-ring${isFour ? ' purple' : ''}"></div>
         <div class="gacha-burst-ring ring-outer${isFour ? ' purple' : ''}"></div>
@@ -3752,11 +3878,6 @@ class GameApp {
         ${isFive && isCore ? '<div class="gacha-core-banner">霸 业 名 将</div>' : ''}
       ` : '';
 
-      // 【关键结构】特效层必须挂在 .gacha-card-wrapper 上，不能放进 .gacha-card-inner。
-      // inner 是 transform-style:preserve-3d 的 3D 翻转容器，在 3D 变换上下文中
-      // 图层会被强制展平，导致 mix-blend-mode（加色混合）失效；
-      // 且横幅等带文字元素会被 rotateY(180°) 翻转成镜像。
-      // wrapper 有 perspective 但自身不参与翻转，且已设 isolation:isolate，是安全的混合上下文。
       wrapper.innerHTML = `
         <div class="gacha-card-inner">
           <!-- 🎴 背面：神秘古风虎符卡背 -->
@@ -3765,17 +3886,24 @@ class GameApp {
             <div class="card-back-title">英雄令</div>
             <div class="card-back-hint">点击翻开</div>
           </div>
-          <!-- 🎴 正面：名将真容全息卡牌 -->
+          <!-- 🎴 正面：名将真容全息卡牌（全画幅竖版立绘） -->
           <div class="gacha-card-face card-front general-card ${qualityClass}">
-            <div class="card-header">
+            <div class="card-header gacha-front-header">
               <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}</span>
               <span class="cost-badge">${c.cost}御</span>
             </div>
-            <div class="avatar-box">
-              ${getGeneralAvatarHtml(c, { fontSize: '46px' })}
+            <div class="avatar-box gacha-front-portrait">
+              ${getGeneralAvatarHtml(c, { fontSize: '56px' })}
             </div>
-            <div class="hero-name" style="font-size:15px; margin:4px 0;">${c.name}</div>
-            <div class="stars-row" style="${starClass} font-size:14px; letter-spacing:2px; margin-bottom:4px;">${starStr}</div>
+            <div class="gacha-front-footer">
+              <div class="stars-row" style="${starClass} font-size:13px; letter-spacing:2px; line-height:1;">${starStr}</div>
+              <div class="hero-name">${c.name}</div>
+              ${c.autoConvertedCopper ? `
+                <div class="gacha-copper-badge">
+                  🪙 已转 +${c.autoConvertedCopper} 铜币
+                </div>
+              ` : ''}
+            </div>
           </div>
         </div>
         ${fxHtml}
@@ -3791,24 +3919,17 @@ class GameApp {
         wrapper.classList.add('flipped');
         sound.playCardFlip();
 
-        // ★ 四阶段仪式编排：按时间轴分层触发，形成"炸裂 → 光芒 → 金屑 → 震动"的递进
-        // 3 星卡不参与仪式，仅翻牌音效
         if (isFive) {
-          // ① 0ms 金光炸裂：扩散光环 + 强白闪 + 上行琶音
           wrapper.classList.add('burst-five');
           if (isCore) wrapper.classList.add('burst-core');
           sound.playGoldBurst(isCore);
 
-          // ①' Canvas 粒子爆发（路径 B）。坐标必须取卡牌在视口中的实际中心，
-          // 因为画布覆盖整个 fixed 浮层，与卡牌容器无定位关系。
-          // rAF 推迟一帧等翻转 transform 生效，否则读到的是翻牌前的旧位置。
           requestAnimationFrame(() => {
             const rect = wrapper.getBoundingClientRect();
             if (!rect.width) return;
             goldFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, { isCore });
           });
 
-          // 环境光与标题在炸裂瞬间同步点亮
           this.gachaShowcase.classList.add('has-gold');
           if (this.gachaShowcaseTitle) {
             this.gachaShowcaseTitle.className = 'gacha-title-banner gold';
@@ -3817,7 +3938,6 @@ class GameApp {
               : '🌟 华光万道 · 恭迎五星名将！';
           }
 
-          // ② 180ms 放射光柱：铜锣一记承接炸裂；同步补一圈低重力外扩余波
           setTimeout(() => {
             if (!wrapper.classList.contains('flipped')) return;
             sound.playGoldRay();
@@ -3827,29 +3947,24 @@ class GameApp {
             }
           }, 180);
 
-          // ③ 300ms 金屑迸射：细碎高频闪烁
           setTimeout(() => {
             if (wrapper.classList.contains('flipped')) sound.playGoldSparkle();
           }, 300);
 
-          // ④ 450ms 屏幕震动 + 低频冲击（核心名将震得更重）
           setTimeout(() => {
             if (!wrapper.classList.contains('flipped')) return;
             sound.playScreenImpact(isCore);
             this.gachaShowcase.classList.add(isCore ? 'shake-core' : 'shake');
-            // 抖完移除，避免残留 class 影响下次揭晓
             setTimeout(() => {
               this.gachaShowcase.classList.remove('shake', 'shake-core');
             }, isCore ? 780 : 520);
           }, 450);
 
         } else if (isFour) {
-          // 紫卡：仅一圈柔光扩散 + 柔和琴音，无粒子与震动
           wrapper.classList.add('burst-four');
           setTimeout(() => {
             if (!wrapper.classList.contains('flipped')) return;
-            sound.playPurpleBurst();
-            // 已有金卡在场时不覆盖金光氛围，避免紫光抢金卡风头
+            if (!isFastBatch) sound.playPurpleBurst();
             if (!this.gachaShowcase.classList.contains('has-gold')) {
               this.gachaShowcase.classList.add('has-purple');
               if (this.gachaShowcaseTitle && !this.gachaShowcaseTitle.classList.contains('gold')) {
@@ -3857,7 +3972,7 @@ class GameApp {
                 this.gachaShowcaseTitle.innerHTML = '💜 紫气东来 · 恭获四星良将！';
               }
             }
-          }, 280);
+          }, isFastBatch ? 80 : 280);
         }
       };
 
@@ -3865,24 +3980,41 @@ class GameApp {
       wrapper.addEventListener('click', flipCard);
 
       this.gachaCardsContainer.appendChild(wrapper);
-      cardElements.push(flipCard);
+      cardElements.push({ wrapper, flipCard });
     });
 
+    // 绑定“一键全翻”快捷按钮
+    const btnFlipAll = document.getElementById('btnGachaFlipAll');
+    if (btnFlipAll) {
+      btnFlipAll.addEventListener('click', () => {
+        if (this.gachaAutoFlipTimers && this.gachaAutoFlipTimers.length > 0) {
+          this.gachaAutoFlipTimers.forEach(tid => clearTimeout(tid));
+          this.gachaAutoFlipTimers = [];
+        }
+        cardElements.forEach(({ wrapper, flipCard }) => {
+          if (!wrapper.classList.contains('flipped')) {
+            flipCard();
+          }
+        });
+      });
+    }
+
     this.gachaShowcase.style.display = 'flex';
-    // 画布必须在浮层 display 设为 flex 之后挂载，
-    // 否则 getBoundingClientRect() 全返回 0，画布尺寸会是 1x1
     goldFX.mount(this.gachaShowcase);
 
-    // 优雅体验：入场完成后，如果主公未点击，依次按序自动掀起翻开。
-    // ★ 出五星的卡牌多留 900ms 间隔，让炸裂/光柱/金屑/震动四层特效完整演完；
-    //   否则连翻时后一张会立刻盖住前一张的特效，五星仪式感就白做了。
-    let autoDelay = 550;
-    pulledCards.forEach((c, i) => {
-      const doFlip = cardElements[i];
-      if (!doFlip) return;
+    // 自动掀牌编排：50/100抽采用极速节奏（5★间隔260ms，4★间隔45ms），常规抽卡保持沉浸仪式感
+    let autoDelay = isFastBatch ? 260 : 550;
+    displayCards.forEach((c, i) => {
+      const item = cardElements[i];
+      if (!item) return;
       const isFive = (c.star >= 5);
-      setTimeout(() => doFlip(), autoDelay);
-      autoDelay += isFive ? 1150 : 320;
+      const tid = setTimeout(() => {
+        if (!item.wrapper.classList.contains('flipped')) {
+          item.flipCard();
+        }
+      }, autoDelay);
+      this.gachaAutoFlipTimers.push(tid);
+      autoDelay += isFastBatch ? (isFive ? 280 : 45) : (isFive ? 1150 : 320);
     });
   }
 
