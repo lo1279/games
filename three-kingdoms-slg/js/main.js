@@ -2257,27 +2257,51 @@ class GameApp {
             <div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:10px;">
               
               <!-- 四维核心战斗属性与成长率 -->
-              <div class="hero-detail-section">
-                <div class="hero-detail-title">📊 四维实战属性与成长</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                    <span>🗡️ 武力: <b style="color:#fde047; font-size:15px;">${realHero.force}</b></span>
-                    <span class="hero-growth-tag" style="color:#fbbf24;">(+${realHero.forceGrowth || 1.0}/级)</span>
+              ${(() => {
+                const redBonus = redStars * 5;
+                const curForce = Math.round(realHero.force + (realHero.forceGrowth || 1.0) * (hLvl - 1));
+                const curIntel = Math.round(realHero.intel + (realHero.intelGrowth || 1.0) * (hLvl - 1));
+                const curCommand = Math.round(realHero.command + (realHero.commandGrowth || 1.0) * (hLvl - 1));
+                const curSpeed = Math.round(realHero.speed + (realHero.speedGrowth || 1.0) * (hLvl - 1));
+                const redInlineTag = redBonus > 0
+                  ? ` <span style="font-size:11px; color:#f87171; font-weight:bold;">(红+${redBonus})</span>`
+                  : '';
+                const redHeaderBadge = redBonus > 0
+                  ? `<span style="font-size:11px; background:${isFullRed ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'rgba(239,68,68,0.2)'}; color:${isFullRed ? '#fde047' : '#fca5a5'}; border:1px solid ${isFullRed ? '#fbbf24' : '#ef4444'}; padding:1px 7px; border-radius:4px; font-weight:bold;">${isFullRed ? `👑 满红(${redStars}红)` : `🔥 进阶${redStars}红`} · 全属性 +${redBonus}</span>`
+                  : `<span class="card-micro">白板(0红) · 进阶每红全属性 +5</span>`;
+
+                return `
+                  <div class="hero-detail-section">
+                    <div class="hero-detail-title card-row--split card-row--wrap" style="gap:6px;">
+                      <span>📊 四维实战属性与成长 <span class="card-micro">(Lv.${hLvl})</span></span>
+                      ${redHeaderBadge}
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                      <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
+                        <span>🗡️ 武力: <b style="color:#fde047; font-size:15px;">${curForce}</b>${redInlineTag}</span>
+                        <span class="hero-growth-tag" style="color:#fbbf24;">(+${realHero.forceGrowth || 1.0}/级)</span>
+                      </div>
+                      <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
+                        <span>🧠 智力: <b style="color:#60a5fa; font-size:15px;">${curIntel}</b>${redInlineTag}</span>
+                        <span class="hero-growth-tag" style="color:#93c5fd;">(+${realHero.intelGrowth || 1.0}/级)</span>
+                      </div>
+                      <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
+                        <span>🛡️ 统率: <b style="color:#34d399; font-size:15px;">${curCommand}</b>${redInlineTag}</span>
+                        <span class="hero-growth-tag val-copper">(+${realHero.commandGrowth || 1.0}/级)</span>
+                      </div>
+                      <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
+                        <span>⚡ 速度: <b style="color:#f472b6; font-size:15px;">${curSpeed}</b>${redInlineTag}</span>
+                        <span class="hero-growth-tag" style="color:#f9a8d4;">(+${realHero.speedGrowth || 1.0}/级)</span>
+                      </div>
+                    </div>
+                    <div class="card-note card-note--tight" style="margin-top:6px;">
+                      ${redBonus > 0
+                        ? `💡 相比同级白板（Lv.1 初始 武${realHero.force - redBonus} / 智${realHero.intel - redBonus} / 统${realHero.command - redBonus} / 速${realHero.speed - redBonus}），${redStars}红进阶已永久提升四维各 <b class="val-danger">+${redBonus}</b> 点`
+                        : `💡 当前为白板属性（Lv.1 初始 武${realHero.force} / 智${realHero.intel} / 统${realHero.command} / 速${realHero.speed}），消耗同名卡每进阶 1 红四维各 <b class="val-gold">+5</b> 点`}
+                    </div>
                   </div>
-                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                    <span>🧠 智力: <b style="color:#60a5fa; font-size:15px;">${realHero.intel}</b></span>
-                    <span class="hero-growth-tag" style="color:#93c5fd;">(+${realHero.intelGrowth || 1.0}/级)</span>
-                  </div>
-                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                    <span>🛡️ 统率: <b style="color:#34d399; font-size:15px;">${realHero.command}</b></span>
-                    <span class="hero-growth-tag val-copper">(+${realHero.commandGrowth || 1.0}/级)</span>
-                  </div>
-                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                    <span>⚡ 速度: <b style="color:#f472b6; font-size:15px;">${realHero.speed}</b></span>
-                    <span class="hero-growth-tag" style="color:#f9a8d4;">(+${realHero.speedGrowth || 1.0}/级)</span>
-                  </div>
-                </div>
-              </div>
+                `;
+              })()}
 
               <!-- 五大兵种适性面板 -->
               <div class="hero-detail-section">
@@ -2770,7 +2794,7 @@ class GameApp {
               </div>
               <div style="font-size:11px; color:#9ca3af; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 <span>${currentArmMeta.name}适性: <b class="apt-tag ${apt}">${apt}</b> <span style="color:#6ee7b7; font-size:10px;">(${aptModPct}%)</span></span>
-                <span>武:<b class="val-gold">${c.force}</b> 智:<b style="color:#60a5fa;">${c.intel}</b> 统:<b class="val-ok">${c.command}</b> 速:<b style="color:#f472b6;">${c.speed}</b></span>
+                <span>武:<b class="val-gold">${Math.round(c.force + (c.forceGrowth || 1.0) * (cLvl - 1))}</b> 智:<b style="color:#60a5fa;">${Math.round(c.intel + (c.intelGrowth || 1.0) * (cLvl - 1))}</b> 统:<b class="val-ok">${Math.round(c.command + (c.commandGrowth || 1.0) * (cLvl - 1))}</b> 速:<b style="color:#f472b6;">${Math.round(c.speed + (c.speedGrowth || 1.0) * (cLvl - 1))}</b>${redStars > 0 ? ` <span style="color:#f87171; font-weight:bold;">(红+${redStars * 5})</span>` : ''}</span>
                 <span class="val-ok">兵力:${(c.maxSoldiers || 3000).toLocaleString()}</span>
                 <span style="color:#e2e8f0;">[自带] <b style="color:${c.star === 5 ? '#fde047' : (c.star === 4 ? '#c084fc' : '#93c5fd')};">${tacName}</b> <span style="color:#6ee7b7; font-size:10px;">Lv.${builtInLvl}</span></span>
                 ${eqTacTags ? `<span>配法: ${eqTacTags}</span>` : ''}
