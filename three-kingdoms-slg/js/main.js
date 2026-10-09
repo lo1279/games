@@ -11,6 +11,7 @@ import { sound } from './engine/audio.js';
 import { goldFX } from './engine/goldfx.js';
 import { loadGameState, saveGameState, resetGameState } from './engine/storage.js';
 import { MAP_CONFIG, LAND_TIERS, RESOURCE_TYPES, isTileAdjacentToPlayer, calculateMarchMorale, createLandGuardTroop } from './engine/map.js';
+import { estimateTroopPower, estimateWinChance, evaluateLandMatchup } from './engine/power.js';
 import { BUILDINGS_CONFIG, hasEnoughResources, deductResources } from './engine/city.js';
 import { checkActiveBonds, getBondsForHero } from './data/bonds.js';
 
@@ -220,6 +221,29 @@ class GameApp {
     document.getElementById('btnGachaCopperTen')?.addEventListener('click', () => this.doGacha('copper', 10));
     document.getElementById('btnGachaCopperFifty')?.addEventListener('click', () => this.doGacha('copper', 50));
     document.getElementById('btnGachaCopperHundred')?.addEventListener('click', () => this.doGacha('copper', 100));
+
+    // ♻️ 招募自动转化 3★ / 4★ 武将开关绑定
+    const chkAuto3 = document.getElementById('chkAutoConvert3Star');
+    const chkAuto4 = document.getElementById('chkAutoConvert4Star');
+    if (!this.state.gachaAutoConvert) {
+      this.state.gachaAutoConvert = { star3: true, star4: false };
+    }
+    if (chkAuto3) {
+      chkAuto3.checked = this.state.gachaAutoConvert.star3 !== false;
+      chkAuto3.addEventListener('change', () => {
+        this.state.gachaAutoConvert.star3 = chkAuto3.checked;
+        sound.playDrum();
+        this.save();
+      });
+    }
+    if (chkAuto4) {
+      chkAuto4.checked = !!this.state.gachaAutoConvert.star4;
+      chkAuto4.addEventListener('change', () => {
+        this.state.gachaAutoConvert.star4 = chkAuto4.checked;
+        sound.playDrum();
+        this.save();
+      });
+    }
 
     // 👑 名将卡池全景预览弹窗入口
     const btnPreviewFamous = document.getElementById('btnPreviewFamousPool');
@@ -484,17 +508,23 @@ class GameApp {
 
     // 招募统计数据刷新
     const elTotal = document.getElementById('gachaTotalCount');
-    if (elTotal) elTotal.innerHTML = `${(this.state.totalGachaCount || 0).toLocaleString()} <span style="font-size:11px; color:#9ca3af;">次</span>`;
+    if (elTotal) elTotal.innerHTML = `${(this.state.totalGachaCount || 0).toLocaleString()} <span class="card-note">次</span>`;
     const elFive = document.getElementById('gachaTotalFiveCount');
-    if (elFive) elFive.innerHTML = `${(this.state.totalFiveStarCount || 0).toLocaleString()} <span style="font-size:11px; color:#9ca3af;">位</span>`;
+    if (elFive) elFive.innerHTML = `${(this.state.totalFiveStarCount || 0).toLocaleString()} <span class="card-note">位</span>`;
     const elCore = document.getElementById('gachaTotalCoreCount');
-    if (elCore) elCore.innerHTML = `${(this.state.totalCoreCount || 0).toLocaleString()} <span style="font-size:11px; color:#9ca3af;">位</span>`;
+    if (elCore) elCore.innerHTML = `${(this.state.totalCoreCount || 0).toLocaleString()} <span class="card-note">位</span>`;
+
+    // 同步招募自动转化开关勾选状态
+    const chkAuto3 = document.getElementById('chkAutoConvert3Star');
+    const chkAuto4 = document.getElementById('chkAutoConvert4Star');
+    if (chkAuto3) chkAuto3.checked = this.state.gachaAutoConvert?.star3 !== false;
+    if (chkAuto4) chkAuto4.checked = !!this.state.gachaAutoConvert?.star4;
 
     // 城建状态横幅
     if (this.cityStatsBanner) {
       const palaceLvl = this.state.buildings?.palace || 1;
       const barracksLvl = this.state.buildings?.barracks || 0;
-      this.cityStatsBanner.innerHTML = `部队统御上限: <b style="color:#fde047;">统御 ${14 + palaceLvl}</b> · 兵营加成: <b style="color:#6ee7b7;">+${barracksLvl * 300} 兵/将</b>`;
+      this.cityStatsBanner.innerHTML = `部队统御上限: <b class="val-gold">>统御 ${14 + palaceLvl}</b> · 兵营加成: <b class="val-copper">>+${barracksLvl * 300} 兵/将</b>`;
     }
   }
 
@@ -557,13 +587,13 @@ class GameApp {
           <!-- 产能看板与敌情预期 -->
           <div class="resource-land-stats-box">
             <div>
-              <div style="font-size:11px; color:#9ca3af;">当前领地产能</div>
+              <div class="card-note">当前领地产能</div>
               <div style="font-size:16px; font-weight:800; color:#6ee7b7; margin-top:2px;">
-                +${currentProdPerHour.toLocaleString()} <span style="font-size:11px; color:#9ca3af;">/小时</span>
+                +${currentProdPerHour.toLocaleString()} <span class="card-note">/小时</span>
               </div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:11px; color:#9ca3af;">下一阶攻坚目标</div>
+              <div class="card-note">下一阶攻坚目标</div>
               <div style="font-size:13px; font-weight:bold; color:${maxLv >= 10 ? '#9ca3af' : '#fbbf24'}; margin-top:2px;">
                 ${maxLv >= 10 ? '已达顶峰 10 级' : `Lv.${nextLv} 守将 (${nextCfg?.soldiers.toLocaleString()} 兵)`}
               </div>
@@ -615,10 +645,17 @@ class GameApp {
     this.tileModalTitle.innerHTML = `${meta.icon} ${meta.name} · 1~10 级领地开拓`;
 
     // 组装 1~10 级阶梯列表
+    const playerTroop = this.getCurrentTroop();
+    const hasTroop = !!(playerTroop && playerTroop.heroes && playerTroop.heroes.length);
+    // 我方总战力：只需算一次，10 行复用（敌阵不同会导致克制修正，故每行单独评估）
+    const myPowerInfo = hasTroop ? estimateTroopPower(playerTroop) : { total: 0, soldiers: 0 };
+
     let tierItemsHtml = '';
     for (let lv = 1; lv <= 10; lv++) {
       const cfg = LAND_TIERS[lv] || LAND_TIERS[1];
       const guardTroop = createLandGuardTroop(lv, resKey);
+      // 标记等级供 evaluateLandMatchup 计算跳级幅度
+      guardTroop._level = lv;
       const leadHero = guardTroop.heroes[0];
       const armMeta = ARMS[guardTroop.arm] || { name: guardTroop.arm, icon: '⚔️' };
       const isOccupied = (lv <= maxLv);
@@ -631,15 +668,32 @@ class GameApp {
       else if (guardTroop.arm === 'bow') restTip = '克制枪兵 · 惧怕盾兵';
       else if (guardTroop.arm === 'spear') restTip = '克制骑兵 · 惧怕弓兵';
 
+      // ★ 战力评估：出征前就告知胜算，避免盲目送兵
+      const matchup = hasTroop
+        ? evaluateLandMatchup(playerTroop, guardTroop, { nextTarget: isNextTarget, isOccupied })
+        : null;
+      const chance = matchup ? matchup.chance : null;
+      const enemyPower = matchup ? matchup.enemy.total : 0;
+
+      // 战力对比条：以守军战力为 100% 基准，我方战力映射为百分比宽度（上限 130% 防溢出）
+      const mineRatio = matchup && enemyPower > 0 ? Math.min(130, (myPowerInfo.total / enemyPower) * 100) : 0;
+      const barClass = chance ? chance.level : 'even';
+      const riskTip = chance
+        ? (chance.level === 'great' ? '胜算极大，可稳推' :
+           chance.level === 'even'  ? '势均力敌，看战法搭配' :
+           chance.level === 'weak'  ? '兵力偏弱，建议先扫荡屯田' : '⚠️ 悬殊，强烈不建议出征')
+        : '尚未配置出征武将';
+
       tierItemsHtml += `
-        <div class="land-tier-item ${isOccupied ? 'occupied' : (isNextTarget ? 'current-target' : '')}" style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; background:#161922; border:1px solid ${isNextTarget ? '#f59e0b' : '#2d3340'}; border-radius:8px;">
+        <div class="land-tier-item ${isOccupied ? 'occupied' : (isNextTarget ? 'current-target' : '')} ${chance && !isOccupied && (chance.level === 'weak' || chance.level === 'danger') ? 'risky' : ''} card-row--split"
+             style="gap:12px; padding:12px; background:#161922; border:1px solid ${isNextTarget ? '#f59e0b' : '#2d3340'}; border-radius:8px">
           <!-- 守军基本信息与兵种 -->
-          <div style="display:flex; align-items:center; gap:12px; flex:1;">
-            <div style="font-size:28px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+          <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
+            <div style="font-size:28px; width:44px; height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
               ${leadHero.avatar}
             </div>
-            <div>
-              <div style="display:flex; align-items:center; gap:6px;">
+            <div style="min-width:0;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                 <span style="font-weight:800; font-size:14px; color:#fff;">Lv.${lv} ${cfg.name}</span>
                 <span style="font-size:10px; background:rgba(56,189,248,0.15); border:1px solid #0284c7; color:#38bdf8; padding:1px 6px; border-radius:4px;">
                   ${armMeta.icon} ${armMeta.name}
@@ -647,19 +701,39 @@ class GameApp {
                 ${isOccupied ? '<span style="font-size:10px; background:rgba(16,185,129,0.2); color:#6ee7b7; padding:1px 5px; border-radius:3px; font-weight:bold;">已占领</span>' : ''}
                 ${isNextTarget ? '<span style="font-size:10px; background:rgba(251,191,36,0.2); color:#fbbf24; padding:1px 5px; border-radius:3px; font-weight:bold;">首要开拓</span>' : ''}
               </div>
-              <div style="font-size:11px; color:#9ca3af; margin-top:3px; display:flex; gap:10px;">
-                <span>守将: <b style="color:#e2e8f0;">${leadHero.name}</b> (3人队伍)</span>
-                <span>守备兵力: <b style="color:#f87171;">${cfg.soldiers.toLocaleString()}</b></span>
-                <span style="color:#6ee7b7;">+${cfg.prodPerHour}/h</span>
+              <div style="font-size:11px; color:#9ca3af; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap;">
+                <span>守将: <b style="color:#e2e8f0;">${leadHero.name}</b></span>
+                <span>守备兵力: <b class="val-damage">>${cfg.soldiers.toLocaleString()}</b></span>
+                <span class="val-copper">>+${cfg.prodPerHour}/h</span>
               </div>
               <div style="font-size:10px; color:#a1a1aa; margin-top:2px;">
                 克制关系: ${restTip}
               </div>
+
+              <!-- ★ 战力对比条：绿=优势 / 黄=均势 / 橙=劣势 / 红=危局 -->
+              ${hasTroop ? `
+                <div class="power-compare ${barClass}" style="margin-top:6px;">
+                  <div class="power-compare-head">
+                    <span>我方 <b>${myPowerInfo.total.toLocaleString()}</b></span>
+                    <span class="power-verdict">${chance.label} · ${chance.ratioText}</span>
+                    <span>守军 <b>${enemyPower.toLocaleString()}</b></span>
+                  </div>
+                  <div class="power-bar-track">
+                    <div class="power-bar-fill" style="width:${Math.max(6, mineRatio).toFixed(1)}%"></div>
+                    <div class="power-bar-guard" style="left:${Math.min(96, 100).toFixed(1)}%"></div>
+                  </div>
+                  <div class="power-tip">${riskTip}</div>
+                </div>
+              ` : `
+                <div class="power-compare empty" style="margin-top:6px;">
+                  <div class="power-tip">⚠️ 尚未配置出征武将，无法评估战力</div>
+                </div>
+              `}
             </div>
           </div>
 
           <!-- 操作按钮区 (无需连地，直接出征) -->
-          <div style="display:flex; gap:8px; align-items:center;">
+          <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
             <button class="upgrade-btn btn-scout-tier" data-tier="${lv}" style="background:#374151; font-size:11px; padding:6px 10px;">
               🔍 虚实
             </button>
@@ -668,7 +742,8 @@ class GameApp {
                 🌾 扫荡
               </button>
             ` : `
-              <button class="upgrade-btn btn-attack-tier" data-tier="${lv}" style="background:${isNextTarget ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'}; font-size:12px; padding:6px 14px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+              <button class="upgrade-btn btn-attack-tier" data-tier="${lv}" ${!hasTroop ? 'disabled' : ''}
+                style="background:${isNextTarget ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'}; font-size:12px; padding:6px 14px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,0.3);${(!hasTroop || chance.level === 'danger') ? 'opacity:0.45;' : ''}">
                 ⚔️ 出征
               </button>
             `}
@@ -678,19 +753,44 @@ class GameApp {
     }
 
     this.tileModalBody.innerHTML = `
-      <!-- 顶部领地总览 -->
-      <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <span style="font-size:13px; font-weight:bold; color:#fff;">【战棋出征模式】</span>
-          <span style="font-size:12px; color:#9ca3af; margin-left:6px;">无需连地铺路，全图任意选定 1~10 级土地自由挥师出征！</span>
+      <!-- 顶部领地总览（sticky：10 级列表较长，滚动时仍需可见当前进度与战力） -->
+      <div class="land-overview-sticky">
+        <div class="card-row--split card-row--wrap" style="flex-wrap:wrap; gap:8px">
+          <div>
+            <span style="font-size:13px; font-weight:bold; color:#fff;">【战棋出征模式】</span>
+            <span style="font-size:12px; color:#9ca3af; margin-left:6px;">无需连地铺路，全图任意选定 1~10 级土地自由挥师出征！</span>
+          </div>
+          <div style="font-size:12px; color:#fbbf24; font-weight:bold;">
+            当前最高开拓：Lv.${maxLv} / 10 级
+          </div>
         </div>
-        <div style="font-size:12px; color:#fbbf24; font-weight:bold;">
-          当前最高开拓：Lv.${maxLv} / 10 级
+        <!-- ★ 我方出征军团战力概览：出征前先知道自己有多强 -->
+        <div class="land-my-power">
+          ${hasTroop ? `
+            <div class="land-my-power-item">
+              <span class="lmp-label">出征军团</span>
+              <span class="lmp-value">${playerTroop.name || '未命名军团'}</span>
+            </div>
+            <div class="land-my-power-item">
+              <span class="lmp-label">总兵力</span>
+              <span class="lmp-value">${myPowerInfo.soldiers.toLocaleString()}</span>
+            </div>
+            <div class="land-my-power-item">
+              <span class="lmp-label">综合战力</span>
+              <span class="lmp-value highlight">${myPowerInfo.total.toLocaleString()}</span>
+            </div>
+            <div class="land-my-power-hint">绿色优势 / 黄色均势 / 橙色劣势 / 红色危局，仅供决策参考</div>
+          ` : `
+            <div class="land-my-power-item warn">
+              <span class="lmp-label">⚠️ 尚未配置出征武将</span>
+              <span class="lmp-value">请先前往【编队】配置出战阵容</span>
+            </div>
+          `}
         </div>
       </div>
 
       <!-- 1~10 级阶梯列表 -->
-      <div class="land-tier-list" style="display:flex; flex-direction:column; gap:10px; max-height:60vh; overflow-y:auto; padding-right:4px;">
+      <div class="land-tier-list" style="display:flex; flex-direction:column; gap:10px; max-height:58vh; overflow-y:auto; padding-right:4px;">
         ${tierItemsHtml}
       </div>
     `;
@@ -715,23 +815,115 @@ class GameApp {
       });
     });
 
-    // 绑定各级【侦查虚实】
+    // 绑定各级【侦查虚实】—— 弹出斥候军报（含战力评估），替代原生 alert
     this.tileModalBody.querySelectorAll('.btn-scout-tier').forEach(btn => {
       btn.addEventListener('click', () => {
         const lv = parseInt(btn.getAttribute('data-tier'), 10);
-        const guardTroop = createLandGuardTroop(lv, resKey);
-        const lead = guardTroop.heroes[0];
-        const sub1 = guardTroop.heroes[1];
-        const sub2 = guardTroop.heroes[2];
-        const armMeta = ARMS[guardTroop.arm] || { name: guardTroop.arm };
         sound.playDrum();
-        alert(`🔍【斥候军报 · Lv.${lv} 守备探查】\n` +
-          `• 兵种部曲：${armMeta.name} (总兵力 ${LAND_TIERS[lv]?.soldiers.toLocaleString()})\n` +
-          `• 主将：${lead.name} (Lv.${lead.level}, 兵力 ${lead.currentSoldiers})\n` +
-          `• 左卫：${sub1.name} (Lv.${sub1.level}, 兵力 ${sub1.currentSoldiers})\n` +
-          `• 右翼：${sub2.name} (Lv.${sub2.level}, 兵力 ${sub2.currentSoldiers})\n\n` +
-          `💡 兵种克制提示：骑克盾、盾克弓、弓克枪、枪克骑！调整编队兵种可享 15% 伤害增幅！`);
+        this.openScoutReportModal(resKey, lv);
       });
+    });
+
+    // 打开弹窗后自动定位到「首要开拓」那一级，省去用户手动滚动
+    const targetItem = this.tileModalBody.querySelector('.land-tier-item.current-target');
+    if (targetItem) {
+      requestAnimationFrame(() => {
+        targetItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    }
+  }
+
+  /**
+   * 斥候军报弹窗：把守军三人明细与战力评估集中呈现。
+   * 原实现是浏览器原生 alert，信息密度低且打断操作流；
+   * 这里复用 tileActionModal 作为报告容器，关闭后可回到阶梯列表继续决策。
+   */
+  openScoutReportModal(resKey, level) {
+    if (!this.tileActionModal) return;
+
+    const meta = RESOURCE_TYPES[resKey] || { name: '战略领地', resName: '资源', icon: '🚩' };
+    const cfg = LAND_TIERS[level] || LAND_TIERS[1];
+    const guardTroop = createLandGuardTroop(level, resKey);
+    guardTroop._level = level;
+    const armMeta = ARMS[guardTroop.arm] || { name: guardTroop.arm };
+    const playerTroop = this.getCurrentTroop();
+    const hasTroop = !!(playerTroop && playerTroop.heroes && playerTroop.heroes.length);
+
+    this.tileModalTitle.innerHTML = `🔍 斥候军报 · ${meta.name} Lv.${level}`;
+
+    const heroRows = guardTroop.heroes.map((h, idx) => `
+      <div class="scout-hero-row" role="${idx === 0 ? '主将' : idx === 1 ? '左卫' : '右翼'}">
+        <div class="shr-avatar">${h.avatar}</div>
+        <div class="shr-info">
+          <div class="shr-name">${h.name} <span class="shr-role">${idx === 0 ? '主将' : idx === 1 ? '左卫' : '右翼'}</span></div>
+          <div class="shr-detail">Lv.${h.level} · 兵力 ${h.currentSoldiers.toLocaleString()} · 统 ${h.command} · 武 ${h.force} · 智 ${h.intel}</div>
+        </div>
+        <div class="shr-power">战力 ${estimateTroopPower({ arm: guardTroop.arm, heroes: [h] }).total.toLocaleString()}</div>
+      </div>
+    `).join('');
+
+    const matchupHtml = hasTroop
+      ? (() => {
+          const m = evaluateLandMatchup(playerTroop, guardTroop, { nextTarget: false, isOccupied: false });
+          return `
+            <div class="scout-verdict ${m.chance.level}">
+              <div class="sv-head">
+                <span>战力对比</span>
+                <span class="sv-badge">${m.chance.label} · ${m.chance.ratioText}</span>
+              </div>
+              <div class="sv-bar">
+                <div class="sv-fill" style="width:${Math.min(100, m.mine.total / m.enemy.total * 100).toFixed(1)}%"></div>
+              </div>
+              <div class="sv-nums">
+                <span>我军 <b>${m.mine.total.toLocaleString()}</b></span>
+                <span>守军 <b>${m.enemy.total.toLocaleString()}</b></span>
+              </div>
+            </div>
+          `;
+        })()
+      : `<div class="scout-verdict empty"><span>⚠️ 尚未配置出征武将，无法评估战力</span></div>`;
+
+    this.tileModalBody.innerHTML = `
+      <div class="scout-report">
+        <div class="scout-summary">
+          <div class="scout-summary-row">
+            <span class="ssr-label">守军部曲</span>
+            <span class="ssr-value">${armMeta.name || armMeta.icon || guardTroop.arm}</span>
+          </div>
+          <div class="scout-summary-row">
+            <span class="ssr-label">总兵力</span>
+            <span class="ssr-value danger">${cfg.soldiers.toLocaleString()}</span>
+          </div>
+          <div class="scout-summary-row">
+            <span class="ssr-label">土地产出</span>
+            <span class="ssr-value gain">+${cfg.prodPerHour.toLocaleString()} /小时</span>
+          </div>
+        </div>
+
+        ${matchupHtml}
+
+        <div class="scout-hero-list">
+          <div class="scout-section-title">守军编成明细</div>
+          ${heroRows}
+        </div>
+
+        <div class="scout-tip">
+          💡 <b>兵种克制</b>：骑克盾、盾克弓、弓克枪、枪克骑。克制方伤害 +15%，被克方 −15%。
+          调整出征兵种可显著改变胜负。<br>
+          ⚠️ 本报告为<strong>事前静态估算</strong>，实际胜负受战法触发与站位影响，仅供决策参考。
+        </div>
+
+        <button class="upgrade-btn scout-back-btn" style="width:100%; background:linear-gradient(135deg,#374151 0%,#1f2937 100%); padding:9px; font-weight:bold;">
+          ← 返回阶梯列表
+        </button>
+      </div>
+    `;
+
+    this.tileActionModal.style.display = 'flex';
+
+    this.tileModalBody.querySelector('.scout-back-btn')?.addEventListener('click', () => {
+      // 重新渲染会重建阶梯列表内容，回到原弹窗视图
+      this.openResourceLandModal(resKey);
     });
   }
 
@@ -790,15 +982,26 @@ class GameApp {
         }
       });
 
-      const levelUpStr = levelUpMessages.length > 0 ? `\n\n🌟 武将突破升级：\n${levelUpMessages.join('\n')}` : '';
-      const promoteStr = (level > oldMaxLv) ? `\n👑 【${meta.name}】最高开拓等级晋升至 Lv.${level}！全境产能大幅提升！` : '';
+      const promoteStr = (level > oldMaxLv) ? `👑 【${meta.name}】最高开拓等级晋升至 Lv.${level}！全境产能大幅提升！` : '';
 
-      alert(`🎉【攻占大捷】恭贺主公！我军顺利攻克 ${meta.name} · Lv.${level} ${tierCfg.name}！\n` +
-        `获得铜币 🪙 +${copperReward.toLocaleString()} · 参战武将历练经验 +${baseExp.toLocaleString()}` +
-        `${promoteStr}${levelUpStr}`);
+      // 结算信息不再重复弹原生 alert；改由下方战报弹窗统一呈现。
+      // 存在实例属性而非 this.state —— 纯 UI 瞬态不该被存档持久化。
+      this.pendingLandResult = {
+        title: '🎉 攻占大捷',
+        lines: [
+          `攻克 ${meta.name} · Lv.${level} ${tierCfg.name}`,
+          `铜币 🪙 +${copperReward.toLocaleString()}`,
+          `参战武将历练经验 +${baseExp.toLocaleString()}`,
+        ],
+        extras: [promoteStr, ...levelUpMessages].filter(Boolean),
+      };
     } else {
       sound.playSwordClash();
-      alert(`⚠️【出征失利】我军未能击溃 Lv.${level} 守备部曲，领地攻占失败！建议探查守军兵种，调整兵种克制或研习战法！`);
+      this.pendingLandResult = {
+        title: '⚠️ 出征失利',
+        lines: [`未能击溃 Lv.${level} 守备部曲，领地攻占失败`],
+        extras: ['建议先扫荡屯田积蓄兵力，或调整兵种克制关系后再战'],
+      };
     }
 
     // 战报沉淀
@@ -816,6 +1019,9 @@ class GameApp {
     this.save();
     this.renderHUD();
     this.renderWorldMap();
+    // 把本次出征的收获/损失挂到战报上，由战报弹窗顶部结算条渲染
+    reportItem.reward = this.pendingLandResult;
+    this.pendingLandResult = null;
     this.openBattleDetailModal(reportItem);
   }
 
@@ -849,13 +1055,58 @@ class GameApp {
     });
 
     sound.playVictoryHorn();
-    const levelUpStr = levelUpMessages.length > 0 ? `\n\n🌟 武将突破升级：\n${levelUpMessages.join('\n')}` : '';
-    alert(`🌾【扫荡大捷】主公发兵扫荡 ${meta.name} (Lv.${level})，安抚百姓、屯田丰收！\n` +
-      `收获 ${meta.resName} +${harvest.toLocaleString()} · 参战武将历练经验 +${baseExp.toLocaleString()}${levelUpStr}`);
-
     this.save();
     this.renderHUD();
     this.renderWorldMap();
+    this.showHarvestReportModal(resKey, level, harvest, baseExp, levelUpMessages);
+  }
+
+  /**
+   * 屯田/扫荡成果面板。
+   * 扫荡不产生战报（无战斗推演），故单独做一个轻量成果弹窗，
+   * 替代原先的原生 alert —— 保留同样的信息量，但不再打断浏览器原生弹窗。
+   */
+  showHarvestReportModal(resKey, level, harvest, baseExp, levelUpMessages = []) {
+    if (!this.tileActionModal) return;
+    const meta = RESOURCE_TYPES[resKey] || { name: '战略领地', icon: '🚩' };
+    const cfg = LAND_TIERS[level] || LAND_TIERS[1];
+
+    this.tileModalTitle.innerHTML = `🌾 屯田成果 · ${meta.name} Lv.${level}`;
+    this.tileModalBody.innerHTML = `
+      <div class="harvest-report">
+        <div class="harvest-big">
+          <div class="hb-label">${meta.resName || meta.name} 入库</div>
+          <div class="hb-value" style="color:${meta.color || '#fbbf24'};">+${harvest.toLocaleString()}</div>
+          <div class="hb-sub">按 ${cfg.name} 产出 ${cfg.prodPerHour.toLocaleString()}/h × 3 小时结算</div>
+        </div>
+        <div class="harvest-rows">
+          ${baseExp > 0 ? `
+            <div class="harvest-row">
+              <span>参战武将历练经验</span>
+              <b>+${baseExp.toLocaleString()}</b>
+            </div>
+          ` : ''}
+          <div class="harvest-row">
+            <span>本次结算等级</span>
+            <b>Lv.${level} ${cfg.name}</b>
+          </div>
+        </div>
+        ${levelUpMessages.length ? `
+          <div class="harvest-levelups">
+            <div class="scout-section-title">🌟 武将突破升级</div>
+            ${levelUpMessages.map(m => `<div class="hl-item">${m}</div>`).join('')}
+          </div>
+        ` : ''}
+        <button class="upgrade-btn harvest-back-btn" style="width:100%; background:linear-gradient(135deg,#374151 0%,#1f2937 100%); padding:9px; font-weight:bold;">
+          确认收下
+        </button>
+      </div>
+    `;
+    this.tileActionModal.style.display = 'flex';
+    this.tileModalBody.querySelector('.harvest-back-btn')?.addEventListener('click', () => {
+      // 回到领地阶梯列表，保持用户的操作上下文连续
+      this.openResourceLandModal(resKey);
+    });
   }
 
   // 快速屯田单个资源领地 (+3小时产出)
@@ -873,17 +1124,18 @@ class GameApp {
     this.state.resources[resKey] = (this.state.resources[resKey] || 0) + harvest;
 
     sound.playVictoryHorn();
-    alert(`🌾【屯田大丰收】主公下令军士开垦 ${meta.name} (开拓Lv.${maxLv})，瞬间收获 3 小时储备！\n获得 ${meta.resName} +${harvest.toLocaleString()}！`);
-
     this.save();
     this.renderHUD();
     this.renderWorldMap();
+    // 复用成果面板：exp 传 0 表示本次无战斗历练，渲染时自动隐藏经验行
+    this.showHarvestReportModal(resKey, maxLv, harvest, 0, []);
   }
 
   // 全境一键屯田 (+3小时全部4大资源产出)
   quickFarmAllLands() {
-    let summaryText = [];
     const resKeys = ['wood', 'iron', 'stone', 'grain'];
+    const detail = [];
+    let totalHarvest = 0;
 
     resKeys.forEach(rk => {
       const meta = RESOURCE_TYPES[rk];
@@ -895,15 +1147,43 @@ class GameApp {
       }
       const harvest = prod * 3;
       this.state.resources[rk] = (this.state.resources[rk] || 0) + harvest;
-      summaryText.push(`${meta.icon} ${meta.resName}: +${harvest.toLocaleString()}`);
+      totalHarvest += harvest;
+      detail.push({ meta, harvest, maxLv });
     });
 
     sound.playVictoryHorn();
-    alert(`🌾【全境大丰收】主公一道令下，四大战略资源领地同时开垦屯田！瞬间收获 3 小时国家储备！\n\n${summaryText.join('\n')}`);
-
     this.save();
     this.renderHUD();
     this.renderWorldMap();
+
+    // 全境屯田用独立面板：一次列出四大资源明细，比逐个弹四次更清晰
+    if (this.tileActionModal) {
+      this.tileModalTitle.innerHTML = '🌾 全境屯田大丰收';
+      this.tileModalBody.innerHTML = `
+        <div class="harvest-report">
+          <div class="harvest-big">
+            <div class="hb-label">四境资源合计入库</div>
+            <div class="hb-value" style="color:#fbbf24;">+${totalHarvest.toLocaleString()}</div>
+            <div class="hb-sub">各领地按当前开拓等级 × 3 小时结算</div>
+          </div>
+          <div class="harvest-rows">
+            ${detail.map(d => `
+              <div class="harvest-row">
+                <span>${d.meta.icon} ${d.meta.name} <small style="color:#6b7280;">(Lv.${d.maxLv})</small></span>
+                <b style="color:${d.meta.color};">+${d.harvest.toLocaleString()}</b>
+              </div>
+            `).join('')}
+          </div>
+          <button class="upgrade-btn harvest-back-btn" style="width:100%; background:linear-gradient(135deg,#374151 0%,#1f2937 100%); padding:9px; font-weight:bold;">
+            确认收下
+          </button>
+        </div>
+      `;
+      this.tileActionModal.style.display = 'flex';
+      this.tileModalBody.querySelector('.harvest-back-btn')?.addEventListener('click', () => {
+        this.tileActionModal.style.display = 'none';
+      });
+    }
   }
 
   // ================= 0.5. 主城内政城建系统 (君王殿、兵营、军舍、四大资源所) =================
@@ -947,7 +1227,7 @@ class GameApp {
             <div class="campaign-desc">${cfg.desc}</div>
             <div style="font-size:11px; color:#38bdf8;">
               当前功效: <b>${cfg.effect(currentLvl)}</b>
-              ${!isMax ? ` ➔ 下级: <b style="color:#fde047;">${cfg.effect(nextLvl)}</b>` : ''}
+              ${!isMax ? ` ➔ 下级: <b class="val-gold">>${cfg.effect(nextLvl)}</b>` : ''}
             </div>
             ${!isMax ? `<div style="margin-top:6px; font-size:11px; color:#9ca3af;">升级所需: ${costStr}</div>` : ''}
           </div>
@@ -1276,14 +1556,14 @@ class GameApp {
         const t1 = TACTICS_DATA.find(t => t.id === h.equippedTactic1);
         const t2 = TACTICS_DATA.find(t => t.id === h.equippedTactic2);
         return `
-          <div style="background:rgba(0,0,0,0.3); border:1px solid #2d3340; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+          <div class="card-row--split" style="background:rgba(0,0,0,0.3); border:1px solid #2d3340; border-radius:6px; padding:8px 10px">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:24px;">${h.avatar}</span>
               <div>
                 <div style="font-size:13px; font-weight:bold; color:#fff;">
-                  ${h.name} <span style="font-size:10px; color:#fbbf24;">(Lv.${h.level || 50})</span>
+                  ${h.name} <span class="card-micro">>(Lv.${h.level || 50})</span>
                 </div>
-                <div style="font-size:10px; color:#9ca3af; margin-top:2px;">
+                <div>
                   战法: ${bTactic?.name || '自带战法'} · ${t1?.name || '无'} · ${t2?.name || '无'}
                 </div>
               </div>
@@ -1294,10 +1574,10 @@ class GameApp {
       }).join('');
 
       previewEl.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+        <div class="card-row--split" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px">
           <div>
             <div style="font-weight:800; font-size:15px; color:#10b981;">🛡️ 我方参战：${playerTroop.name}</div>
-            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">兵种：<b style="color:#6ee7b7;">${armMeta.icon} ${armMeta.name}</b> (可在【编队】自由换将)</div>
+            <div>兵种：<b class="val-copper">>${armMeta.icon} ${armMeta.name}</b> (可在【编队】自由换将)</div>
           </div>
           <span style="font-size:11px; background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px;">
             满状态推演
@@ -1339,7 +1619,7 @@ class GameApp {
 
         return `
           <div class="sandbox-slot-card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-row--split">
               <span style="font-size:12px; font-weight:bold; color:${slotIdx === 0 ? '#f87171' : '#fbbf24'};">
                 ${slotIdx === 0 ? '★ 敌方主将' : `敌方副将 ${slotIdx}`}
               </span>
@@ -1354,10 +1634,10 @@ class GameApp {
                 <div style="font-size:13px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:6px;">
                   <span>${gen.name}</span>
                   <span style="font-size:10px; background:${camp.color}; padding:1px 4px; border-radius:3px;">${camp.name}</span>
-                  <span style="font-size:10px; color:#fbbf24;">${'★'.repeat(gen.star)}</span>
+                  <span class="card-micro">>${'★'.repeat(gen.star)}</span>
                 </div>
-                <div style="font-size:10px; color:#9ca3af; margin-top:2px;">
-                  自带: <b style="color:#fde047;">${bTactic?.name || '自带战法'}</b> (Lv.10)
+                <div>
+                  自带: <b class="val-gold">>${bTactic?.name || '自带战法'}</b> (Lv.10)
                 </div>
               </div>
             </div>
@@ -1378,10 +1658,10 @@ class GameApp {
       }).join('');
 
       enemyPanelEl.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; flex-wrap:wrap; gap:6px;">
+        <div class="card-row--split card-row--wrap" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; flex-wrap:wrap; gap:6px">
           <div>
             <div style="font-weight:800; font-size:15px; color:#f87171;">⚔️ 敌方假想军团</div>
-            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">等级：Lv.50 · 兵力：30,000 · 战法：Lv.10</div>
+            <div>等级：Lv.50 · 兵力：30,000 · 战法：Lv.10</div>
           </div>
           <div style="display:flex; gap:4px;">
             ${armsHtml}
@@ -1484,7 +1764,7 @@ class GameApp {
         const isCore = CORE_FIVE_STAR_IDS.has(g.id);
 
         return `
-          <div class="general-card-item" data-gid="${g.id}" style="background:#151821; border:1px solid ${g.star === 5 ? '#d97706' : '#374151'}; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s ease;">
+          <div class="general-card-item card-row--split" data-gid="${g.id}" style="background:#151821; border:1px solid ${g.star === 5 ? '#d97706' : '#374151'}; border-radius:8px; padding:10px; cursor:pointer; transition:all 0.2s ease">
             <div style="display:flex; align-items:center; gap:10px;">
               <span style="font-size:32px;">${g.avatar}</span>
               <div>
@@ -1493,8 +1773,8 @@ class GameApp {
                   <span style="font-size:10px; background:${camp.color}; padding:1px 5px; border-radius:3px;">${camp.name}</span>
                   <span style="font-size:11px; color:#fbbf24;">${'★'.repeat(g.star)}</span>
                 </div>
-                <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
-                  自带战法: <b style="color:#fde047;">${bTactic?.name || '自带战法'}</b> · 统御: ${g.cost}御
+                <div>
+                  自带战法: <b class="val-gold">>${bTactic?.name || '自带战法'}</b> · 统御: ${g.cost}御
                 </div>
               </div>
             </div>
@@ -1540,13 +1820,13 @@ class GameApp {
         const dmgMeta = dmgBadgeMap[dmgType] || { name: '辅助', color: '#9ca3af' };
 
         return `
-          <div class="tactic-select-item" data-tid="${t.id}" style="background:#151821; border:1px solid #2d3340; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s ease;">
+          <div class="tactic-select-item card-row--split" data-tid="${t.id}" style="background:#151821; border:1px solid #2d3340; border-radius:8px; padding:10px; cursor:pointer; transition:all 0.2s ease">
             <div style="flex:1;">
               <div style="font-size:14px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:8px;">
                 <span>${t.name}</span>
                 <span style="font-size:10px; background:${typeMeta.color}25; border:1px solid ${typeMeta.color}; color:${typeMeta.color}; padding:1px 5px; border-radius:3px;">${typeMeta.name}</span>
                 <span style="font-size:10px; background:${dmgMeta.color}25; border:1px solid ${dmgMeta.color}; color:${dmgMeta.color}; padding:1px 5px; border-radius:3px;">${dmgMeta.name}</span>
-                <span style="font-size:10px; color:#fbbf24;">发动率: ${t.rate}%</span>
+                <span class="card-micro">>发动率: ${t.rate}%</span>
               </div>
               <div style="font-size:11px; color:#9ca3af; margin-top:3px; line-height:1.4;">
                 ${t.desc || ''}
@@ -1624,6 +1904,7 @@ class GameApp {
       heroes: playerTroop.heroes.map(h => ({
         ...h,
         level: 50,
+        tacticLevel: MAX_TACTIC_LEVEL,
         currentSoldiers: 10000,
         maxSoldiers: 10000
       }))
@@ -1724,32 +2005,52 @@ class GameApp {
 
     // 3位武将槽位
     const heroesHtml = [0, 1, 2].map(slotIdx => {
-      const hero = troop.heroes[slotIdx];
+      const rawHero = troop.heroes[slotIdx];
+      const hero = rawHero ? (this.state.ownedGenerals.find(g => g.id === rawHero.id) || rawHero) : null;
       if (hero) {
+        troop.heroes[slotIdx] = hero;
         const apt = hero.aptitude[troop.arm] || 'C';
         const aptMod = GENERAL_APTITUDE_MODIFIERS[apt] || 1.0;
         const hLvl = hero.level || 1;
         const hExp = hero.exp || 0;
         const reqExp = getExpRequiredForLevel(hLvl);
         const expPct = reqExp > 0 ? Math.min(100, Math.round((hExp / reqExp) * 100)) : 100;
+        const redStars = hero.redStars || 0;
+        const maxRedStars = hero.star || 5;
+        const isFullRed = redStars >= maxRedStars;
+
+        let starsHtml = '';
+        for (let s = 1; s <= (hero.star || 5); s++) {
+          starsHtml += (s <= redStars) ? `<span class="star-red">★</span>` : `<span class="star-gold">★</span>`;
+        }
+        const redBadgeHtml = isFullRed
+          ? `<span style="font-size:10px; background:linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color:#fde047; border:1px solid #fbbf24; padding:0 5px; border-radius:3px; font-weight:bold;">👑满红</span>`
+          : (redStars > 0
+            ? `<span style="font-size:10px; background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444; padding:0 5px; border-radius:3px; font-weight:bold;">${redStars}红</span>`
+            : `<span style="font-size:10px; background:rgba(107,114,128,0.25); color:#9ca3af; border:1px solid #4b5563; padding:0 4px; border-radius:3px;">白板</span>`);
+
+        const builtInTac = TACTICS_MAP.get(hero.builtInTacticId);
+        const builtInLvl = hero.builtInTacticLevel || this.state.tacticLevels?.[hero.builtInTacticId] || 1;
 
         return `
-          <div class="troop-hero-card clickable" style="background:#11141a; border:1px solid ${hero.star===5?'#d97706':'#374151'}; border-radius:10px; padding:14px; width:220px; display:flex; flex-direction:column; align-items:center; position:relative;">
+          <div class="troop-hero-card clickable" style="background:#11141a; border:1px solid ${isFullRed ? '#ef4444' : (hero.star===5?'#d97706':'#374151')}; ${isFullRed ? 'box-shadow:0 0 12px rgba(239,68,68,0.3);' : ''} border-radius:10px; padding:14px; width:220px; display:flex; flex-direction:column; align-items:center; position:relative;">
             <div style="font-size:12px; color:#fbbf24; font-weight:bold; margin-bottom:4px;">${slotIdx===0?'★ 主将位 (核心) ★':`副将位 ${slotIdx}`}</div>
             
             <!-- 可点击查看详情的武将核心主体 -->
-            <div class="hero-click-area" data-slot="${slotIdx}" title="点击查看【${hero.name}】军略全息详情" style="display:flex; flex-direction:column; align-items:center;">
+            <div class="hero-click-area" data-slot="${slotIdx}" title="点击查看【${hero.name}】军略全息详情与升级自带战法" style="display:flex; flex-direction:column; align-items:center; width:100%;">
               <div style="width:58px; height:58px; margin-bottom:4px;">
                 ${getGeneralAvatarHtml(hero, { size: 58, borderRadius: '10px', fontSize: '38px' })}
               </div>
-              <div style="font-size:15px; font-weight:bold; margin-top:2px; color:#fff; display:flex; align-items:center; gap:6px;">
+              <div style="font-size:15px; font-weight:bold; margin-top:2px; color:#fff; display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:center;">
                 <span>${hero.name}</span>
                 <span class="hero-level-badge">Lv.${hLvl}</span>
+                ${redBadgeHtml}
               </div>
+              <div style="font-size:12px; letter-spacing:1px; margin:2px 0;">${starsHtml}</div>
               
               <!-- 经验条 -->
-              <div style="width:100%; margin:4px 0 2px 0;">
-                <div style="display:flex; justify-content:space-between; font-size:10px; color:#9ca3af;">
+              <div style="width:100%; margin:2px 0;">
+                <div class="card-row--split" style="font-size:10px; color:#9ca3af">
                   <span>历练经验</span>
                   <span>${hLvl>=MAX_GENERAL_LEVEL?'已达满级':`${hExp}/${reqExp}`}</span>
                 </div>
@@ -1758,9 +2059,10 @@ class GameApp {
                 </div>
               </div>
 
-              <div style="font-size:11px; color:#9ca3af; margin:2px 0;">${CAMPS[hero.camp].name} · ${troop.arm.toUpperCase()}适性:<b class="apt-tag ${apt}">${apt} (${Math.round(aptMod*100)}%)</b></div>
-              <div style="font-size:12px; color:#34d399; margin:4px 0;">带兵量: <b>${(hero.maxSoldiers || 3000).toLocaleString()}</b></div>
-              <div style="font-size:10px; color:#38bdf8; margin-top:1px;">🔍 点击查看全息属性</div>
+              <div style="font-size:11px; color:#9ca3af; margin:2px 0;">${CAMPS[hero.camp].name} · ${ARMS[troop.arm]?.name || troop.arm}适性:<b class="apt-tag ${apt}">${apt} (${Math.round(aptMod*100)}%)</b></div>
+              <div style="font-size:11px; color:#fde047; margin:2px 0;">[自带] ${builtInTac ? builtInTac.name : '军略'} <span style="color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; font-size:10px;">Lv.${builtInLvl}</span></div>
+              <div style="font-size:12px; color:#34d399; margin:2px 0;">带兵量: <b>${(hero.maxSoldiers || 3000).toLocaleString()}</b></div>
+              <div style="font-size:10px; color:#38bdf8; margin-top:1px;">🔍 点击升级战法 / 查看全息属性</div>
             </div>
 
             <!-- 操作按钮组 -->
@@ -1782,7 +2084,7 @@ class GameApp {
     }).join('');
 
     el.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div class="card-row--split card-row--wrap" style="margin-bottom:14px; flex-wrap:wrap; gap:10px">
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <span style="font-size:17px; font-weight:bold; color:#fbbf24;">${troop.name}</span>
           ${campBonusHtml}
@@ -1890,7 +2192,7 @@ class GameApp {
                 ${getGeneralAvatarHtml(realHero, { borderRadius: '6px', fontSize: '80px', style: 'width:100%; height:100%;' })}
                 
                 <!-- 顶部悬浮：阵营与统御、等级 -->
-                <div style="position:absolute; top:8px; left:8px; right:8px; display:flex; justify-content:space-between; align-items:center; z-index:2; pointer-events:none;">
+                <div class="card-row--split" style="position:absolute; top:8px; left:8px; right:8px; z-index:2; pointer-events:none">
                   <span class="camp-tag" style="background:${campInfo.color}; font-size:12px; padding:2px 8px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,0.6);">${campInfo.badge}国</span>
                   <div style="display:flex; align-items:center; gap:6px;">
                     <span class="cost-badge" style="font-size:11px; padding:2px 6px; background:rgba(0,0,0,0.6); border:1px solid rgba(251,191,36,0.4); border-radius:4px; backdrop-filter:blur(2px);">统御 ${realHero.cost}</span>
@@ -1908,14 +2210,14 @@ class GameApp {
 
               <!-- 带兵上限与历练进度 -->
               <div style="background:rgba(0,0,0,0.4); border:1px solid #2d3340; border-radius:6px; padding:8px 10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
-                  <span style="color:#9ca3af;">带兵上限</span>
+                <div class="card-row--split" style="font-size:11px">
+                  <span class="val-muted">>带兵上限</span>
                   <span style="font-size:15px; font-weight:bold; color:#34d399;">${(realHero.maxSoldiers || 3000).toLocaleString()}</span>
                 </div>
                 <div style="margin-top:6px;">
-                  <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
+                  <div class="card-row--split" style="font-size:10px; margin-bottom:3px">
                     <span style="color:#fbbf24;">⚔️ 历练经验</span>
-                    <span style="color:#9ca3af;">${hLvl>=MAX_GENERAL_LEVEL?'Lv.50 (满级)':`${hExp}/${reqExp} (${expPct}%)`}</span>
+                    <span class="val-muted">>${hLvl>=MAX_GENERAL_LEVEL?'Lv.50 (满级)':`${hExp}/${reqExp} (${expPct}%)`}</span>
                   </div>
                   <div class="hero-exp-track" style="height:5px;">
                     <div class="hero-exp-progress" style="width:${expPct}%;"></div>
@@ -1923,27 +2225,32 @@ class GameApp {
                 </div>
               </div>
 
-              <!-- 快捷军务管理（传承与解甲 / 未招募预览提示） -->
+              <!-- 快捷军务管理（传承与转化 / 未招募预览提示） -->
               ${!isOwned ? `
                 <div style="text-align:center; font-size:11px; color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:4px; padding:6px 0; margin-top:2px;">
                   🔍 卡池图鉴预览 · 招募后可出征与配装
                 </div>
-              ` : `
-                <div style="display:flex; gap:6px; margin-top:2px;">
-                  ${isInherited ? `
-                    <div style="flex:1; text-align:center; font-size:11px; color:#10b981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:4px; padding:5px 0;">
-                      ✔ 战法已传承
-                    </div>
-                  ` : `
-                    <button class="upgrade-btn btn-modal-inherit" style="flex:1; padding:5px 0; font-size:11px; background:linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);" ${isInTroop ? 'disabled title="已在出征阵容中，不可传承"' : ''}>
-                      📖 传承战法
+              ` : (() => {
+                const convertCardCount = 1 + (realHero.redStars || 0);
+                const convertCopper = (realHero.star >= 5 ? 5000 : (realHero.star === 4 ? 1000 : 300)) * convertCardCount;
+                const convertLabel = convertCopper >= 1000 ? `${convertCopper / 1000}千` : `${convertCopper}`;
+                return `
+                  <div style="display:flex; gap:6px; margin-top:2px;">
+                    ${isInherited ? `
+                      <div style="flex:1; text-align:center; font-size:11px; color:#10b981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:4px; padding:5px 0;">
+                        ✔ 战法已传承
+                      </div>
+                    ` : `
+                      <button class="upgrade-btn btn-modal-inherit" style="flex:1; padding:5px 0; font-size:11px; background:linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);" ${isInTroop ? 'disabled title="已在出征阵容中，不可传承"' : ''}>
+                        📖 传承战法
+                      </button>
+                    `}
+                    <button class="upgrade-btn btn-modal-sell" style="padding:5px 12px; font-size:11px; background:${isInTroop ? '#374151' : (realHero.star >= 5 ? 'linear-gradient(135deg, #b45309 0%, #78350f 100%)' : '#4b5563')};" ${isInTroop ? 'disabled title="正在出征阵容中，不可转化"' : `title="消耗该武将卡转化为 ${convertCopper.toLocaleString()} 铜币（用于战法研习）"`}>
+                      ${isInTroop ? '出征中' : `🪙 转化(${convertLabel})`}
                     </button>
-                  `}
-                  <button class="upgrade-btn btn-modal-sell" style="padding:5px 12px; font-size:11px; background:${isInTroop ? '#374151' : (realHero.star >= 5 ? 'linear-gradient(135deg, #b45309 0%, #78350f 100%)' : '#4b5563')};" ${isInTroop ? 'disabled title="出征军团中不可解甲"' : `title="解甲可得 ${realHero.star >= 5 ? '5,000' : (realHero.star === 4 ? '1,000' : '300')} 铜币"`}>
-                    ${isInTroop ? '出征中' : `解甲(${realHero.star >= 5 ? '5千' : (realHero.star === 4 ? '1千' : '3百')})`}
-                  </button>
-                </div>
-              `}
+                  </div>
+                `;
+              })()}
 
             </div>
 
@@ -1954,19 +2261,19 @@ class GameApp {
               <div class="hero-detail-section">
                 <div class="hero-detail-title">📊 四维实战属性与成长</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
                     <span>🗡️ 武力: <b style="color:#fde047; font-size:15px;">${realHero.force}</b></span>
                     <span class="hero-growth-tag" style="color:#fbbf24;">(+${realHero.forceGrowth || 1.0}/级)</span>
                   </div>
-                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
                     <span>🧠 智力: <b style="color:#60a5fa; font-size:15px;">${realHero.intel}</b></span>
                     <span class="hero-growth-tag" style="color:#93c5fd;">(+${realHero.intelGrowth || 1.0}/级)</span>
                   </div>
-                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
                     <span>🛡️ 统率: <b style="color:#34d399; font-size:15px;">${realHero.command}</b></span>
-                    <span class="hero-growth-tag" style="color:#6ee7b7;">(+${realHero.commandGrowth || 1.0}/级)</span>
+                    <span class="hero-growth-tag val-copper">>(+${realHero.commandGrowth || 1.0}/级)</span>
                   </div>
-                  <div style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340; display:flex; justify-content:space-between; align-items:center;">
+                  <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
                     <span>⚡ 速度: <b style="color:#f472b6; font-size:15px;">${realHero.speed}</b></span>
                     <span class="hero-growth-tag" style="color:#f9a8d4;">(+${realHero.speedGrowth || 1.0}/级)</span>
                   </div>
@@ -1976,14 +2283,14 @@ class GameApp {
               <!-- 五大兵种适性面板 -->
               <div class="hero-detail-section">
                 <div class="hero-detail-title">🛡️ 兵种统领适性</div>
-                <div class="apt-row" style="padding:6px 10px; font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                <div class="apt-row card-row--split card-row--wrap" style="padding:6px 10px; font-size:12px; flex-wrap:wrap; gap:6px">
                   <span>骑兵 <b class="apt-tag ${realHero.aptitude.cavalry}">${realHero.aptitude.cavalry}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.cavalry]||1)*100)}%)</span>
                   <span>盾兵 <b class="apt-tag ${realHero.aptitude.shield}">${realHero.aptitude.shield}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.shield]||1)*100)}%)</span>
                   <span>弓兵 <b class="apt-tag ${realHero.aptitude.bow}">${realHero.aptitude.bow}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.bow]||1)*100)}%)</span>
                   <span>枪兵 <b class="apt-tag ${realHero.aptitude.spear}">${realHero.aptitude.spear}</b> (${Math.round((GENERAL_APTITUDE_MODIFIERS[realHero.aptitude.spear]||1)*100)}%)</span>
                   <span>器械 <b class="apt-tag ${realHero.aptitude.siege || 'B'}">${realHero.aptitude.siege || 'B'}</b></span>
                 </div>
-                <div style="font-size:10px; color:#9ca3af; margin-top:4px;">适性加成说明：S级 120% 全属性 · A级 100% · B级 85% · C级 70%</div>
+                <div>适性加成说明：S级 120% 全属性 · A级 100% · B级 85% · C级 70%</div>
               </div>
 
               <!-- 三大战法配置槽位 -->
@@ -1991,7 +2298,7 @@ class GameApp {
                 <div class="hero-detail-title">📚 战法装配与研习</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                   
-                  <!-- 自带战法 -->
+                  <!-- 自带战法（支持 Lv.1 ~ Lv.10 研习升级与一键满级） -->
                   ${(() => {
                     const qBuiltIn = (realHero.star === 3) ? 'B' : (builtInTac?.quality || (realHero.star === 5 ? 'S' : 'A'));
                     const isS = qBuiltIn === 'S';
@@ -2003,15 +2310,83 @@ class GameApp {
                     const qualityBadgeText = isS ? '🌟 S级' : (isA ? '💜 A级' : '🔷 B级');
                     const typeZh = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[builtInTac?.type] || '战法';
 
+                    const builtInLvl = Math.max(1, Math.min(MAX_TACTIC_LEVEL, realHero.builtInTacticLevel || this.state.tacticLevels?.[realHero.builtInTacticId] || 1));
+                    const isBuiltInMax = (builtInLvl >= MAX_TACTIC_LEVEL);
+                    const nextBuiltInCost = isBuiltInMax ? 0 : (TACTIC_UPGRADE_COSTS[builtInLvl] || 26000);
+                    let maxRemainingCost = 0;
+                    for (let lv = builtInLvl; lv < MAX_TACTIC_LEVEL; lv++) {
+                      maxRemainingCost += (TACTIC_UPGRADE_COSTS[lv] || 26000);
+                    }
+                    const currentCopper = this.state.resources?.copper || 0;
+                    const canAffordNext = currentCopper >= nextBuiltInCost;
+                    const canAffordMax = currentCopper >= maxRemainingCost;
+
+                    // 计算当前等级与下一级属性成长预览
+                    let builtInCompareHtml = '';
+                    if (builtInTac) {
+                      const curP = getTacticEffectiveProps(builtInTac, builtInLvl);
+                      const nxtP = isBuiltInMax ? null : getTacticEffectiveProps(builtInTac, builtInLvl + 1);
+                      const parts = [];
+                      if (builtInTac.rate && builtInTac.rate < 100) {
+                        parts.push(`<span>发动率: <b style="color:#f472b6;">${curP.rate}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${nxtP.rate}%</span>`}</span>`);
+                      }
+                      if (builtInTac.damageRate) {
+                        parts.push(`<span>伤害率: <b class="val-gold">>${Math.round(curP.damageRate * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${Math.round(nxtP.damageRate * 100)}%</span>`}</span>`);
+                      }
+                      if (builtInTac.healRate || builtInTac.emergencyHealRate) {
+                        const curHeal = curP.healRate || curP.emergencyHealRate;
+                        const nxtHeal = nxtP ? (nxtP.healRate || nxtP.emergencyHealRate) : 0;
+                        parts.push(`<span>治疗率: <b class="val-copper">>${Math.round(curHeal * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${Math.round(nxtHeal * 100)}%</span>`}</span>`);
+                      }
+                      if (builtInTac.statBoost || builtInTac.statBoostForce || builtInTac.statBoostCmd) {
+                        const curStat = curP.statBoost || curP.statBoostForce || curP.statBoostCmd;
+                        const nxtStat = nxtP ? (nxtP.statBoost || nxtP.statBoostForce || nxtP.statBoostCmd) : 0;
+                        parts.push(`<span>属性加成: <b style="color:#38bdf8;">+${curStat}</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ +${nxtStat}</span>`}</span>`);
+                      }
+                      if (builtInTac.teamDamageBonus || builtInTac.selfDamageReduction || builtInTac.shareDamageRate) {
+                        const curBonus = curP.teamDamageBonus || curP.selfDamageReduction || curP.shareDamageRate;
+                        const nxtBonus = nxtP ? (nxtP.teamDamageBonus || nxtP.selfDamageReduction || nxtP.shareDamageRate) : 0;
+                        parts.push(`<span>核心增益: <b style="color:#fb923c;">${Math.round(curBonus * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">>➜ ${Math.round(nxtBonus * 100)}%</span>`}</span>`);
+                      }
+                      if (parts.length === 0) {
+                        parts.push(`<span>战法效能倍率: <b style="color:#38bdf8;">${Math.round(curP.scale * 100)}%</b>${isBuiltInMax ? ' (已满额)' : ` <span class="val-ok">>➜ ${Math.round(nxtP.scale * 100)}%</span>`}</span>`);
+                      }
+                      builtInCompareHtml = parts.join('<span style="color:#4b5563; margin:0 6px;">|</span>');
+                    }
+
                     return `
                       <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor}; padding:8px 12px; border-radius:6px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                          <span style="color:${color}; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
-                          <span style="font-size:10px; color:${color}; background:${bgBadge}; border:1px solid ${borderBadge}; padding:1px 6px; border-radius:3px;">
-                            ${qualityBadgeText} · ${typeZh}
-                          </span>
+                        <div class="card-row--split card-row--wrap" style="gap:8px; flex-wrap:wrap">
+                          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="color:${color}; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
+                            <span style="font-size:10px; color:${color}; background:${bgBadge}; border:1px solid ${borderBadge}; padding:1px 6px; border-radius:3px;">
+                              ${qualityBadgeText} · ${typeZh}
+                            </span>
+                            <span style="font-size:10px; color:${isBuiltInMax ? '#fde047' : '#6ee7b7'}; background:${isBuiltInMax ? 'rgba(217,119,6,0.25)' : 'rgba(5,150,105,0.2)'}; border:1px solid ${isBuiltInMax ? '#f59e0b' : '#059669'}; padding:0 5px; border-radius:3px; font-weight:bold;">
+                              ${isBuiltInMax ? '👑 Lv.10 MAX' : `Lv.${builtInLvl} / ${MAX_TACTIC_LEVEL}`}
+                            </span>
+                          </div>
+                          ${isOwned ? (isBuiltInMax ? `
+                            <span style="font-size:10px; color:#fbbf24; font-weight:bold;">✔ 自带战法已臻满级</span>
+                          ` : `
+                            <div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
+                              <button class="upgrade-btn btn-modal-upgrade-builtin" style="padding:3px 8px; font-size:11px; background:${canAffordNext ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : '#4b5563'};" title="消耗 ${nextBuiltInCost.toLocaleString()} 铜币升级自带战法">
+                                🪙 升至Lv.${builtInLvl + 1} (${nextBuiltInCost >= 1000 ? (nextBuiltInCost / 1000) + 'k' : nextBuiltInCost})
+                              </button>
+                              ${builtInLvl < MAX_TACTIC_LEVEL - 1 ? `
+                                <button class="upgrade-btn btn-modal-max-builtin" style="padding:3px 8px; font-size:11px; background:${canAffordMax ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : '#4b5563'};" title="共需 ${maxRemainingCost.toLocaleString()} 铜币直接升至 Lv.10 满级">
+                                  ⚡ 一键满级
+                                </button>
+                              ` : ''}
+                            </div>
+                          `) : ''}
                         </div>
-                        <div style="font-size:11px; color:#cbd5e1; margin-top:3px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
+                        <div style="font-size:11px; color:#cbd5e1; margin-top:4px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
+                        ${builtInCompareHtml ? `
+                          <div style="font-size:11px; color:#9ca3af; margin-top:5px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.08); display:flex; flex-wrap:wrap; align-items:center;">
+                            ${builtInCompareHtml}
+                          </div>
+                        ` : ''}
                       </div>
                     `;
                   })()}
@@ -2024,7 +2399,7 @@ class GameApp {
                     const typeZh1 = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[tac1?.type] || '战法';
                     const borderColor1 = tac1 ? (isS1 ? 'rgba(217,119,6,0.45)' : 'rgba(147,51,234,0.45)') : '#374151';
                     return `
-                      <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor1}; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                      <div class="card-row--split" style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor1}; padding:8px 12px; border-radius:6px; gap:8px">
                         <div style="flex:1; min-width:0;">
                           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法①]</span>
@@ -2057,7 +2432,7 @@ class GameApp {
                     const typeZh2 = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[tac2?.type] || '战法';
                     const borderColor2 = tac2 ? (isS2 ? 'rgba(217,119,6,0.45)' : 'rgba(147,51,234,0.45)') : '#374151';
                     return `
-                      <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor2}; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                      <div class="card-row--split" style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor2}; padding:8px 12px; border-radius:6px; gap:8px">
                         <div style="flex:1; min-width:0;">
                           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法②]</span>
@@ -2090,7 +2465,7 @@ class GameApp {
                 if (heroBonds.length === 0) return '';
                 const bondsListHtml = heroBonds.map(b => `
                   <div style="background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:6px; padding:6px 10px; margin-top:4px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="card-row--split">
                       <span style="color:#fde047; font-weight:bold; font-size:12px;">✨【${b.name}】</span>
                       <span style="font-size:10px; color:#cbd5e1;">缘分同僚: ${b.heroNames.join('、')}</span>
                     </div>
@@ -2121,6 +2496,22 @@ class GameApp {
     document.body.appendChild(modal);
 
     modal.querySelector('#btnHeroDetailClose').addEventListener('click', () => modal.remove());
+
+    // 绑定自带战法单级强化
+    modal.querySelector('.btn-modal-upgrade-builtin')?.addEventListener('click', () => {
+      if (this.upgradeHeroBuiltInTactic(realHero, false)) {
+        modal.remove();
+        this.openHeroDetailModal(realHero);
+      }
+    });
+
+    // 绑定自带战法一键满级
+    modal.querySelector('.btn-modal-max-builtin')?.addEventListener('click', () => {
+      if (this.upgradeHeroBuiltInTactic(realHero, true)) {
+        modal.remove();
+        this.openHeroDetailModal(realHero);
+      }
+    });
 
     // 绑定槽位1换配
     modal.querySelector('.btn-modal-change-tac1')?.addEventListener('click', () => {
@@ -2153,7 +2544,49 @@ class GameApp {
     }
   }
 
-  // 选拔上阵弹窗 (支持 5 支军团共存全局排重)
+  // 升级武将自带战法（支持单级强化与一键满级，绑定至具体武将实例并同步全局与编队）
+  upgradeHeroBuiltInTactic(hero, toMax = false) {
+    if (!hero) return false;
+    const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
+    const tId = realHero.builtInTacticId;
+    const tac = TACTICS_MAP.get(tId);
+    if (!this.state.tacticLevels) this.state.tacticLevels = {};
+
+    const currentLvl = Math.max(1, Math.min(MAX_TACTIC_LEVEL, realHero.builtInTacticLevel || this.state.tacticLevels[tId] || 1));
+    if (currentLvl >= MAX_TACTIC_LEVEL) return false;
+
+    const currentCopper = this.state.resources.copper || 0;
+    let targetLvl = currentLvl + 1;
+    let totalCost = TACTIC_UPGRADE_COSTS[currentLvl] || 26000;
+
+    if (toMax) {
+      totalCost = 0;
+      for (let lv = currentLvl; lv < MAX_TACTIC_LEVEL; lv++) {
+        totalCost += (TACTIC_UPGRADE_COSTS[lv] || 26000);
+      }
+      targetLvl = MAX_TACTIC_LEVEL;
+    }
+
+    if (currentCopper < totalCost) {
+      alert(`主公，您的铜币不足！\n强化【${realHero.name}】的自带战法【${tac ? tac.name : '军略'}】至 Lv.${targetLvl} 需要 🪙 ${totalCost.toLocaleString()} 铜币，当前拥有 🪙 ${currentCopper.toLocaleString()} 铜币。`);
+      return false;
+    }
+
+    this.state.resources.copper -= totalCost;
+    realHero.builtInTacticLevel = targetLvl;
+    // 同步维护全局字典最高等级，确保各处读取一致
+    this.state.tacticLevels[tId] = Math.max(this.state.tacticLevels[tId] || 1, targetLvl);
+    this.syncTroopHeroTactics(realHero.id);
+
+    sound.playVictoryHorn();
+    this.save();
+    this.renderHUD();
+    this.renderTroops();
+    this.renderGenerals();
+    return true;
+  }
+
+  // 选拔上阵弹窗 (支持 5 支军团共存全局排重，清晰区分满红/高红/白板同名武将)
   openAssignHeroModal(troop, slotIdx) {
     const assignedIds = new Set(
       this.state.troops.flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id))
@@ -2182,15 +2615,15 @@ class GameApp {
     const currentArmMeta = ARMS[currentArm] || { name: '枪兵', icon: '🗡️' };
 
     modal.innerHTML = `
-      <div class="modal-content" style="max-width:720px; width:95%; max-height:88vh;">
+      <div class="modal-content" style="max-width:740px; width:95%; max-height:88vh;">
         <div class="modal-header" style="flex-wrap:wrap; gap:8px;">
           <div>
             <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
               <span>选拔上阵 · ${slotIdx===0?'★ 主将位 ★':`副将位 ${slotIdx}`}</span>
               <span id="assignModalTotalBadge" style="font-size:11px; background:#d97706; color:#fff; padding:1px 8px; border-radius:4px; font-weight:normal;"></span>
             </div>
-            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">
-              当前军团兵种：<b style="color:#6ee7b7;">${currentArmMeta.icon} ${currentArmMeta.name}</b> · 支持按阵营、品质及适性精准筛选
+            <div>
+              当前军团兵种：<b class="val-copper">>${currentArmMeta.icon} ${currentArmMeta.name}</b> · 同名武将已按【👑满红 ➔ 高红 ➔ 白板】与等级优先排列
             </div>
           </div>
           <button class="modal-close-btn" id="btnAssignModalClose">✕</button>
@@ -2199,7 +2632,7 @@ class GameApp {
         <!-- 多维快捷筛选控制栏 -->
         <div style="padding:10px 18px; background:rgba(0,0,0,0.3); border-bottom:1px solid #2d3340; display:flex; flex-direction:column; gap:8px;">
           <!-- 1. 阵营与适性筛选 -->
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div class="card-row--split card-row--wrap" style="flex-wrap:wrap; gap:8px">
             <div style="display:flex; gap:6px; align-items:center;">
               <span style="font-size:12px; color:#9ca3af;">阵营:</span>
               <button class="nav-tab-btn active btn-assign-filter-camp" data-camp="all" style="padding:2px 8px; font-size:11px;">全部</button>
@@ -2257,14 +2690,18 @@ class GameApp {
         return true;
       });
 
-      // 排序规则：适性优先(S->A->B->C) -> 星级优先(5->4->3) -> 等级与属性优先
+      // 排序规则：适性优先(S->A->B->C) -> 星级优先(5->4->3) -> 红星进阶度优先(满红/高红在前，白板在后) -> 等级 -> 自带战法等级 -> 属性
       const aptOrder = { S: 4, A: 3, B: 2, C: 1 };
       const sorted = [...filtered].sort((a, b) => {
         const aptA = aptOrder[a.aptitude?.[currentArm] || 'C'] || 0;
         const aptB = aptOrder[b.aptitude?.[currentArm] || 'C'] || 0;
         if (aptA !== aptB) return aptB - aptA;
         if (a.star !== b.star) return b.star - a.star;
+        if ((b.redStars || 0) !== (a.redStars || 0)) return (b.redStars || 0) - (a.redStars || 0);
         if ((b.level || 1) !== (a.level || 1)) return (b.level || 1) - (a.level || 1);
+        const tacLvlA = a.builtInTacticLevel || this.state.tacticLevels?.[a.builtInTacticId] || 1;
+        const tacLvlB = b.builtInTacticLevel || this.state.tacticLevels?.[b.builtInTacticId] || 1;
+        if (tacLvlB !== tacLvlA) return tacLvlB - tacLvlA;
         return (b.force + b.intel) - (a.force + a.intel);
       });
 
@@ -2288,31 +2725,56 @@ class GameApp {
         const apt = c.aptitude?.[currentArm] || 'C';
         const aptMod = GENERAL_APTITUDE_MODIFIERS[apt] || 1.0;
         const aptModPct = Math.round(aptMod * 100);
-        const starStr = '★'.repeat(c.star);
-        const starColor = c.star === 5 ? '#fbbf24' : (c.star === 4 ? '#c084fc' : '#9ca3af');
         const cLvl = c.level || 1;
+        const redStars = c.redStars || 0;
+        const maxRedStars = c.star || 5;
+        const isFullRed = redStars >= maxRedStars;
 
-        // 自带战法简要
+        // 真实渲染红星 + 金星，并生成醒目的【满红 / X红 / 白板】身份标签
+        let starsHtml = '';
+        for (let s = 1; s <= (c.star || 5); s++) {
+          starsHtml += (s <= redStars) ? `<span class="star-red">★</span>` : `<span class="star-gold">★</span>`;
+        }
+        const redIdentityBadge = isFullRed
+          ? `<span style="font-size:10px; background:linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color:#fde047; border:1px solid #fbbf24; padding:1px 6px; border-radius:4px; font-weight:bold; box-shadow:0 0 8px rgba(239,68,68,0.4);">👑 满红(${redStars}红)</span>`
+          : (redStars > 0
+            ? `<span style="font-size:10px; background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444; padding:1px 6px; border-radius:4px; font-weight:bold;">🔥 进阶${redStars}红</span>`
+            : `<span style="font-size:10px; background:rgba(107,114,128,0.25); color:#d1d5db; border:1px solid #4b5563; padding:1px 5px; border-radius:4px;">白板(0红)</span>`);
+
+        // 自带战法与已装配战法详情
         const builtInTac = TACTICS_MAP.get(c.builtInTacticId);
         const tacName = builtInTac ? builtInTac.name : '军略';
+        const builtInLvl = c.builtInTacticLevel || this.state.tacticLevels?.[c.builtInTacticId] || 1;
+        const eqTac1 = c.equippedTactic1 ? TACTICS_MAP.get(c.equippedTactic1) : null;
+        const eqTac2 = c.equippedTactic2 ? TACTICS_MAP.get(c.equippedTactic2) : null;
+        const eqTacTags = [
+          eqTac1 ? `<span style="color:#c084fc;">[${eqTac1.name} Lv.${this.state.tacticLevels?.[eqTac1.id] || 1}]</span>` : '',
+          eqTac2 ? `<span style="color:#c084fc;">[${eqTac2.name} Lv.${this.state.tacticLevels?.[eqTac2.id] || 1}]</span>` : ''
+        ].filter(Boolean).join(' ');
+
+        const cardBorder = isFullRed ? '#ef4444' : (redStars > 0 ? '#f59e0b' : (c.star === 5 ? '#d97706' : '#374151'));
+        const cardBg = isFullRed ? 'linear-gradient(90deg, rgba(239,68,68,0.12) 0%, #11141a 45%)' : '#11141a';
 
         const card = document.createElement('div');
-        card.style.cssText = `background:#11141a; border:1px solid ${c.star===5?'#d97706':'#374151'}; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; gap:12px; transition:border-color 0.2s;`;
+        card.style.cssText = `background:${cardBg}; border:1px solid ${cardBorder}; ${isFullRed ? 'box-shadow:0 0 10px rgba(239,68,68,0.25);' : ''} padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; gap:12px; transition:border-color 0.2s;`;
         card.innerHTML = `
-          <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
-            ${getGeneralAvatarHtml(c, { size: 42, borderRadius: '8px', fontSize: '28px' })}
+          <div class="candidate-info-area" style="display:flex; align-items:center; gap:10px; flex:1; min-width:0; cursor:pointer;" title="点击预览该张【${c.name}】全息军略详情">
+            ${getGeneralAvatarHtml(c, { size: 46, borderRadius: '8px', fontSize: '28px' })}
             <div style="min-width:0; flex:1;">
               <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                 <span style="font-weight:bold; color:#fff; font-size:14px;">${c.name}</span>
+                ${redIdentityBadge}
                 <span class="hero-level-badge" style="font-size:10px;">Lv.${cLvl}</span>
                 <span style="font-size:10px; background:${campMeta.color}; color:#fff; padding:1px 5px; border-radius:3px;">${campMeta.name}</span>
-                <span style="font-size:11px; color:${starColor};">${starStr}</span>
-                <span style="font-size:10px; color:#fbbf24;">${c.cost}御</span>
+                <span style="font-size:12px; letter-spacing:1px;">${starsHtml}</span>
+                <span class="card-micro">>${c.cost}御</span>
               </div>
-              <div style="font-size:11px; color:#9ca3af; margin-top:2px; display:flex; gap:10px; flex-wrap:wrap;">
+              <div style="font-size:11px; color:#9ca3af; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 <span>${currentArmMeta.name}适性: <b class="apt-tag ${apt}">${apt}</b> <span style="color:#6ee7b7; font-size:10px;">(${aptModPct}%)</span></span>
-                <span>武:${c.force} 智:${c.intel} 统:${c.command} 速:${c.speed}</span>
-                <span style="color:#e2e8f0;">[战法] <b style="color:${c.star === 5 ? '#fde047' : (c.star === 4 ? '#c084fc' : '#93c5fd')};">${tacName}</b></span>
+                <span>武:<b class="val-gold">>${c.force}</b> 智:<b style="color:#60a5fa;">${c.intel}</b> 统:<b class="val-ok">>${c.command}</b> 速:<b style="color:#f472b6;">${c.speed}</b></span>
+                <span class="val-ok">>兵力:${(c.maxSoldiers || 3000).toLocaleString()}</span>
+                <span style="color:#e2e8f0;">[自带] <b style="color:${c.star === 5 ? '#fde047' : (c.star === 4 ? '#c084fc' : '#93c5fd')};">${tacName}</b> <span style="color:#6ee7b7; font-size:10px;">Lv.${builtInLvl}</span></span>
+                ${eqTacTags ? `<span>配法: ${eqTacTags}</span>` : ''}
               </div>
             </div>
           </div>
@@ -2320,6 +2782,11 @@ class GameApp {
             ${slotIdx===0?'命为主将':'选拔上阵'}
           </button>
         `;
+
+        card.querySelector('.candidate-info-area')?.addEventListener('click', () => {
+          sound.playDrum();
+          this.openHeroDetailModal(c);
+        });
 
         card.querySelector('.btn-choose-candidate').addEventListener('click', () => {
           const chosen = this.state.ownedGenerals.find(g => g.id === c.id);
@@ -2798,7 +3265,7 @@ class GameApp {
     }
 
     if (promotedCount === 0) {
-      alert('背包中暂无满足条件的白板重复同名武将卡！\n单张闲置同名卡已安全为您留存，可用于传承战法或遣散解甲换取铜币。');
+      alert('背包中暂无满足条件的白板重复同名武将卡！\n单张闲置同名卡已安全为您留存，可用于传承战法或转化换取铜币。');
       return;
     }
 
@@ -2810,17 +3277,21 @@ class GameApp {
     alert(`🎉【一键进阶圆满】共计完成 ${promotedCount} 次红度进阶！\n全员进阶属性已同步提升！`);
   }
 
-  // 单卡售出 (自由解甲：3星300 / 4星1000 / 5星5000)
+  // 单个武将转化铜币（3星300 / 4星1000 / 5星5000，已进阶红星按消耗同名卡数量全额折算返还）
   sellHero(hero) {
-    const goldBack = (hero.star === 5 ? 5000 : hero.star === 4 ? 1000 : 300);
+    const baseCopper = (hero.star === 5 ? 5000 : hero.star === 4 ? 1000 : 300);
+    const cardCount = 1 + (hero.redStars || 0);
+    const goldBack = baseCopper * cardCount;
     const starStr = '★'.repeat(hero.star);
+    const redExtraNote = (hero.redStars > 0)
+      ? `\n（含已进阶 ${hero.redStars} 红所消耗的同名武将卡，共按 ${cardCount} 张全额折算）`
+      : '';
 
-    // 5星名将解甲时给予格外庄重的敬告提示
-    const warnPrefix = hero.star === 5 
-      ? `👑【五星名将解甲确认】\n\n主公切莫误触！武将【${hero.name} (${starStr})】乃世之名宿！` 
-      : `🪙【武将解甲归田确认】\n\n主公，确认遣散武将【${hero.name} (${starStr})】吗？`;
+    const confirmMsg = hero.star === 5
+      ? `👑【名将转化确认】\n\n【${hero.name} (${starStr})】乃稀世名将，可用于上阵统兵、进阶觉醒或传承 S 级绝技！\n确认将其消耗转化吗？转化后武将卡将消失且不可找回，转化为 🪙 ${goldBack.toLocaleString()} 铜币（用于战法研习）。${redExtraNote}`
+      : `🪙【武将转化确认】\n\n确认消耗闲置武将【${hero.name} (${starStr})】进行转化吗？\n转化后该武将卡将消失，并转化为 🪙 ${goldBack.toLocaleString()} 铜币（用于战法研习升级）。${redExtraNote}`;
 
-    if (!confirm(`${warnPrefix}\n解甲后将永久遣散该武将，并为国库返还 🪙 ${goldBack.toLocaleString()} 铜币（用于研习战法）！`)) return;
+    if (!confirm(confirmMsg)) return;
 
     const idx = this.state.ownedGenerals.findIndex(x => x.id === hero.id);
     if (idx >= 0) {
@@ -2830,44 +3301,45 @@ class GameApp {
       this.save();
       this.renderGenerals();
       this.renderHUD();
-      alert(`✔ 成功遣散【${hero.name}】，获得 🪙 ${goldBack.toLocaleString()} 铜币！`);
+      alert(`✔【转化完成】武将【${hero.name}】已成功转化为 🪙 ${goldBack.toLocaleString()} 铜币！`);
     }
   }
 
-  // 一键解甲全部3星将
+  // 批量转化全部闲置3星武将
   quickSellThreeStars() {
     const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
     const threeStars = this.state.ownedGenerals.filter(g => g.star === 3 && !currentTroopHeroIds.has(g.id));
 
     if (threeStars.length === 0) {
-      alert('当前背包中没有未上阵的 3 星武将！');
+      alert('当前麾下没有未上阵的 3★ 闲置裨将！');
       return;
     }
 
-    if (!confirm(`确认一键解甲全部 ${threeStars.length} 位 3 星随军武将吗？\n将获得 ${threeStars.length * 300} 铜币，并清空闲置卡牌。`)) return;
+    const copperTotal = threeStars.reduce((sum, g) => sum + 300 * (1 + (g.redStars || 0)), 0);
+    if (!confirm(`🪙【批量转化确认】\n\n确认将麾下全部 ${threeStars.length} 位未上阵的【3★ 裨将】消耗转化吗？\n转化后武将卡将消失，共转化为 🪙 ${copperTotal.toLocaleString()} 铜币（用于战法研习升级）。`)) return;
 
     this.state.ownedGenerals = this.state.ownedGenerals.filter(g => !(g.star === 3 && !currentTroopHeroIds.has(g.id)));
-    this.state.resources.copper = (this.state.resources.copper || 0) + threeStars.length * 300;
+    this.state.resources.copper = (this.state.resources.copper || 0) + copperTotal;
 
     sound.playGoldChime();
     this.save();
     this.renderGenerals();
     this.renderHUD();
-    alert(`🪙【一键清包完成】成功遣散 ${threeStars.length} 位 3 星武将，获得 ${threeStars.length * 300} 铜币！`);
+    alert(`🪙【批量转化完成】共消耗 ${threeStars.length} 位 3★ 裨将，成功转化为 🪙 ${copperTotal.toLocaleString()} 铜币！`);
   }
 
-  // 一键解甲全部闲置4星将
+  // 批量转化全部闲置4星良将
   quickSellFourStars() {
     const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
     const fourStars = this.state.ownedGenerals.filter(g => g.star === 4 && !currentTroopHeroIds.has(g.id));
 
     if (fourStars.length === 0) {
-      alert('当前背包中没有未上阵的 4 星闲置良将！');
+      alert('当前麾下没有未上阵的 4★ 闲置良将！');
       return;
     }
 
-    const copperTotal = fourStars.length * 1000;
-    if (!confirm(`⚠️【一键解甲4星良将确认】\n\n主公，确认一键遣散背包中全部 ${fourStars.length} 位【未上阵的 4 星良将】吗？\n遣散后将直接获得 🪙 ${copperTotal.toLocaleString()} 铜币，用于战法研习升级！`)) return;
+    const copperTotal = fourStars.reduce((sum, g) => sum + 1000 * (1 + (g.redStars || 0)), 0);
+    if (!confirm(`⚠️【四星良将批量转化确认】\n\n确认将麾下全部 ${fourStars.length} 位未上阵的【4★ 良将】消耗转化吗？\n（提示：4★良将可用于传承 A 级战法）\n转化后武将卡将消失，共转化为 🪙 ${copperTotal.toLocaleString()} 铜币（用于战法研习升级）。`)) return;
 
     this.state.ownedGenerals = this.state.ownedGenerals.filter(g => !(g.star === 4 && !currentTroopHeroIds.has(g.id)));
     this.state.resources.copper = (this.state.resources.copper || 0) + copperTotal;
@@ -2876,7 +3348,7 @@ class GameApp {
     this.save();
     this.renderGenerals();
     this.renderHUD();
-    alert(`🎉【一键解甲大捷】成功遣散 ${fourStars.length} 位 4 星良将，获得 🪙 ${copperTotal.toLocaleString()} 铜币！`);
+    alert(`🎉【批量转化完成】共消耗 ${fourStars.length} 位 4★ 良将，成功转化为 🪙 ${copperTotal.toLocaleString()} 铜币！`);
   }
 
   openEquipTacticModal(hero, slot = 1) {
@@ -2901,10 +3373,10 @@ class GameApp {
         <div class="modal-body" style="display:flex; flex-direction:column; gap:10px;">
           
           <!-- 卸下当前战法选项 -->
-          <div style="background:rgba(239, 68, 68, 0.08); border:1px dashed #ef4444; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div class="card-row--split" style="background:rgba(239, 68, 68, 0.08); border:1px dashed #ef4444; padding:8px 12px; border-radius:8px">
             <div>
               <div style="font-weight:bold; color:#fca5a5; font-size:12px;">🚫 卸下当前战法</div>
-              <div style="font-size:11px; color:#9ca3af;">卸下后槽位空置，可供其他武将研习装配该战法。</div>
+              <div class="card-note">卸下后槽位空置，可供其他武将研习装配该战法。</div>
             </div>
             <button class="upgrade-btn btn-unequip-tactic" style="background:#4b5563; padding:4px 12px; font-size:11px;" ${!currentEquippedId ? 'disabled' : ''}>
               ${currentEquippedId ? '立即卸下' : '当前已空置'}
@@ -2914,13 +3386,13 @@ class GameApp {
           <!-- 📚 多维战法综合筛选面板 -->
           <div style="background:rgba(0,0,0,0.35); padding:10px 12px; border-radius:8px; border:1px solid #374151; display:flex; flex-direction:column; gap:7px;">
             <!-- 搜索与空闲状态 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="card-row--split card-row--wrap" style="gap:10px; flex-wrap:wrap">
               <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:180px;">
                 <span style="font-size:11px; color:#9ca3af; font-weight:bold;">🔍 搜索:</span>
                 <input type="text" id="modalTacticSearchInput" placeholder="输入战法名称查找..." style="flex:1; background:#11141a; border:1px solid #4b5563; border-radius:4px; padding:3px 8px; font-size:11px; color:#fff; outline:none;" />
               </div>
               <div style="display:flex; gap:4px; align-items:center;">
-                <span style="font-size:11px; color:#9ca3af;">状态:</span>
+                <span class="card-note">状态:</span>
                 <button class="nav-tab-btn active btn-modal-filter-status" data-status="all" style="padding:2px 7px; font-size:11px;">全部</button>
                 <button class="nav-tab-btn btn-modal-filter-status" data-status="idle" style="padding:2px 7px; font-size:11px; color:#34d399;">仅空闲</button>
               </div>
@@ -2996,13 +3468,13 @@ class GameApp {
             }
 
             return `
-              <div class="modal-tactic-row" 
+              <div class="modal-tactic-row card-row--split" 
                    data-tac-name="${tac.name || ''}"
                    data-tac-quality="${tac.quality || 'A'}" 
                    data-tac-type="${tac.type || 'active'}" 
                    data-tac-damage="${dmgType}" 
                    data-tac-occupied="${isOccupiedByOther ? '1' : '0'}"
-                   style="background:#11141a; border:1px solid ${isCurrentSlot?'#059669':'#374151'}; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                   style="background:#11141a; border:1px solid ${isCurrentSlot?'#059669':'#374151'}; padding:10px 14px; border-radius:8px">
                 <div style="flex:1; padding-right:12px;">
                   <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span style="font-weight:bold; color:${tac.quality==='S'?'#fbbf24':'#c084fc'}; font-size:14px;">${tac.name}</span>
@@ -3214,15 +3686,18 @@ class GameApp {
     });
   }
 
-  // 同步部队槽位中的武将战法
+  // 同步部队槽位中的武将战法与培养状态
   syncTroopHeroTactics(heroId) {
     (this.state.troops || []).forEach(troop => {
       (troop.heroes || []).forEach(h => {
         if (h && h.id === heroId) {
           const real = this.state.ownedGenerals.find(g => g.id === heroId);
           if (real) {
+            h.builtInTacticLevel = real.builtInTacticLevel;
             h.equippedTactic1 = real.equippedTactic1;
             h.equippedTactic2 = real.equippedTactic2;
+            h.redStars = real.redStars;
+            h.level = real.level;
           }
         }
       });
@@ -3318,44 +3793,44 @@ class GameApp {
         let statCompareHtml = '';
         if (tac.damageRate) {
           const label = tac.id === 'tac_jue_di_fan_ji' ? '反击爆发' : '伤害率';
-          statCompareHtml += `<div>${label}: <b style="color:#fde047;">${(currentProps.damageRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${(nextProps.damageRate * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>${label}: <b class="val-gold">>${(currentProps.damageRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${(nextProps.damageRate * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.healRate) {
-          statCompareHtml += `<div>治疗率: <b style="color:#6ee7b7;">${(currentProps.healRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${(nextProps.healRate * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>治疗率: <b class="val-copper">>${(currentProps.healRate * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${(nextProps.healRate * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.damageReduction || tac.teamDamageReduction) {
           const curRed = currentProps.damageReduction || currentProps.teamDamageReduction;
           const nextRed = nextProps ? (nextProps.damageReduction || nextProps.teamDamageReduction) : 0;
-          statCompareHtml += `<div>减伤率: <b style="color:#60a5fa;">${(curRed * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${(nextRed * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>减伤率: <b style="color:#60a5fa;">${(curRed * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${(nextRed * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.statBuff) {
           if (tac.id === 'tac_jue_di_fan_ji') {
-            statCompareHtml += `<div>受击武力: <b style="color:#fde047;">+${currentProps.statBuff}/次</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${nextProps.statBuff}/次</span>`}</div>`;
+            statCompareHtml += `<div>受击武力: <b class="val-gold">>+${currentProps.statBuff}/次</b> ${isMax ? '' : `<span class="val-ok">>➜ +${nextProps.statBuff}/次</span>`}</div>`;
           } else {
-            statCompareHtml += `<div>属性提升: <b style="color:#38bdf8;">+${currentProps.statBuff}</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${nextProps.statBuff}</span>`}</div>`;
+            statCompareHtml += `<div>属性提升: <b style="color:#38bdf8;">+${currentProps.statBuff}</b> ${isMax ? '' : `<span class="val-ok">>➜ +${nextProps.statBuff}</span>`}</div>`;
           }
         }
         if (tac.statDebuff) {
-          statCompareHtml += `<div>属性削减: <b style="color:#f87171;">-${currentProps.statDebuff}</b> ${isMax ? '' : `<span style="color:#34d399;">➜ -${nextProps.statDebuff}</span>`}</div>`;
+          statCompareHtml += `<div>属性削减: <b class="val-damage">>-${currentProps.statDebuff}</b> ${isMax ? '' : `<span class="val-ok">>➜ -${nextProps.statDebuff}</span>`}</div>`;
         }
         if (tac.damageBonus) {
-          statCompareHtml += `<div>伤害增幅: <b style="color:#fb923c;">+${(currentProps.damageBonus * 100).toFixed(0)}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${(nextProps.damageBonus * 100).toFixed(0)}%</span>`}</div>`;
+          statCompareHtml += `<div>伤害增幅: <b style="color:#fb923c;">+${(currentProps.damageBonus * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">>➜ +${(nextProps.damageBonus * 100).toFixed(0)}%</span>`}</div>`;
         }
         if (tac.activeRateBonus) {
-          statCompareHtml += `<div>主动几率加成: <b style="color:#a78bfa;">+${currentProps.activeRateBonus}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ +${nextProps.activeRateBonus}%</span>`}</div>`;
+          statCompareHtml += `<div>主动几率加成: <b style="color:#a78bfa;">+${currentProps.activeRateBonus}%</b> ${isMax ? '' : `<span class="val-ok">>➜ +${nextProps.activeRateBonus}%</span>`}</div>`;
         }
         if (tac.disarmRate && tac.disarmRate < 100) {
-          statCompareHtml += `<div>缴械几率: <b style="color:#fb7185;">${currentProps.disarmRate}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${nextProps.disarmRate}%</span>`}</div>`;
+          statCompareHtml += `<div>缴械几率: <b style="color:#fb7185;">${currentProps.disarmRate}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${nextProps.disarmRate}%</span>`}</div>`;
         }
         if (tac.rate && tac.rate < 100) {
-          statCompareHtml += `<div>发动几率: <b style="color:#f472b6;">${currentProps.rate}%</b> ${isMax ? '' : `<span style="color:#34d399;">➜ ${nextProps.rate}%</span>`}</div>`;
+          statCompareHtml += `<div>发动几率: <b style="color:#f472b6;">${currentProps.rate}%</b> ${isMax ? '' : `<span class="val-ok">>➜ ${nextProps.rate}%</span>`}</div>`;
         }
 
         const canAfford = (this.state.resources.copper || 0) >= nextCost;
 
         card.innerHTML = `
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div class="card-row--split" style="margin-bottom:6px">
               <span style="font-weight:bold; color:#fbbf24; font-size:15px;">${tac.name}</span>
               <div style="display:flex; gap:4px; align-items:center;">
                 <span class="tactic-type-tag ${typeClass}">${typeMap[tac.type] || tac.type}</span>
@@ -3366,7 +3841,7 @@ class GameApp {
             <div style="font-size:11px; color:#9ca3af; margin-bottom:8px; line-height:1.4;">${tac.desc}</div>
 
             <!-- 等级进度条 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+            <div class="card-row--split" style="font-size:12px">
               <span style="font-weight:bold; color:${isMax?'#f59e0b':'#38bdf8'}; font-size:13px;">
                 ${isMax ? '👑 臻至化境 Lv.10 MAX' : `研习进度: Lv.${currentLvl} / ${MAX_TACTIC_LEVEL}`}
               </span>
@@ -3378,7 +3853,7 @@ class GameApp {
 
             <!-- 升级效果增益对比 -->
             <div style="background:rgba(0,0,0,0.3); border:1px solid #374151; border-radius:6px; padding:6px 10px; font-size:11px; margin-bottom:10px; display:flex; flex-direction:column; gap:2px;">
-              ${statCompareHtml || '<div style="color:#9ca3af;">持续战术生效中，属性随等级提升</div>'}
+              ${statCompareHtml || '<div class="val-muted">>持续战术生效中，属性随等级提升</div>'}
             </div>
           </div>
 
@@ -3411,7 +3886,7 @@ class GameApp {
 
         card.innerHTML = `
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div class="card-row--split" style="margin-bottom:6px">
               <span style="font-weight:bold; color:#9ca3af; font-size:15px;">🔒 ${tac.name}</span>
               <div style="display:flex; gap:4px; align-items:center;">
                 <span class="tactic-type-tag ${typeClass}">${typeMap[tac.type] || tac.type}</span>
@@ -3424,7 +3899,7 @@ class GameApp {
             <div style="background:rgba(0,0,0,0.4); border:1px dashed #4b5563; border-radius:6px; padding:8px 10px; font-size:11px; margin-bottom:12px;">
               <div style="color:#d8b4fe; font-weight:bold; margin-bottom:3px;">📖 传承来源武将：</div>
               <div style="color:#e5e7eb;">【${sourceNames.join('】、【')}】</div>
-              <div style="font-size:10px; color:#9ca3af; margin-top:4px;">献祭 1 位对应闲置武将即可领悟传承该战法！</div>
+              <div>献祭 1 位对应闲置武将即可领悟传承该战法！</div>
             </div>
           </div>
 
@@ -3543,7 +4018,7 @@ class GameApp {
         card.innerHTML = `
           <div>
             ${tier.isPopular ? '<div style="position:absolute; top:-9px; right:10px; background:#dc2626; color:#fff; font-size:10px; padding:1px 6px; border-radius:3px; font-weight:bold;">👑 镇国尊选</div>' : ''}
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div class="card-row--split" style="margin-bottom:6px">
               <span style="font-size:22px;">${tier.icon}</span>
               <span style="font-size:11px; background:rgba(220,38,38,0.2); border:1px solid #dc2626; color:#fca5a5; padding:1px 6px; border-radius:3px; font-weight:bold;">
                 🔥 始终双倍
@@ -3554,7 +4029,7 @@ class GameApp {
             
             <div style="background:rgba(0,0,0,0.35); border-radius:6px; padding:6px 8px; font-size:11px; margin-bottom:10px;">
               <div style="color:#d1d5db;">基础金珠: <b>${tier.baseGold.toLocaleString()}</b></div>
-              <div style="color:#f87171;">双倍赠送: <b style="color:#34d399;">+${doubleBonus.toLocaleString()}</b></div>
+              <div class="val-damage">>双倍赠送: <b class="val-ok">>+${doubleBonus.toLocaleString()}</b></div>
               <div style="color:#fde047; font-weight:bold; margin-top:2px; border-top:1px dashed #374151; padding-top:2px;">
                 实际到账: <span style="font-size:13px; color:#fbbf24;">${totalGet.toLocaleString()}</span> 金珠
               </div>
@@ -3585,9 +4060,9 @@ class GameApp {
         historyList.innerHTML = '<div style="color:#6b7280; text-align:center; padding:8px;">暂无充值记录，点击上方档位即可模拟充值</div>';
       } else {
         historyList.innerHTML = hist.slice(0, 5).map(item => `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px; border:1px solid #374151;">
-            <span style="color:#9ca3af;">⏱️ ${item.time}</span>
-            <span style="color:#e5e7eb;">模拟支付: <b style="color:#34d399;">¥${item.price}</b></span>
+          <div class="card-row--split" style="background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px; border:1px solid #374151">
+            <span class="val-muted">>⏱️ ${item.time}</span>
+            <span style="color:#e5e7eb;">模拟支付: <b class="val-ok">>¥${item.price}</b></span>
             <span style="color:#fbbf24; font-weight:bold;">到账 +${item.gold.toLocaleString()} 金珠</span>
           </div>
         `).join('');
@@ -3666,7 +4141,7 @@ class GameApp {
       const curCopper = this.state.resources.copper || 0;
       if (curCopper < cost) {
         sound.playDrum();
-        alert(`⚠️ 铜币不足！良将招募 ${count} 次需要 ${cost.toLocaleString()} 铜币，当前拥有 ${curCopper.toLocaleString()} 铜币。\n可通过解甲武将或通关战役赚取铜币！`);
+        alert(`⚠️ 铜币不足！良将招募 ${count} 次需要 ${cost.toLocaleString()} 铜币，当前拥有 ${curCopper.toLocaleString()} 铜币。\n可通过转化闲置武将或通关战役获取铜币！`);
         return;
       }
       this.state.resources.copper -= cost;
@@ -3679,11 +4154,16 @@ class GameApp {
     }
 
     const pulledCards = [];
+    const autoConvert3 = this.state.gachaAutoConvert?.star3 !== false;
+    const autoConvert4 = !!this.state.gachaAutoConvert?.star4;
     const copperPerThreeStar = GACHA_CONFIG.threeStarCopperValue || 300;
+    const copperPerFourStar = GACHA_CONFIG.fourStarCopperValue || 1000;
     let fiveStarCount = 0;
     let coreStarCount = 0;
     let fourStarCount = 0;
     let threeStarCount = 0;
+    let convertedThreeStarCount = 0;
+    let convertedFourStarCount = 0;
 
     for (let i = 0; i < count; i++) {
       this.state.totalGachaCount = (this.state.totalGachaCount || 0) + 1;
@@ -3717,29 +4197,70 @@ class GameApp {
       }
 
       if (res.general.star <= 3) {
-        // ♻️ 3星卡招募时自动转换铜币，不进入武将背包
         threeStarCount++;
-        pulledCards.push({
-          ...res.general,
-          autoConvertedCopper: copperPerThreeStar
-        });
-      } else {
-        if (res.general.star >= 5) {
-          fiveStarCount++;
-          if (res.isCore) coreStarCount++;
-        } else if (res.general.star === 4) {
-          fourStarCount++;
+        if (autoConvert3) {
+          // ♻️ 勾选了自动转化 3★：自动转换为 300 铜币，不进入武将背包
+          convertedThreeStarCount++;
+          pulledCards.push({
+            ...res.general,
+            autoConvertedCopper: copperPerThreeStar
+          });
+        } else {
+          // 未勾选自动转化 3★：正常生成 3★ 武将实例入库
+          const instanceId = `${res.general.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+          const newHeroInstance = {
+            ...res.general,
+            id: instanceId,
+            templateId: res.general.id,
+            level: 1,
+            exp: 0,
+            currentSoldiers: 1000,
+            maxSoldiers: 1000,
+            equippedTactic1: null,
+            equippedTactic2: null
+          };
+          this.state.ownedGenerals.push(newHeroInstance);
+          pulledCards.push(newHeroInstance);
         }
+      } else if (res.general.star === 4) {
+        fourStarCount++;
+        if (autoConvert4) {
+          // ♻️ 勾选了自动转化 4★：自动转换为 1,000 铜币，不进入武将背包
+          convertedFourStarCount++;
+          pulledCards.push({
+            ...res.general,
+            autoConvertedCopper: copperPerFourStar
+          });
+        } else {
+          // 未勾选自动转化 4★：正常生成 4★ 良将实例入库
+          const instanceId = `${res.general.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+          const newHeroInstance = {
+            ...res.general,
+            id: instanceId,
+            templateId: res.general.id,
+            level: 5,
+            exp: 0,
+            currentSoldiers: 1000,
+            maxSoldiers: 1000,
+            equippedTactic1: null,
+            equippedTactic2: null
+          };
+          this.state.ownedGenerals.push(newHeroInstance);
+          pulledCards.push(newHeroInstance);
+        }
+      } else {
+        fiveStarCount++;
+        if (res.isCore) coreStarCount++;
 
         const instanceId = `${res.general.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         const newHeroInstance = {
           ...res.general,
           id: instanceId,
           templateId: res.general.id,
-          level: res.general.star >= 5 ? 10 : 5,
+          level: 10,
           exp: 0,
-          currentSoldiers: (res.general.star >= 5 ? 10 : 5) * 200,
-          maxSoldiers: (res.general.star >= 5 ? 10 : 5) * 200,
+          currentSoldiers: 2000,
+          maxSoldiers: 2000,
           equippedTactic1: null,
           equippedTactic2: null
         };
@@ -3748,8 +4269,10 @@ class GameApp {
       }
     }
 
-    // 结算 3 星卡自动转化的铜币
-    const convertedCopperTotal = threeStarCount * copperPerThreeStar;
+    // 结算自动转化的铜币总额 (3★ + 4★)
+    const convertedCopper3 = convertedThreeStarCount * copperPerThreeStar;
+    const convertedCopper4 = convertedFourStarCount * copperPerFourStar;
+    const convertedCopperTotal = convertedCopper3 + convertedCopper4;
     if (convertedCopperTotal > 0) {
       this.state.resources.copper = (this.state.resources.copper || 0) + convertedCopperTotal;
     }
@@ -3768,6 +4291,7 @@ class GameApp {
     }
 
     this.renderHUD();
+    this.renderGenerals();
     this.save();
 
     // 调整开箱浮层整体氛围环境光（初始悬念状态）
@@ -3790,16 +4314,23 @@ class GameApp {
           })
       : pulledCards;
 
-    // 渲染顶部战果汇总与 3 星自动转铜币提示栏
+    // 渲染顶部战果汇总与 3★ / 4★ 自动转铜币提示栏
     if (this.gachaSummaryBar) {
-      if (isFastBatch || threeStarCount > 0) {
+      if (isFastBatch || threeStarCount > 0 || convertedFourStarCount > 0) {
+        const fourConvertHint = fourStarCount > 0
+          ? (autoConvert4 ? `（已自动转为 🪙 <b>+${convertedCopper4.toLocaleString()}</b> 铜币）` : '（已入库）')
+          : '';
+        const threeConvertHint = threeStarCount > 0
+          ? (autoConvert3 ? `（已自动转为 🪙 <b>+${convertedCopper3.toLocaleString()}</b> 铜币）` : '（已入库）')
+          : '';
+
         this.gachaSummaryBar.style.display = 'flex';
         this.gachaSummaryBar.innerHTML = `
           <div class="gacha-summary-stats">
             <span class="summary-chip chip-total">📊 招募 <b>${count}</b> 次</span>
             ${isFastBatch || fiveStarCount > 0 ? `<span class="summary-chip chip-five">🌟 5★橙卡: <b>${fiveStarCount}</b> 张${coreStarCount > 0 ? ` <em>(👑核心 ${coreStarCount})</em>` : ''}</span>` : ''}
-            ${isFastBatch || fourStarCount > 0 ? `<span class="summary-chip chip-four">💜 4★紫卡: <b>${fourStarCount}</b> 张</span>` : ''}
-            <span class="summary-chip chip-three">♻️ 3★三星卡: <b>${threeStarCount}</b> 张（已自动转为 🪙 <b>+${convertedCopperTotal.toLocaleString()}</b> 铜币）</span>
+            ${isFastBatch || fourStarCount > 0 ? `<span class="summary-chip chip-four">💜 4★紫卡: <b>${fourStarCount}</b> 张${fourConvertHint}</span>` : ''}
+            <span class="summary-chip chip-three">♻️ 3★三星卡: <b>${threeStarCount}</b> 张${threeConvertHint}</span>
           </div>
           ${displayCards.length > 1 ? `
             <button type="button" class="gacha-fast-flip-btn" id="btnGachaFlipAll">⚡ 一键全翻</button>
@@ -3816,7 +4347,7 @@ class GameApp {
     // 重抽时先清掉上一轮残留粒子，否则新旧爆发会叠加在同一帧
     goldFX.clear();
 
-    // 若 50/100 抽未抽出紫卡或橙卡（如铜币池全为3星），展示专属的3星自动转化铜币结算卡
+    // 若 50/100 抽未抽出紫卡或橙卡（如铜币池全为3星），展示专属的3星结算卡
     if (isFastBatch && displayCards.length === 0) {
       this.gachaCardsContainer.innerHTML = `
         <div class="gacha-three-star-summary-card">
@@ -3824,7 +4355,9 @@ class GameApp {
           <div style="font-size:17px; font-weight:900; color:#fbbf24;">本次 ${count} 连抽共获得 3★ 三星卡 ${threeStarCount} 张</div>
           <div style="font-size:13px; color:#94a3b8; margin-top:4px;">未产出 4★ 紫卡或 5★ 橙卡</div>
           <div style="margin-top:12px; padding:8px 16px; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:8px; color:#34d399; font-weight:800; font-size:14px;">
-            ♻️ 全部 ${threeStarCount} 张三星卡已自动转化为 +${convertedCopperTotal.toLocaleString()} 铜币！
+            ${autoConvert3
+              ? `♻️ 全部 ${threeStarCount} 张三星卡已自动转化为 +${convertedCopper3.toLocaleString()} 铜币！`
+              : `🎴 全部 ${threeStarCount} 张三星卡已收入麾下武将库！`}
           </div>
         </div>
       `;
@@ -4096,7 +4629,7 @@ class GameApp {
       card.style.cursor = 'pointer';
       card.title = `点击查阅【${hero.name}】全息军略大立绘档案`;
       card.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-row--split">
           <span style="background: ${camp.color}; color: #fff; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px;">
             ${camp.badge} · ${camp.name}
           </span>
@@ -4117,7 +4650,7 @@ class GameApp {
           </div>
         </div>
 
-        <div style="font-size: 11px; color: #9ca3af; display: flex; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 3px 6px; border-radius: 4px;">
+        <div class="card-row--split" style="font-size: 11px; color: #9ca3af; background: rgba(0,0,0,0.3); padding: 3px 6px; border-radius: 4px">
           <span>武:${hero.force} 智:${hero.intel}</span>
           <span>统:${hero.command} 速:${hero.speed}</span>
         </div>
@@ -4127,7 +4660,7 @@ class GameApp {
         </div>
 
         <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px;">
-          <div style="color: ${isFive ? '#fbbf24' : '#c084fc'}; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+          <div class="card-row--split" style="color: ${isFive ? '#fbbf24' : '#c084fc'}; font-weight: bold">
             <span>${tacName}</span>
             <span style="font-size: 9px; padding: 0 4px; border-radius: 3px; background: ${isFive ? 'rgba(251,191,36,0.15)' : 'rgba(192,132,252,0.15)'}; color: ${isFive ? '#fbbf24' : '#c084fc'}; border: 1px solid ${isFive ? 'rgba(251,191,36,0.3)' : 'rgba(192,132,252,0.3)'};">${isFive ? '🌟 S级' : '💜 A级'} · ${tacType}</span>
           </div>
@@ -4195,6 +4728,19 @@ class GameApp {
     const s = rep.summary;
     this.battleDetailTitle.textContent = `${rep.isVictory ? '🎉 战役大捷' : '💀 战事惜败'} · ${rep.tileName} (${rep.time})`;
 
+    // ★ 出征/扫荡结算条：替代原先的原生 alert，把奖励与突破信息集中呈现
+    const rewardBanner = rep.reward ? `
+      <div class="battle-reward-banner ${rep.isVictory ? 'win' : 'lose'}">
+        <div class="brb-title">${rep.reward.title}</div>
+        <ul class="brb-lines">
+          ${rep.reward.lines.map(l => `<li>${l}</li>`).join('')}
+        </ul>
+        ${rep.reward.extras && rep.reward.extras.length
+          ? `<div class="brb-extras">${rep.reward.extras.map(e => `<div>${e}</div>`).join('')}</div>`
+          : ''}
+      </div>
+    ` : '';
+
     const pArmObj = ARMS[s.playerArm] || { name: '主力', icon: '⚔️' };
     const eArmObj = ARMS[s.enemyArm] || { name: '守军', icon: '🛡️' };
 
@@ -4208,11 +4754,14 @@ class GameApp {
         const starStr = '★'.repeat(h.star || 4);
         const campObj = CAMPS[h.camp] || { name: '群', color: '#888' };
         
-        // 战法徽章
+        // 战法徽章（S级橙金 / A级紫晶 / B级湛蓝）
         const tacticsHtml = (h.tactics || []).map((t, idx) => {
           const isInnate = (idx === 0);
-          const badgeClass = isInnate ? 'lineup-tac-badge innate' : (t.quality === 'S' ? 'lineup-tac-badge s-rank' : 'lineup-tac-badge');
-          return `<span class="${badgeClass}" title="${t.desc || ''}">[${isInnate ? '自带' : '配'}] ${t.name} Lv.${t.level || 1}</span>`;
+          const q = isInnate
+            ? ((h.star || 4) >= 5 ? 'S' : ((h.star || 4) === 4 ? 'A' : 'B'))
+            : (t.quality || 'A');
+          const qClass = q === 'S' ? 'q-s' : (q === 'B' ? 'q-b' : 'q-a');
+          return `<span class="lineup-tac-badge ${qClass}" title="${t.desc || ''}">[${isInnate ? '自带' : '配'}] ${t.name} Lv.${t.level || 1}</span>`;
         }).join('');
 
         return `
@@ -4228,12 +4777,12 @@ class GameApp {
                     <span style="font-size:9px; background:${campObj.color}; color:#fff; border-radius:3px; padding:0 3px;">${campObj.name}</span>
                     ${h.isLeader ? '<span style="font-size:9px; background:#d97706; color:#fff; border-radius:3px; padding:0 3px;">主将</span>' : ''}
                   </div>
-                  <div style="font-size:10px; color:#fbbf24;">${starStr}</div>
+                  <div class="card-micro">>${starStr}</div>
                 </div>
               </div>
               <div style="text-align:right; font-size:11px;">
                 <div style="color:${isPlayer ? '#34d399' : '#f87171'}; font-weight:bold;">余兵: ${h.remaining} / ${h.initial}</div>
-                <div style="color:#9ca3af; font-size:10px;">造成伤害: <b class="battle-num-dmg" style="color:#ef4444;">${h.damage || 0}</b> | 治疗: <b class="battle-num-heal" style="color:#10b981;">${h.heals || 0}</b></div>
+                <div style="color:#9ca3af; font-size:10px;">造成伤害: <b class="battle-num-dmg val-danger">>${h.damage || 0}</b> | 治疗: <b class="battle-num-heal" style="color:#10b981;">${h.heals || 0}</b></div>
               </div>
             </div>
             <div class="lineup-hero-tactics">
@@ -4325,6 +4874,7 @@ class GameApp {
     }).join('');
 
     this.battleDetailBody.innerHTML = `
+      ${rewardBanner}
       <!-- 双方全息阵容对决看板 -->
       <div class="battle-lineup-container">
         <!-- 我方军团 -->
@@ -4338,9 +4888,9 @@ class GameApp {
           <div class="lineup-hero-row">
             ${renderHeroList(s.playerHeroStats, true)}
           </div>
-          <div style="margin-top:auto; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; display:flex; justify-content:space-between; color:#9ca3af;">
-            <span>总兵力: <b style="color:#34d399;">${s.playerInitialSoldiers}</b></span>
-            <span>总战损: <b style="color:#ef4444;">-${s.playerLosses}</b></span>
+          <div class="card-row--split" style="margin-top:auto; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#9ca3af">
+            <span>总兵力: <b class="val-ok">>${s.playerInitialSoldiers}</b></span>
+            <span>总战损: <b class="val-danger">>-${s.playerLosses}</b></span>
           </div>
         </div>
 
@@ -4367,9 +4917,9 @@ class GameApp {
           <div class="lineup-hero-row">
             ${renderHeroList(s.enemyHeroStats, false)}
           </div>
-          <div style="margin-top:auto; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; display:flex; justify-content:space-between; color:#9ca3af;">
-            <span>守备兵力: <b style="color:#f87171;">${s.enemyInitialSoldiers}</b></span>
-            <span>被歼灭: <b style="color:#34d399;">-${s.enemyLosses}</b></span>
+          <div class="card-row--split" style="margin-top:auto; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#9ca3af">
+            <span>守备兵力: <b class="val-damage">>${s.enemyInitialSoldiers}</b></span>
+            <span>被歼灭: <b class="val-ok">>-${s.enemyLosses}</b></span>
           </div>
         </div>
       </div>
@@ -4426,7 +4976,7 @@ class GameApp {
       const maxLossInMatch = Math.max(1, ...(allHeroStats.map(h => h.losses || 0)));
 
       // 战法明细数据表格渲染器 (三战原版经典战报明细)
-      const renderTacticRows = (tacticStats, heroTotalDmg, heroTotalHeal) => {
+      const renderTacticRows = (tacticStats, heroTotalDmg, heroTotalHeal, heroStar) => {
         if (!tacticStats || tacticStats.length === 0) {
           return `<tr><td colspan="7" style="color:#6b7280; font-size:11px; padding:6px;">暂无战法释放数据</td></tr>`;
         }
@@ -4442,8 +4992,12 @@ class GameApp {
 
           const isNormal = (ts.id === 'normal_attack');
           const isInnate = ts.isInnate;
+          const effQuality = isInnate
+            ? ((heroStar || 4) >= 5 ? 'S' : ((heroStar || 4) === 4 ? 'A' : 'B'))
+            : (ts.quality || 'A');
+          const qColor = isNormal ? '#e5e7eb' : (effQuality === 'S' ? '#fbbf24' : (effQuality === 'B' ? '#60a5fa' : '#c084fc'));
           const badgePrefix = isNormal ? '普攻' : (isInnate ? '自带' : '传承');
-          const badgeClass = isNormal ? 'normal' : (isInnate ? 'innate' : 'inherited');
+          const badgeClass = isNormal ? 'normal' : `q-${effQuality.toLowerCase()}`;
           const dmgPct = (heroTotalDmg > 0 && ts.damage > 0) ? Math.min(100, Math.round((ts.damage / heroTotalDmg) * 100)) : 0;
 
           return `
@@ -4451,11 +5005,11 @@ class GameApp {
               <td style="text-align:left; padding-left:8px;">
                 <div style="display:flex; align-items:center; gap:4px;">
                   <span class="tac-badge-tag ${badgeClass}">[${badgePrefix}]</span>
-                  <span style="font-weight:600; color:#fff;">${ts.name}</span>
+                  <span style="font-weight:600; color:${qColor};">${ts.name}</span>
                 </div>
               </td>
               <td><span class="tac-type-pill ${typeClass}">${typeName}</span></td>
-              <td style="font-size:10px; color:#fbbf24;">${isNormal ? '-' : (ts.quality + '级 · Lv.' + (ts.level || 1))}</td>
+              <td style="font-size:10px; font-weight:bold; color:${isNormal ? '#6b7280' : qColor};">${isNormal ? '-' : (effQuality + '级 · Lv.' + (ts.level || 1))}</td>
               <td><b style="color:#60a5fa; font-size:12px;">${ts.casts}</b> 次</td>
               <td><b style="color:#ef4444; font-size:12px;">${(ts.damage || 0).toLocaleString()}</b></td>
               <td><b style="color:#10b981; font-size:12px;">${(ts.heals || 0).toLocaleString()}</b></td>
@@ -4478,6 +5032,14 @@ class GameApp {
           const healPct = Math.min(100, Math.round(((h.heals || 0) / maxHealInMatch) * 100));
           const lossPct = Math.min(100, Math.round(((h.losses || 0) / maxLossInMatch) * 100));
 
+          const heroTacticsColored = (h.tactics || []).map((t, idx) => {
+            const q = (idx === 0)
+              ? ((h.star || 4) >= 5 ? 'S' : ((h.star || 4) === 4 ? 'A' : 'B'))
+              : (t.quality || 'A');
+            const c = q === 'S' ? '#fbbf24' : (q === 'B' ? '#60a5fa' : '#c084fc');
+            return `<span style="color:${c}; font-weight:600;">${t.name}</span>`;
+          }).join('<span style="color:#6b7280; margin:0 3px;">·</span>');
+
           return `
             <tr>
               <td style="min-width:140px;">
@@ -4489,8 +5051,8 @@ class GameApp {
                       <span style="font-size:9px; background:${campObj.color}; color:#fff; border-radius:2px; padding:0 3px;">${campObj.name}</span>
                       ${h.isLeader ? '<span style="font-size:9px; background:#d97706; color:#fff; border-radius:2px; padding:0 2px;">主</span>' : ''}
                     </div>
-                    <div style="font-size:10px; color:#9ca3af; margin-top:2px;">
-                      ${(h.tactics || []).map(t => t.name).join(' · ')}
+                    <div>
+                      ${heroTacticsColored}
                     </div>
                   </div>
                 </div>
@@ -4499,7 +5061,7 @@ class GameApp {
                 <div style="font-weight:bold; color:${h.remaining > 0 ? (isPlayer ? '#34d399' : '#f87171') : '#6b7280'};">
                   ${h.remaining} <span style="font-size:10px; color:#6b7280;">/ ${h.initial}</span>
                 </div>
-                <div style="font-size:10px; color:#9ca3af;">战损 -${h.losses}</div>
+                <div>战损 -${h.losses}</div>
               </td>
               <td style="min-width:110px;">
                 <div style="font-weight:800; color:#ef4444; font-size:13px;">${(h.damage || 0).toLocaleString()}</div>
@@ -4540,7 +5102,7 @@ class GameApp {
                       </tr>
                     </thead>
                     <tbody>
-                      ${renderTacticRows(h.tacticStats, h.damage, h.heals)}
+                      ${renderTacticRows(h.tacticStats, h.damage, h.heals, h.star)}
                     </tbody>
                   </table>
                 </div>
@@ -4580,7 +5142,7 @@ class GameApp {
           <div class="stats-table-header player">
             <span>🛡️ 我军出征军团 · 数据统计 (${pArmObj.icon} ${pArmObj.name})</span>
             <span style="font-size:11px; font-weight:normal; color:#a7f3d0;">
-              总输出: <b style="color:#ef4444;">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
+              总输出: <b class="val-danger">>${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.playerHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
             </span>
           </div>
           <table class="stats-grid-table">
@@ -4604,7 +5166,7 @@ class GameApp {
           <div class="stats-table-header enemy">
             <span>🏯 敌军守备军团 · 数据统计 (${eArmObj.icon} ${eArmObj.name})</span>
             <span style="font-size:11px; font-weight:normal; color:#fca5a5;">
-              总输出: <b style="color:#ef4444;">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
+              总输出: <b class="val-danger">>${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.damage || 0), 0).toLocaleString()}</b> | 总恢复: <b style="color:#10b981;">${(s.enemyHeroStats || []).reduce((sum, h) => sum + (h.heals || 0), 0).toLocaleString()}</b>
             </span>
           </div>
           <table class="stats-grid-table">

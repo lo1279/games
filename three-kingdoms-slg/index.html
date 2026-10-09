@@ -15,21 +15,23 @@
       <span style="font-size:24px;">⚔️</span>
       <div>
         <div class="game-title">三国·战略版</div>
-        <div class="game-sub-title" style="font-size: 10px; color: #9ca3af;">历史战役 · 策略卡牌对决</div>
+        <div class="game-sub-title">历史战役 · 策略卡牌对决</div>
       </div>
     </div>
 
     <!-- 实时资源显示栏 -->
     <div class="res-items">
-      <div class="res-badge gold" id="badgeGold" title="点击打开【金铢钱庄】· 模拟充值金铢 (始终双倍)" style="cursor: pointer; border: 1px solid #fbbf24;">
+      <div class="res-badge gold" id="badgeGold" title="点击打开【金铢钱庄】· 模拟充值金铢 (始终双倍)" style="cursor: pointer;">
         <span>👑 金铢:</span>
         <span class="val" id="resGold">0</span>
-        <span style="font-size:9px; background:linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color:#fff; border-radius:3px; padding:1px 4px; margin-left:3px; font-weight:bold;">充值</span>
+        <span class="tag tag--solid" style="margin-left:3px;">充值</span>
       </div>
-      <div class="res-badge" title="用于研习战法升级(Lv.1~10)，通过解甲武将或通关战役获得" style="border: 1px solid #059669; background: rgba(5, 150, 105, 0.15);">
+      <div class="res-badge" title="用于研习战法升级(Lv.1~10)，通过解甲武将或通关战役获得" style="border: 1px solid #059669; background: var(--camp-shu-bg);">
         <span>🪙 铜币:</span>
-        <span class="val" id="resCopper" style="color:#6ee7b7; font-weight:bold;">0</span>
+        <span class="val hl-ok num-strong" id="resCopper">0</span>
       </div>
+      <!-- ⚠️ 这四个资源初始隐藏（内网/城建未解锁时显示），JS 不接管其 display，
+           属纯 HTML 状态，故 display 留在内联 style 上 -->
       <div class="res-badge" id="hudResWood" title="木材：城建储备物资" style="display:none;">
         <span>🌲 木材:</span>
         <span class="val" id="resWood">0</span>
@@ -48,19 +50,19 @@
       </div>
       <div class="res-badge" title="历史战役获得的总星数">
         <span>⭐ 战役:</span>
-        <span class="val" id="resCampaignStars" style="color:#fde047;">0</span>
+        <span class="val hl-grain" id="resCampaignStars">0</span>
         <span>星</span>
       </div>
       <div class="res-badge" title="当前演武试炼已通关层数">
         <span>🏛️ 试炼:</span>
-        <span class="val" id="resTrialFloor" style="color:#38bdf8;">第 1 层</span>
+        <span class="val hl-info" id="resTrialFloor">第 1 层</span>
       </div>
       <div class="res-badge" title="已收归麾下的名将总数">
         <span>🎴 将领:</span>
-        <span class="val" id="resOwnedCount" style="color:#34d399;">0</span>
+        <span class="val tone-green-bright" id="resOwnedCount">0</span>
         <span>位</span>
       </div>
-      <button id="btnResetGame" title="重置当前存档，恢复初始状态重新开局" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 4px 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+      <button id="btnResetGame" class="btn-reset" title="重置当前存档，恢复初始状态重新开局">
         <span>🔄 重置</span>
       </button>
     </div>
@@ -73,27 +75,25 @@
     <section class="slg-tab-page active" id="tabMap">
       <div class="map-container">
         <!-- 顶部信息栏 -->
-        <div class="map-controls" style="flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center;">
+        <div class="map-controls page-head">
           <div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <h2 style="font-size:18px; color:#fbbf24; font-weight:800;">🗺️ 战棋沙盘 · 资源领地</h2>
-              <span style="font-size:11px; background:rgba(16,185,129,0.15); border:1px solid #059669; color:#6ee7b7; padding:2px 8px; border-radius:4px; font-weight:bold;">
-                ⚡ 战棋直连 · 无需铺路连地
-              </span>
+            <div class="page-title-row">
+              <h2 class="page-title">🗺️ 战棋沙盘 · 资源领地</h2>
+              <span class="tag tag--ok">⚡ 战棋直连 · 无需铺路连地</span>
             </div>
-            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">
-              掌控 <b style="color:#86efac;">苍翠林场</b>、<b style="color:#cbd5e1;">幽铁矿脉</b>、<b style="color:#fdba74;">崇山石场</b>、<b style="color:#fde047;">天府粮田</b> 4 大资源据点，自由选择 1~10 级土地挥师出征！
+            <div class="page-desc">
+              掌控 <b class="hl-wood">苍翠林场</b>、<b class="hl-iron">幽铁矿脉</b>、<b class="hl-stone">崇山石场</b>、<b class="hl-grain">天府粮田</b> 4 大资源据点，自由选择 1~10 级土地挥师出征！
             </div>
           </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <button class="upgrade-btn" id="btnQuickFarmAll" style="background:linear-gradient(135deg, #059669 0%, #047857 100%); padding:6px 14px; font-size:12px; font-weight:bold;">
+          <div class="row">
+            <button class="upgrade-btn upgrade-btn--md" id="btnQuickFarmAll" style="background:linear-gradient(135deg, #059669 0%, #047857 100%); font-weight:bold;">
               🌾 全境一键屯田 (+3h收益)
             </button>
           </div>
         </div>
 
         <!-- 四大资源领地主卡片模块看板 (战棋版风格) -->
-        <div class="resource-lands-grid" id="resourceLandsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px;">
+        <div class="resource-lands-grid grid-cards" id="resourceLandsGrid" style="margin-top:var(--sp-5);">
           <!-- 动态渲染 4 大资源领地模块 (木/铁/石/粮) -->
         </div>
       </div>
@@ -101,16 +101,16 @@
 
     <!-- 0.5. 主城内政城建 (City & Construction) -->
     <section class="slg-tab-page" id="tabCity">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div class="page-head">
         <div>
-          <h2 style="font-size:18px; color:#fbbf24;">🏯 主城内政 · 营建中枢</h2>
-          <p style="font-size:12px; color:#9ca3af; margin-top:2px;">升级君王殿解锁 Cost 统御上限，修筑兵营提升带兵容量，营建资源所扩大每小时产能！</p>
+          <h2 class="page-title">🏯 主城内政 · 营建中枢</h2>
+          <p class="page-desc">升级君王殿解锁 Cost 统御上限，修筑兵营提升带兵容量，营建资源所扩大每小时产能！</p>
         </div>
-        <div style="font-size:12px; color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid #d97706; padding:4px 10px; border-radius:6px;" id="cityStatsBanner">
+        <div class="notice notice--gold" id="cityStatsBanner">
           部队统御上限: Cost 15 · 兵营加成: +0 兵
         </div>
       </div>
-      <div id="cityBuildingsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px;">
+      <div id="cityBuildingsGrid" class="grid-cards grid-cards--wide">
         <!-- 动态生成君王殿、兵营、军舍、征兵处、四大资源所等卡片 -->
       </div>
     </section>
@@ -141,56 +141,60 @@
       </div>
 
       <!-- 历史战役视图 -->
-      <div id="campaignsContainer" style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- ⚠️ display 由 main.js:122 直接接管（'flex'/'none'），不可迁移到类 -->
+      <div id="campaignsContainer" class="stack" style="display: flex; flex-direction: column; gap: 16px;">
         <!-- 动态生成5大经典战役卡片 -->
       </div>
 
       <!-- 演武试炼视图 -->
-      <div id="trialsContainer" style="display: none; flex-direction: column; gap: 14px;">
+      <!-- ⚠️ display 由 main.js:123 直接接管，不可迁移 -->
+      <div id="trialsContainer" class="stack" style="display: none; flex-direction: column; gap: 14px;">
         <!-- 动态生成试炼阶梯卡片 -->
       </div>
 
       <!-- 🎯 假想敌自定义沙盒演习视图 -->
-      <div id="sandboxContainer" style="display: none; flex-direction: column; gap: 16px;">
+      <!-- ⚠️ display 由 main.js:124 直接接管，不可迁移 -->
+      <div id="sandboxContainer" class="stack" style="display: none; flex-direction: column; gap: 16px;">
         <!-- 顶部导言 -->
-        <div style="background:#14171f; border:1px solid #374151; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div class="panel">
           <div>
-            <div style="font-size:15px; font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+            <div class="panel-title panel-title--lg">
               <span>🎯 假想敌自定义沙盒演武场</span>
-              <span style="font-size:10px; background:#059669; color:#fff; padding:1px 6px; border-radius:3px;">全武将·全战法自由配置</span>
+              <span class="tag tag--plain">全武将·全战法自由配置</span>
             </div>
-            <div style="font-size:12px; color:#9ca3af; margin-top:3px;">
+            <div class="panel-desc">
               自由指定敌军 3 位武将与 6 门顶配战法，设定兵种克制，以战练兵，检验我军配队破敌威力！
             </div>
           </div>
           <!-- 经典预设模板 -->
-          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-            <span style="font-size:11px; color:#9ca3af;">经典假想敌:</span>
-            <button class="upgrade-btn btn-sandbox-preset" data-preset="shuguo" style="padding:4px 8px; font-size:11px; background:#065f46;">诸葛蜀枪</button>
-            <button class="upgrade-btn btn-sandbox-preset" data-preset="taowei" style="padding:4px 8px; font-size:11px; background:#1e3a8a;">太尉真盾</button>
-            <button class="upgrade-btn btn-sandbox-preset" data-preset="dudu" style="padding:4px 8px; font-size:11px; background:#991b1b;">都督神火弓</button>
-            <button class="upgrade-btn btn-sandbox-preset" data-preset="lvbu" style="padding:4px 8px; font-size:11px; background:#854d0e;">无双三势骑</button>
+          <div class="row row--wrap" style="margin-top:var(--sp-3);">
+            <span class="filter-label">经典假想敌:</span>
+            <button class="upgrade-btn upgrade-btn--sm btn-sandbox-preset" data-preset="shuguo" style="background:#065f46;">诸葛蜀枪</button>
+            <button class="upgrade-btn upgrade-btn--sm btn-sandbox-preset" data-preset="taowei" style="background:#1e3a8a;">太尉真盾</button>
+            <button class="upgrade-btn upgrade-btn--sm btn-sandbox-preset" data-preset="dudu" style="background:#991b1b;">都督神火弓</button>
+            <button class="upgrade-btn upgrade-btn--sm btn-sandbox-preset" data-preset="lvbu" style="background:#854d0e;">无双三势骑</button>
           </div>
         </div>
 
         <!-- 阵容对垒工作台 (我方军团 VS 自定义敌军) -->
-        <div class="sandbox-battlefield-grid" style="display:grid; grid-template-columns: 1fr auto 1fr; gap:14px; align-items:stretch;">
+        <!-- ⚠️ 保留这两个类名：css 3754/3759 行的移动端规则依赖它们做单列排列 -->
+        <div class="sandbox-battlefield-grid grid-cards" style="grid-template-columns: 1fr auto 1fr; gap:var(--sp-4); align-items:stretch;">
           <!-- 我方当前出征军团展示 -->
-          <div style="background:#11141a; border:1px solid #10b981; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px;" id="sandboxPlayerTroopPreview">
+          <div class="panel" style="border-color:var(--camp-shu-border); gap:var(--sp-3); flex-direction:column;" id="sandboxPlayerTroopPreview">
             <!-- 动态渲染我方出战队伍 -->
           </div>
 
           <!-- 中间推演开战中枢 -->
-          <div class="sandbox-vs-divider" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-width:120px;">
-            <div style="font-size:32px; font-weight:900; color:#fbbf24; text-shadow:0 0 15px rgba(251,191,36,0.6);">VS</div>
-            <button class="upgrade-btn" id="btnLaunchSandboxBattle" style="background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); font-weight:800; font-size:14px; padding:12px 18px; border-radius:8px; box-shadow:0 0 16px rgba(220,38,38,0.5); cursor:pointer;">
+          <div class="sandbox-vs-divider stack" style="align-items:center; justify-content:center; gap:var(--sp-4); min-width:120px;">
+            <div style="font-size:32px; font-weight:var(--fw-black); color:var(--text-gold); text-shadow:0 0 15px rgba(251,191,36,0.6);">VS</div>
+            <button class="upgrade-btn upgrade-btn--md" id="btnLaunchSandboxBattle" style="background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); font-weight:var(--fw-bold); box-shadow:0 0 16px rgba(220,38,38,0.5);">
               ⚔️ 开启演习对决
             </button>
-            <span style="font-size:11px; color:#9ca3af; text-align:center;">8回合全真物理推演<br>沉淀详实战报</span>
+            <span class="page-desc" style="text-align:center;">8回合全真物理推演<br>沉淀详实战报</span>
           </div>
 
           <!-- 自定义敌方军团控制台 -->
-          <div style="background:#11141a; border:1px solid #ef4444; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px;" id="sandboxEnemyTroopPanel">
+          <div class="panel" style="border-color:var(--danger-border); gap:var(--sp-3); flex-direction:column;" id="sandboxEnemyTroopPanel">
             <!-- 动态渲染敌方假想敌配置与战法槽 -->
           </div>
         </div>
@@ -199,22 +203,22 @@
 
     <!-- 2. 军团编制配置 (Troops 扩增为 5 支军团) -->
     <section class="slg-tab-page" id="tabTroops">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div class="page-head">
         <div>
-          <h2 style="font-size:18px; color:#fbbf24;">🛡️ 出征主力军团配置 (共5支军团)</h2>
-          <p style="font-size:12px; color:#9ca3af; margin-top:2px;">支持组建5支主力军团，自由选拔3位名将上阵，任意切换兵种出战！</p>
+          <h2 class="page-title">🛡️ 出征主力军团配置 (共5支军团)</h2>
+          <p class="page-desc">支持组建5支主力军团，自由选拔3位名将上阵，任意切换兵种出战！</p>
         </div>
-        <div style="font-size:12px; color:#34d399; background:rgba(52,211,153,0.1); border:1px solid #059669; padding:4px 10px; border-radius:6px;">
+        <div class="notice notice--ok">
           统御限制已解禁 (Cost 上限 21) · 5 支军团随心共存！
         </div>
       </div>
 
       <!-- 5 支军团切换导航 Tabs -->
-      <div id="troopTabsContainer" style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+      <div id="troopTabsContainer" class="row row--wrap" style="gap:var(--sp-3); margin-bottom:var(--sp-4);">
         <!-- 动态渲染 5 支军团切换按钮 -->
       </div>
 
-      <div id="troopsContainer" style="display: flex; flex-direction: column; gap: 20px;">
+      <div id="troopsContainer" class="stack" style="gap: 20px;">
         <!-- 动态渲染当前选中的主副将槽位与兵种切换 -->
       </div>
     </section>
@@ -222,8 +226,8 @@
     <!-- 3. 武将图鉴与战法研习 (Generals & Tactics) -->
     <section class="slg-tab-page" id="tabGenerals">
       <!-- 二级导航栏 -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #374151; padding-bottom:10px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:8px;">
+      <div class="page-head page-head--bordered">
+        <div class="row row--wrap" style="gap:var(--sp-3);">
           <button class="sub-nav-tab-btn active" id="btnSubTabGenerals">
             🎴 武将
           </button>
@@ -231,94 +235,96 @@
             📚 战法
           </button>
         </div>
-        <div id="generalsActionBar" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <!-- ⚠️ display 由 main.js:165/175 直接接管（'flex'/'none'），不可迁移 -->
+        <div id="generalsActionBar" class="row row--wrap" style="display:flex; gap:var(--sp-4); align-items:center;">
           <!-- 阵营筛选 -->
-          <div style="display:flex; gap:4px; align-items:center; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:6px; border:1px solid #374151;">
-            <span style="font-size:11px; color:#9ca3af; margin-right:2px;">阵营:</span>
-            <button class="nav-tab-btn active btn-filter-camp" data-camp="all" style="padding:2px 8px; font-size:11px;">全部</button>
-            <button class="nav-tab-btn btn-filter-camp" data-camp="wei" style="padding:2px 8px; font-size:11px;">魏</button>
-            <button class="nav-tab-btn btn-filter-camp" data-camp="shu" style="padding:2px 8px; font-size:11px;">蜀</button>
-            <button class="nav-tab-btn btn-filter-camp" data-camp="wu" style="padding:2px 8px; font-size:11px;">吴</button>
-            <button class="nav-tab-btn btn-filter-camp" data-camp="qun" style="padding:2px 8px; font-size:11px;">群</button>
+          <div class="filter-group">
+            <span class="filter-label">阵营:</span>
+            <button class="nav-tab-btn active btn-filter-camp filter-btn" data-camp="all">全部</button>
+            <button class="nav-tab-btn btn-filter-camp filter-btn" data-camp="wei">魏</button>
+            <button class="nav-tab-btn btn-filter-camp filter-btn" data-camp="shu">蜀</button>
+            <button class="nav-tab-btn btn-filter-camp filter-btn" data-camp="wu">吴</button>
+            <button class="nav-tab-btn btn-filter-camp filter-btn" data-camp="qun">群</button>
           </div>
 
           <!-- 星级筛选 -->
-          <div style="display:flex; gap:4px; align-items:center; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:6px; border:1px solid #374151;">
-            <span style="font-size:11px; color:#9ca3af; margin-right:2px;">品质:</span>
-            <button class="nav-tab-btn active btn-filter-star" data-star="all" style="padding:2px 8px; font-size:11px;">全部</button>
-            <button class="nav-tab-btn btn-filter-star" data-star="5" style="padding:2px 8px; font-size:11px; color:#fbbf24;">5★名将</button>
-            <button class="nav-tab-btn btn-filter-star" data-star="4" style="padding:2px 8px; font-size:11px; color:#c084fc;">4★良将</button>
-            <button class="nav-tab-btn btn-filter-star" data-star="3" style="padding:2px 8px; font-size:11px; color:#9ca3af;">3★偏将</button>
+          <div class="filter-group">
+            <span class="filter-label">品质:</span>
+            <button class="nav-tab-btn active btn-filter-star filter-btn" data-star="all">全部</button>
+            <button class="nav-tab-btn btn-filter-star filter-btn hl-gold" data-star="5">5★名将</button>
+            <button class="nav-tab-btn btn-filter-star filter-btn tone-purple" data-star="4">4★良将</button>
+            <button class="nav-tab-btn btn-filter-star filter-btn" data-star="3">3★偏将</button>
           </div>
 
           <!-- 快捷操作按钮 -->
-          <button class="upgrade-btn" id="btnQuickAutoPromote" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding:4px 10px; font-size:11px;">
+          <button class="upgrade-btn upgrade-btn--sm" id="btnQuickAutoPromote" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
             🌟 一键进阶
           </button>
-          <button class="upgrade-btn" id="btnQuickSellThreeStars" style="background:#4b5563; padding:4px 10px; font-size:11px;" title="一键分解所有未上阵的 3 星偏将 (300铜币/位)">
-            🪙 解甲3星
+          <button class="upgrade-btn upgrade-btn--sm" id="btnQuickSellThreeStars" style="background:#4b5563;" title="消耗所有未上阵的 3★ 裨将，转化为战法研习铜币 (300铜币/张)">
+            🪙 转化3星
           </button>
-          <button class="upgrade-btn" id="btnQuickSellFourStars" style="background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding:4px 10px; font-size:11px;" title="一键分解所有未上阵的 4 星良将 (1,000铜币/位)">
-            🪙 解甲4星
+          <button class="upgrade-btn upgrade-btn--sm" id="btnQuickSellFourStars" style="background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);" title="消耗所有未上阵的 4★ 良将，转化为战法研习铜币 (1,000铜币/张)">
+            🪙 转化4星
           </button>
         </div>
       </div>
 
       <!-- 子视图 1：麾下名将网格 -->
       <div id="viewOwnedGenerals">
-        <div style="display: flex; gap: 16px; flex-wrap: wrap;" id="ownedGeneralsGrid">
+        <div class="grid-cards grid-cards--tile" id="ownedGeneralsGrid" style="gap:var(--sp-5);">
           <!-- 动态渲染武将卡牌 -->
         </div>
       </div>
 
       <!-- 子视图 2：战法研习阁网格 -->
+      <!-- ⚠️ display 由 main.js:164/174 直接接管，不可迁移 -->
       <div id="viewTacticsUpgrade" style="display: none;">
-        <div style="background: rgba(217, 119, 6, 0.1); border: 1px solid rgba(217, 119, 6, 0.3); border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div class="panel panel--gold">
           <div>
-            <div style="font-weight: bold; color: #fbbf24; font-size: 14px;">🪙 研习战法需要消耗大量铜币</div>
-            <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">分解闲置武将（解甲）或通关历史战役可赚取海量铜币，将核心战法升至 Lv.10 可大幅提高伤害率与发动几率！</div>
+            <div class="panel-title">🪙 战法研习与等级强化</div>
+            <div class="panel-desc">消耗闲置武将转化或平定中原战役可获取大量铜币，将核心战法研习至 Lv.10 满级可大幅提高伤害率与发动几率！</div>
           </div>
-          <div style="font-size: 14px; color: #fde047; font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 12px; border-radius: 6px; border: 1px solid #4b5563;">
-            当前可用铜币: <span id="tacticViewCopperVal" style="color: #6ee7b7; font-weight: 900;">0</span>
+          <div class="notice" style="color: var(--res-grain); font-weight:var(--fw-bold); background:rgba(0,0,0,0.4); border-color:var(--border-dark); margin-top:var(--sp-3);">
+            当前可用铜币: <span id="tacticViewCopperVal" class="num-strong" style="color: var(--ok-text);">0</span>
           </div>
         </div>
         <!-- 战法研习多维筛选工具条 (品阶、强化等级、机制类型、伤害性质) -->
-        <div id="tacticsFilterBar" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid #374151;">
+        <div id="tacticsFilterBar" class="filter-bar">
           <!-- 1. 战法品阶筛选 -->
-          <div style="display:flex; gap:4px; align-items:center;">
-            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">品阶:</span>
-            <button class="nav-tab-btn active btn-filter-tac-quality" data-tac-quality="all" style="padding:2px 8px; font-size:11px;">全部</button>
-            <button class="nav-tab-btn btn-filter-tac-quality" data-tac-quality="S" style="padding:2px 8px; font-size:11px; color:#fbbf24; border:1px solid rgba(251,191,36,0.3);">🌟 S级名将战法</button>
-            <button class="nav-tab-btn btn-filter-tac-quality" data-tac-quality="A" style="padding:2px 8px; font-size:11px; color:#c084fc; border:1px solid rgba(192,132,252,0.3);">💜 A级良将战法</button>
+          <div class="row row--wrap" style="gap:var(--sp-1);">
+            <span class="filter-label" style="font-weight:var(--fw-bold);">品阶:</span>
+            <button class="nav-tab-btn active btn-filter-tac-quality filter-btn" data-tac-quality="all">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-quality filter-btn tone-gold-dim" data-tac-quality="S">🌟 S级名将战法</button>
+            <button class="nav-tab-btn btn-filter-tac-quality filter-btn tone-purple-dim" data-tac-quality="A">💜 A级良将战法</button>
           </div>
 
           <!-- 2. 研习强化等级筛选 -->
-          <div style="display:flex; gap:4px; align-items:center;">
-            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">强化:</span>
-            <button class="nav-tab-btn active btn-filter-tac-level" data-tac-level="all" style="padding:2px 8px; font-size:11px;">全部</button>
-            <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="max" style="padding:2px 8px; font-size:11px; color:#fbbf24;">Lv.10满级</button>
-            <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="learning" style="padding:2px 8px; font-size:11px; color:#38bdf8;">研习中(Lv.1~9)</button>
-            <button class="nav-tab-btn btn-filter-tac-level" data-tac-level="locked" style="padding:2px 8px; font-size:11px; color:#9ca3af;">🔒未领悟</button>
+          <div class="row row--wrap" style="gap:var(--sp-1);">
+            <span class="filter-label" style="font-weight:var(--fw-bold);">强化:</span>
+            <button class="nav-tab-btn active btn-filter-tac-level filter-btn" data-tac-level="all">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-level filter-btn hl-gold" data-tac-level="max">Lv.10满级</button>
+            <button class="nav-tab-btn btn-filter-tac-level filter-btn hl-info" data-tac-level="learning">研习中(Lv.1~9)</button>
+            <button class="nav-tab-btn btn-filter-tac-level filter-btn" data-tac-level="locked">🔒未领悟</button>
           </div>
 
-          <!-- 2. 战法类型筛选 -->
-          <div style="display:flex; gap:4px; align-items:center;">
-            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">机制类型:</span>
-            <button class="nav-tab-btn active btn-filter-tac-type" data-tac-type="all" style="padding:2px 8px; font-size:11px;">全部</button>
-            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="command" style="padding:2px 8px; font-size:11px; color:#3b82f6;">指挥</button>
-            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="passive" style="padding:2px 8px; font-size:11px; color:#10b981;">被动</button>
-            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="active" style="padding:2px 8px; font-size:11px; color:#ef4444;">主动</button>
-            <button class="nav-tab-btn btn-filter-tac-type" data-tac-type="assault" style="padding:2px 8px; font-size:11px; color:#f59e0b;">突击</button>
+          <!-- 3. 战法类型筛选 -->
+          <div class="row row--wrap" style="gap:var(--sp-1);">
+            <span class="filter-label" style="font-weight:var(--fw-bold);">机制类型:</span>
+            <button class="nav-tab-btn active btn-filter-tac-type filter-btn" data-tac-type="all">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-type filter-btn tone-blue-strong" data-tac-type="command">指挥</button>
+            <button class="nav-tab-btn btn-filter-tac-type filter-btn tone-green" data-tac-type="passive">被动</button>
+            <button class="nav-tab-btn btn-filter-tac-type filter-btn tone-red-strong" data-tac-type="active">主动</button>
+            <button class="nav-tab-btn btn-filter-tac-type filter-btn tone-amber" data-tac-type="assault">突击</button>
           </div>
 
-          <!-- 3. 伤害/作用性质筛选 -->
-          <div style="display:flex; gap:4px; align-items:center;">
-            <span style="font-size:11px; color:#9ca3af; margin-right:2px; font-weight:bold;">伤害性质:</span>
-            <button class="nav-tab-btn active btn-filter-tac-damage" data-tac-damage="all" style="padding:2px 8px; font-size:11px;">全部</button>
-            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="physical" style="padding:2px 8px; font-size:11px; color:#f87171;">⚔️兵刃伤害</button>
-            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="tactical" style="padding:2px 8px; font-size:11px; color:#60a5fa;">🔮谋略伤害</button>
-            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="heal" style="padding:2px 8px; font-size:11px; color:#34d399;">🩹急救治疗</button>
-            <button class="nav-tab-btn btn-filter-tac-damage" data-tac-damage="buff" style="padding:2px 8px; font-size:11px; color:#e879f9;">🛡️增益/减伤/控制</button>
+          <!-- 4. 伤害/作用性质筛选 -->
+          <div class="row row--wrap" style="gap:var(--sp-1);">
+            <span class="filter-label" style="font-weight:var(--fw-bold);">伤害性质:</span>
+            <button class="nav-tab-btn active btn-filter-tac-damage filter-btn" data-tac-damage="all">全部</button>
+            <button class="nav-tab-btn btn-filter-tac-damage filter-btn tone-red" data-tac-damage="physical">⚔️兵刃伤害</button>
+            <button class="nav-tab-btn btn-filter-tac-damage filter-btn tone-blue" data-tac-damage="tactical">🔮谋略伤害</button>
+            <button class="nav-tab-btn btn-filter-tac-damage filter-btn tone-green-bright" data-tac-damage="heal">🩹急救治疗</button>
+            <button class="nav-tab-btn btn-filter-tac-damage filter-btn tone-pink" data-tac-damage="buff">🛡️增益/减伤/控制</button>
           </div>
         </div>
 
@@ -331,45 +337,45 @@
     <!-- 4. 点将招募卡池 (Gacha) -->
     <section class="slg-tab-page" id="tabGacha">
       <div class="gacha-page">
-        <div style="text-align: center;">
-          <h2 style="font-size:22px; color:#fbbf24; margin-bottom:4px;">🏮 拜将台 · 英雄招募</h2>
-          <p style="font-size:12px; color:#9ca3af;">天下大乱，英雄辈出，起用良将辅佐社稷！</p>
+        <div class="page-head page-head--center" style="margin-bottom:0;">
+          <h2 class="page-title page-title--hero">🏮 拜将台 · 英雄招募</h2>
+          <p class="page-desc">天下大乱，英雄辈出，起用良将辅佐社稷！</p>
         </div>
 
         <!-- 💰 模拟充值金铢钱庄控制台 -->
-        <div style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.2) 0%, rgba(180, 83, 9, 0.08) 100%); border: 1px solid #d97706; border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 704px; box-shadow: 0 0 15px rgba(217,119,6,0.25); flex-wrap: wrap; gap: 10px;">
+        <div class="panel panel--gold" style="width: 100%; max-width: 704px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--sp-3);">
           <div>
-            <div style="font-weight: bold; color: #fbbf24; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+            <div class="panel-title">
               <span>🏦 金铢钱庄 · 模拟充值</span>
-              <span style="font-size: 11px; background: #dc2626; color: #fff; border-radius: 4px; padding: 1px 6px; font-weight: bold;">🔥 始终双倍到账</span>
+              <span class="tag tag--solid">🔥 始终双倍到账</span>
             </div>
-            <div style="font-size: 12px; color: #d1d5db; margin-top: 3px;">
-              金铢余额: <b id="gachaGoldBalanceVal" style="color:#fbbf24; font-size:13px;">0</b> 金铢 · 累计已充值: <b id="gachaRechargeMoneyVal" style="color:#34d399;">¥0</b>
+            <div class="panel-desc" style="color:var(--text-subtle);">
+              金铢余额: <b class="hl-gold" id="gachaGoldBalanceVal" style="font-size:var(--fs-md);">0</b> 金铢 · 累计已充值: <b class="hl-ok" id="gachaRechargeMoneyVal">¥0</b>
             </div>
           </div>
-          <button class="upgrade-btn" id="btnOpenRechargeModal" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); padding: 6px 16px; font-size: 12px; white-space: nowrap; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <button class="upgrade-btn upgrade-btn--md" id="btnOpenRechargeModal" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); white-space: nowrap; font-weight: bold; display: flex; align-items: center; gap: 6px;">
             <span>💰</span>
             <span>模拟充值金铢</span>
           </button>
         </div>
 
         <!-- 📊 招募历程与三战原版概率数据看板 -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; width: 100%; max-width: 704px;">
-          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
-            <div style="font-size:11px; color:#9ca3af;">📜 历史累计招募</div>
-            <div style="font-size:18px; font-weight:800; color:#fbbf24; margin-top:2px;" id="gachaTotalCount">0 <span style="font-size:11px; color:#9ca3af;">次</span></div>
+        <div class="grid-cards grid-cards--narrow" style="width: 100%; max-width: 704px;">
+          <div class="stat-tile">
+            <div class="stat-tile-label">📜 历史累计招募</div>
+            <div class="stat-tile-value" id="gachaTotalCount">0 <span class="stat-tile-unit">次</span></div>
           </div>
-          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
-            <div style="font-size:11px; color:#9ca3af;">⭐ 已获 5 星名将</div>
-            <div style="font-size:18px; font-weight:800; color:#f59e0b; margin-top:2px;" id="gachaTotalFiveCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
+          <div class="stat-tile">
+            <div class="stat-tile-label">⭐ 已获 5 星名将</div>
+            <div class="stat-tile-value tone-amber" id="gachaTotalFiveCount">0 <span class="stat-tile-unit">位</span></div>
           </div>
-          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
-            <div style="font-size:11px; color:#9ca3af;">👑 核心名将产出</div>
-            <div style="font-size:18px; font-weight:800; color:#ef4444; margin-top:2px;" id="gachaTotalCoreCount">0 <span style="font-size:11px; color:#9ca3af;">位</span></div>
+          <div class="stat-tile">
+            <div class="stat-tile-label">👑 核心名将产出</div>
+            <div class="stat-tile-value tone-red-strong" id="gachaTotalCoreCount">0 <span class="stat-tile-unit">位</span></div>
           </div>
-          <div style="background:#161922; border:1px solid #2d3340; border-radius:8px; padding:10px; text-align:center;">
-            <div style="font-size:11px; color:#9ca3af;">🎯 5星保底追踪</div>
-            <div style="font-size:18px; font-weight:800; color:#34d399; margin-top:2px;"><span id="gachaPityCount">0</span> <span style="font-size:11px; color:#9ca3af;">/ 30 抽</span></div>
+          <div class="stat-tile">
+            <div class="stat-tile-label">🎯 5星保底追踪</div>
+            <div class="stat-tile-value tone-green-bright"><span id="gachaPityCount">0</span> <span class="stat-tile-unit">/ 30 抽</span></div>
           </div>
         </div>
 
@@ -401,20 +407,40 @@
           </div>
         </div>
 
+        <!-- ♻️ 三战原版：招募自动转化铜币可选开关栏 (3★ / 4★) -->
+        <div class="gacha-autoconvert-bar" id="gachaAutoConvertBar">
+          <div class="gacha-autoconvert-title">
+            <span>♻️ 招募自动转化设置</span>
+            <span class="gacha-autoconvert-sub">勾选后，招募出的对应星级武将将直接转化为战法研习铜币</span>
+          </div>
+          <div class="gacha-autoconvert-options">
+            <label class="autoconvert-check-label star-3">
+              <input type="checkbox" id="chkAutoConvert3Star" checked />
+              <span class="check-box-ui"></span>
+              <span class="check-text">自动转化 <b>3★ 裨将</b> <small>(300铜币/张)</small></span>
+            </label>
+            <label class="autoconvert-check-label star-4">
+              <input type="checkbox" id="chkAutoConvert4Star" />
+              <span class="check-box-ui"></span>
+              <span class="check-text">自动转化 <b>4★ 良将</b> <small>(1,000铜币/张)</small></span>
+            </label>
+          </div>
+        </div>
+
         <div class="gacha-banners">
           <!-- 名将卡池 (金铢) -->
           <div class="gacha-banner">
-            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-              <h3 style="margin:0; font-size:18px;">👑 名将招募 · 群英逐鹿</h3>
-              <button class="upgrade-btn" id="btnPreviewFamousPool" style="background:rgba(251,191,36,0.15); border:1px solid #fbbf24; color:#fbbf24; font-size:11px; padding:3px 10px; border-radius:6px; font-weight:bold; cursor:pointer;">
+            <div class="row" style="justify-content:space-between; width:100%;">
+              <h3 style="margin:0; font-size:var(--fs-xl);">👑 名将招募 · 群英逐鹿</h3>
+              <button class="upgrade-btn upgrade-btn--sm" id="btnPreviewFamousPool" style="background:rgba(251,191,36,0.15); border:1px solid var(--border-gold); color:var(--text-gold);">
                 🔍 预览武将
               </button>
             </div>
-            <div class="pool-rates" style="line-height:1.6; margin-top:8px;">
+            <div class="pool-rates" style="line-height:1.6; margin-top:var(--sp-3);">
               • <b>综合概率</b>：5★名将 <b>5.6%</b> · 4★良将 <b>36.0%</b> · 3★裨将 <b>58.4%</b><br>
               • <b>核心卡机制</b>：5星出货中，大核心名将（如诸葛亮、刘备、曹操、孙权、吕布等）权重为 12%，普通5星权重为 88%！<br>
               • <b>保底承诺</b>：连续 29 抽未出 5 星，第 30 抽<b>必出 5 星名将</b>；每 5 抽必出紫卡或橙卡！<br>
-              • <b>♻️ 极速减负</b>：招募出的 3★ 武将<b>自动转化为 300 铜币/张</b>；50/100连抽仅展示紫卡与橙卡！
+              • <b>♻️ 自由转化</b>：上方可自由勾选<b>自动转化 3★ (300铜币) / 4★ (1,000铜币)</b>；50/100连抽仅展示紫卡与橙卡！
             </div>
             <div class="gacha-btn-group">
               <button class="gacha-btn" id="btnGachaFamousSingle">招募 1 次<br><small>198 金铢</small></button>
@@ -430,7 +456,7 @@
           <!-- 良将卡池 (铜币) -->
           <div class="gacha-banner copper">
             <h3>🪙 良将招募 · 招贤纳士</h3>
-            <div class="pool-rates">招募随军武将 (3星50.0% · 2星49.5% · 4星0.5%)<br>3★ 卡招募时自动解甲转化为 300 铜币/张，4★ 良将直接入库！</div>
+            <div class="pool-rates">招募随军武将 (3星50.0% · 2星49.5% · 4星0.5%)<br>支持按上方勾选设置自动将 3★ / 4★ 武将转化为铜币！</div>
             <div class="gacha-btn-group">
               <button class="gacha-btn" id="btnGachaCopperSingle" style="background:#475569;">招募 1 次<br><small>300 铜币</small></button>
               <button class="gacha-btn" id="btnGachaCopperTen" style="background:#334155;">招募 10 次<br><small>2700 铜币</small></button>
@@ -446,11 +472,11 @@
 
     <!-- 5. 战报全书 (Reports) -->
     <section class="slg-tab-page" id="tabReports">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h2 style="font-size:18px; color:#fbbf24;">📜 战报推演全书</h2>
-        <button class="upgrade-btn" id="btnClearReports" style="background:#4b5563; padding:4px 10px;">清空历史</button>
+      <div class="page-head">
+        <h2 class="page-title">📜 战报推演全书</h2>
+        <button class="upgrade-btn upgrade-btn--sm" id="btnClearReports" style="background:#4b5563;">清空历史</button>
       </div>
-      <div id="battleReportsList" style="display: flex; flex-direction: column; gap: 12px;">
+      <div id="battleReportsList" class="stack" style="gap: var(--sp-4);">
         <!-- 战报卡片列表 -->
       </div>
     </section>
@@ -490,13 +516,14 @@
   </nav>
 
   <!-- 🗺️ 资源领地开拓 / 1~10级难度选择 / 出征扫荡全息 Modal -->
+  <!-- ⚠️ 全部弹窗的 mask display 由 main.js 接管（'flex'/'none'），不可迁移到类 -->
   <div class="modal-mask" id="tileActionModal" style="display: none;">
-    <div class="modal-content" style="max-width: 680px; width: 92%;">
+    <div class="modal-content modal-content--680">
       <div class="modal-header">
         <div class="modal-title" id="tileModalTitle">🗺️ 战略领地开拓 · 难度选择</div>
         <button class="modal-close-btn" id="btnTileModalClose">✕</button>
       </div>
-      <div class="modal-body" id="tileModalBody" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="modal-body stack" id="tileModalBody" style="gap:var(--sp-4);">
         <!-- 动态填充四大资源领地 1~10 级守军情报、难度梯队与出征按钮 -->
       </div>
     </div>
@@ -517,7 +544,7 @@
 
   <!-- ✨ 抽卡开箱展示浮层 -->
   <div class="gacha-showcase-mask" id="gachaShowcase" style="display: none;">
-    <button class="modal-close-btn" id="btnGachaShowcaseClose" style="position: fixed; top: 16px; right: 20px; font-size: 22px; color: #fbbf24; z-index: 320; cursor: pointer; width: 38px; height: 38px; background: rgba(0,0,0,0.6); border: 1px solid rgba(251,191,36,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" title="收归麾下并关闭">✕</button>
+    <button class="modal-close-btn showcase-close-btn" id="btnGachaShowcaseClose" title="收归麾下并关闭">✕</button>
     <div class="gacha-title-banner" id="gachaShowcaseTitle">🎉 英雄集结 · 恭获名将</div>
     <div class="gacha-summary-bar" id="gachaSummaryBar" style="display: none;"></div>
     <div class="gacha-cards-display" id="gachaCardsContainer"></div>
@@ -529,12 +556,12 @@
 
   <!-- 🎯 沙盒演习 · 全图鉴敌将/战法选择全息 Modal -->
   <div class="modal-mask" id="sandboxCustomModal" style="display: none;">
-    <div class="modal-content" style="max-width: 650px; width: 92%;">
+    <div class="modal-content modal-content--650">
       <div class="modal-header">
         <div class="modal-title" id="sandboxModalTitle">🎯 选择假想敌配置</div>
         <button class="modal-close-btn" id="btnSandboxModalClose">✕</button>
       </div>
-      <div class="modal-body" id="sandboxModalBody" style="max-height: 70vh; overflow-y: auto;">
+      <div class="modal-body modal-body--scroll" id="sandboxModalBody">
         <!-- 动态填充可选全武将列表或全战法列表 -->
       </div>
     </div>
@@ -542,46 +569,46 @@
 
   <!-- 👑 名将卡池武将全景预览全息 Modal -->
   <div class="modal-mask" id="gachaPoolPreviewModal" style="display: none;">
-    <div class="modal-content" style="max-width: 900px; width: 95%; max-height: 90vh;">
-      <div class="modal-header" style="flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #374151;">
+    <div class="modal-content modal-content--900">
+      <div class="modal-header" style="flex-wrap: wrap; gap: var(--sp-3);">
         <div>
-          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <div class="modal-title modal-title-row">
             <span>👑 名将招募 · 武将全景池预览</span>
-            <span id="previewPoolTotalBadge" style="font-size: 11px; background: #d97706; color: #fff; padding: 1px 8px; border-radius: 4px; font-weight: normal;">共 60 位名将</span>
+            <span id="previewPoolTotalBadge" class="tag tag--solid" style="font-weight:normal;">共 60 位名将</span>
           </div>
-          <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">
+          <div class="modal-subtitle">
             5★名将出率 5.6% · 4★良将出率 36.0% · 30 抽必出 5★ 大保底
           </div>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="row" style="gap: var(--sp-3);">
           <button class="modal-close-btn" id="btnGachaPoolPreviewClose">✕</button>
         </div>
       </div>
 
       <!-- 快捷筛选控制栏 -->
-      <div style="padding: 10px 20px; background: rgba(0,0,0,0.3); border-bottom: 1px solid #2d3340; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div class="modal-toolbar">
         <!-- 阵营筛选 -->
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <span style="font-size: 12px; color: #9ca3af;">阵营:</span>
-          <button class="nav-tab-btn active btn-pool-filter-camp" data-camp="all" style="padding: 2px 10px; font-size: 11px;">全部</button>
-          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="wei" style="padding: 2px 10px; font-size: 11px; color: #60a5fa;">魏国</button>
-          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="shu" style="padding: 2px 10px; font-size: 11px; color: #34d399;">蜀汉</button>
-          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="wu" style="padding: 2px 10px; font-size: 11px; color: #f87171;">东吴</button>
-          <button class="nav-tab-btn btn-pool-filter-camp" data-camp="qun" style="padding: 2px 10px; font-size: 11px; color: #c084fc;">群雄</button>
+        <div class="row row--wrap" style="gap: var(--sp-2);">
+          <span class="filter-label" style="font-size:var(--fs-sm);">阵营:</span>
+          <button class="nav-tab-btn active btn-pool-filter-camp filter-btn" data-camp="all" style="padding:var(--sp-1) var(--sp-4);">全部</button>
+          <button class="nav-tab-btn btn-pool-filter-camp filter-btn" style="padding:var(--sp-1) var(--sp-4); color:#60a5fa;" data-camp="wei">魏国</button>
+          <button class="nav-tab-btn btn-pool-filter-camp filter-btn" style="padding:var(--sp-1) var(--sp-4); color:#34d399;" data-camp="shu">蜀汉</button>
+          <button class="nav-tab-btn btn-pool-filter-camp filter-btn" style="padding:var(--sp-1) var(--sp-4); color:#f87171;" data-camp="wu">东吴</button>
+          <button class="nav-tab-btn btn-pool-filter-camp filter-btn" style="padding:var(--sp-1) var(--sp-4); color:#c084fc;" data-camp="qun">群雄</button>
         </div>
 
         <!-- 品质筛选 -->
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <span style="font-size: 12px; color: #9ca3af;">品质:</span>
-          <button class="nav-tab-btn active btn-pool-filter-star" data-star="all" style="padding: 2px 10px; font-size: 11px;">全部</button>
-          <button class="nav-tab-btn btn-pool-filter-star" data-star="5" style="padding: 2px 10px; font-size: 11px; color: #fbbf24;">5★名将</button>
-          <button class="nav-tab-btn btn-pool-filter-star" data-star="4" style="padding: 2px 10px; font-size: 11px; color: #c084fc;">4★良将</button>
+        <div class="row row--wrap" style="gap: var(--sp-2);">
+          <span class="filter-label" style="font-size:var(--fs-sm);">品质:</span>
+          <button class="nav-tab-btn active btn-pool-filter-star filter-btn" data-star="all" style="padding:var(--sp-1) var(--sp-4);">全部</button>
+          <button class="nav-tab-btn btn-pool-filter-star filter-btn hl-gold" data-star="5" style="padding:var(--sp-1) var(--sp-4);">5★名将</button>
+          <button class="nav-tab-btn btn-pool-filter-star filter-btn" style="padding:var(--sp-1) var(--sp-4); color:#c084fc;" data-star="4">4★良将</button>
         </div>
       </div>
 
       <!-- 动态渲染卡牌展示区 -->
-      <div class="modal-body" id="gachaPoolPreviewBody" style="max-height: 65vh; overflow-y: auto; padding: 16px 20px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;" id="gachaPoolPreviewGrid">
+      <div class="modal-body" id="gachaPoolPreviewBody" style="max-height: 65vh; overflow-y: auto; padding: var(--sp-5);">
+        <div class="grid-cards grid-cards--tile" id="gachaPoolPreviewGrid" style="gap:var(--sp-4);">
           <!-- 动态渲染武将预览卡片 -->
         </div>
       </div>
@@ -590,54 +617,54 @@
 
   <!-- 🏦 金铢钱庄 · 模拟充值全息 Modal (始终双倍特权) -->
   <div class="modal-mask" id="rechargeModal" style="display: none;">
-    <div class="modal-content" style="max-width: 780px; width: 95%; max-height: 90vh;">
-      <div class="modal-header" style="border-bottom: 1px solid #374151;">
-        <div style="display: flex; align-items: center; gap: 8px;">
+    <div class="modal-content modal-content--780">
+      <div class="modal-header">
+        <div class="row" style="gap: var(--sp-3);">
           <span style="font-size: 20px;">🏦</span>
           <div class="modal-title">金铢钱庄 · 模拟充值大典</div>
-          <span style="font-size: 11px; background: #dc2626; color: #fff; padding: 1px 8px; border-radius: 4px; font-weight: bold;">🔥 始终双倍金珠</span>
+          <span class="tag tag--solid">🔥 始终双倍金珠</span>
         </div>
         <button class="modal-close-btn" id="btnRechargeModalClose">✕</button>
       </div>
 
-      <div class="modal-body" style="padding: 16px 20px; max-height: 75vh; overflow-y: auto;">
+      <div class="modal-body" style="padding: var(--sp-5); max-height: 75vh; overflow-y: auto;">
         <!-- 统计看板 -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
-          <div style="background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; padding: 10px 14px; text-align: center;">
-            <div style="font-size: 11px; color: #9ca3af;">💳 累计模拟充值金额</div>
-            <div style="font-size: 20px; font-weight: 800; color: #34d399; margin-top: 3px;" id="modalTotalRechargeMoney">¥0</div>
+        <div class="grid-cards grid-cards--tile" style="gap:var(--sp-4); margin-bottom: var(--sp-5);">
+          <div class="stat-tile stat-tile--sunken">
+            <div class="stat-tile-label">💳 累计模拟充值金额</div>
+            <div class="stat-tile-value stat-tile-value--hero tone-green-bright" id="modalTotalRechargeMoney">¥0</div>
           </div>
-          <div style="background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; padding: 10px 14px; text-align: center;">
-            <div style="font-size: 11px; color: #9ca3af;">🎁 累计充值获得金珠</div>
-            <div style="font-size: 20px; font-weight: 800; color: #f59e0b; margin-top: 3px;" id="modalTotalRechargeGold">0</div>
+          <div class="stat-tile stat-tile--sunken">
+            <div class="stat-tile-label">🎁 累计充值获得金珠</div>
+            <div class="stat-tile-value stat-tile-value--hero tone-amber" id="modalTotalRechargeGold">0</div>
           </div>
-          <div style="background: rgba(0,0,0,0.3); border: 1px solid #374151; border-radius: 8px; padding: 10px 14px; text-align: center;">
-            <div style="font-size: 11px; color: #9ca3af;">👑 当前可用金珠库存</div>
-            <div style="font-size: 20px; font-weight: 800; color: #fbbf24; margin-top: 3px;" id="modalCurrentGoldBalance">0</div>
+          <div class="stat-tile stat-tile--sunken">
+            <div class="stat-tile-label">👑 当前可用金珠库存</div>
+            <div class="stat-tile-value stat-tile-value--hero" id="modalCurrentGoldBalance">0</div>
           </div>
         </div>
 
         <!-- 始终双倍醒目标签 -->
-        <div style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(185, 28, 28, 0.05) 100%); border: 1px solid #dc2626; border-radius: 8px; padding: 8px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-          <div style="font-size: 12px; color: #fca5a5; display: flex; align-items: center; gap: 6px;">
+        <div class="panel panel--danger" style="padding:var(--sp-3) var(--sp-5); margin-bottom: var(--sp-5); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--sp-2);">
+          <div style="font-size:var(--fs-sm); color:var(--danger-text); display:flex; align-items:center; gap:var(--sp-2);">
             <span>⚡</span>
             <span><b>永久特权保障</b>：钱庄所有充值档位<b>始终保持 100% 双倍到账</b>，买多少送多少！纯前端绿色模拟，不产生任何真实扣款。</span>
           </div>
         </div>
 
         <!-- 充值档位卡片网格 -->
-        <div class="recharge-tier-grid" id="rechargeTiersContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px;">
+        <div class="recharge-tier-grid" id="rechargeTiersContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-5);">
           <!-- 动态渲染 6 大经典充值档位卡片 -->
         </div>
 
         <!-- 历史充值流水明细折叠区 -->
-        <div style="background: rgba(0,0,0,0.25); border: 1px solid #2d3340; border-radius: 8px; padding: 12px 16px;">
-          <div style="font-size: 12px; font-weight: bold; color: #9ca3af; margin-bottom: 8px; display: flex; justify-content: space-between;">
+        <div class="panel panel--sunken">
+          <div style="font-size:var(--fs-sm); font-weight:var(--fw-bold); color:var(--text-muted); margin-bottom:var(--sp-3); display:flex; justify-content:space-between;">
             <span>📜 最近充值明细</span>
-            <span style="font-size: 11px; color: #6b7280;" id="rechargeHistoryCount">共 0 笔记录</span>
+            <span style="color:var(--text-hint);" id="rechargeHistoryCount">共 0 笔记录</span>
           </div>
-          <div id="rechargeHistoryList" style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; max-height: 120px; overflow-y: auto;">
-            <div style="color: #6b7280; text-align: center; padding: 8px;">暂无充值记录，点击上方档位即可模拟充值</div>
+          <div id="rechargeHistoryList" class="stack" style="gap:var(--sp-2); font-size:var(--fs-xs); max-height:120px; overflow-y:auto;">
+            <div class="text-center" style="color:var(--text-hint); padding:var(--sp-3);">暂无充值记录，点击上方档位即可模拟充值</div>
           </div>
         </div>
       </div>
