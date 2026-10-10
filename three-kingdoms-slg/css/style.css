@@ -311,7 +311,9 @@ button:disabled {
 body {
   background-color: var(--bg-dark);
   color: var(--text-light);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -5014,6 +5016,7 @@ body {
   font-weight: var(--fw-bold);
   color: var(--text-gold);
   line-height: var(--lh-tight);
+  margin: 0;
 }
 .page-title--hero {
   font-size: var(--fs-2xl);
@@ -5021,10 +5024,11 @@ body {
 
 /* 标题下的说明文字 */
 .page-desc {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-top: var(--sp-1);
-  line-height: var(--lh-normal);
+  font-size: var(--fs-base);
+  color: var(--text-subtle);
+  margin-top: var(--sp-2);
+  line-height: var(--lh-relaxed);
+  max-width: 62ch;
 }
 .page-desc--tight {
   margin-top: var(--sp-2);
@@ -5038,6 +5042,9 @@ body {
 }
 .page-head--center .page-desc {
   margin-top: 0;
+  max-width: 56ch;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ---------- 布局工具 ---------- */
@@ -5209,10 +5216,17 @@ body {
 
 /* 面板内的说明文字 */
 .panel-desc {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-top: var(--sp-1);
-  line-height: var(--lh-normal);
+  font-size: var(--fs-base);
+  color: var(--text-subtle);
+  margin-top: var(--sp-2);
+  line-height: var(--lh-relaxed);
+  max-width: 62ch;
+}
+
+/* 招募概率说明：行高放松 + 次级正文色，密集信息更易读 */
+.pool-rates {
+  line-height: var(--lh-relaxed);
+  color: var(--text-subtle);
 }
 
 /* ---------- 按钮尺寸变体 ---------- */
