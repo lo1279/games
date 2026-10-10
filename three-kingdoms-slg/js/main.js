@@ -203,11 +203,19 @@ class GameApp {
 
     // 清空战报历史
     document.getElementById('btnClearReports').addEventListener('click', () => {
-      if (confirm('确认清空所有历史战报吗？')) {
-        this.state.battleReports = [];
-        this.renderReports();
-        this.save();
-      }
+      slgNotice({
+        title: '清空战报',
+        body: '确认清空所有历史战报吗？',
+        seal: '🗡️',
+        type: 'warn',
+        okText: '清空',
+        cancelText: '再思',
+        onConfirm: () => {
+          this.state.battleReports = [];
+          this.renderReports();
+          this.save();
+        }
+      });
     });
 
     // 招募按钮绑定 (1 / 5 / 10 / 50 / 100 连抽)
@@ -301,15 +309,23 @@ class GameApp {
     const btnResetGame = document.getElementById('btnResetGame');
     if (btnResetGame) {
       btnResetGame.addEventListener('click', () => {
-        if (confirm('⚠️【重置开局确认】\n\n主公，确认清除当前所有战绩、麾下武将与战法研习进度吗？\n将重置为初始开局（赠送【关平(主将)+郭淮+张宝+韩当】经典良将开荒团、3,000 启动金珠及 20,000 启动铜币）！')) {
-          this.state = resetGameState();
-          this.activeTab = 'tabBattle';
-          this.battleSubTab = 'campaigns';
-          this.generalSubTab = 'generals';
-          sound.playVictoryHorn();
-          this.renderAll();
-          alert('🔄 恭祝主公重振旗鼓！天下格局已重置，先锋开荒营已整装待发！');
-        }
+        slgNotice({
+          title: '重置开局确认',
+          body: '⚠️ 主公，确认清除当前所有战绩、麾下武将与战法研习进度吗？\n将重置为初始开局（赠送【关平(主将)+郭淮+张宝+韩当】经典良将开荒团、3,000 启动金珠及 20,000 启动铜币）！',
+          seal: '⚠️',
+          type: 'danger',
+          okText: '确认重置',
+          cancelText: '再思',
+          onConfirm: () => {
+            this.state = resetGameState();
+            this.activeTab = 'tabBattle';
+            this.battleSubTab = 'campaigns';
+            this.generalSubTab = 'generals';
+            sound.playVictoryHorn();
+            this.renderAll();
+            slgNotice({ title: '天下重置', body: '🔄 恭祝主公重振旗鼓！\n天下格局已重置，先锋开荒营已整装待发！', seal: '🔄', type: 'info' });
+          }
+        });
       });
     }
 
@@ -936,7 +952,7 @@ class GameApp {
   launchLandAttack(resKey, level) {
     const playerTroop = this.getCurrentTroop();
     if (!playerTroop || playerTroop.heroes.length === 0) {
-      alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
+      slgNotice({ title: '出征受阻', body: '您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！', seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -1028,7 +1044,7 @@ class GameApp {
   sweepLandTier(resKey, level) {
     const playerTroop = this.getCurrentTroop();
     if (!playerTroop || playerTroop.heroes.length === 0) {
-      alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
+      slgNotice({ title: '出征受阻', body: '您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！', seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -1261,7 +1277,7 @@ class GameApp {
 
     const currentLvl = this.state.buildings[bId] || 0;
     if (currentLvl >= cfg.maxLevel) {
-      alert('该建筑已升至最高等级！');
+      slgNotice({ title: '建造提示', body: '该建筑已升至最高等级！', seal: '🏯', type: 'info' });
       return;
     }
 
@@ -1269,7 +1285,7 @@ class GameApp {
     const cost = cfg.cost(nextLvl);
 
     if (!hasEnoughResources(this.state.resources, cost)) {
-      alert('⚠️ 资源不足！请占领更多对应资源地块或屯田积攒战略储备！');
+      slgNotice({ title: '军资告急', body: '⚠️ 资源不足！\n请占领更多对应资源地块或屯田积攒战略储备！', seal: '⚠️', type: 'danger' });
       return;
     }
 
@@ -1278,7 +1294,7 @@ class GameApp {
     this.state.buildings[bId] = nextLvl;
 
     sound.playVictoryHorn();
-    alert(`🎉【城建告捷】恭贺主公！【${cfg.name}】成功营建升级至 Lv.${nextLvl}！\n生效收益：${cfg.effect(nextLvl)}！`);
+    slgNotice({ title: '城建告捷', body: `🎉【城建告捷】恭贺主公！【${cfg.name}】成功营建升级至 Lv.${nextLvl}！\n生效收益：${cfg.effect(nextLvl)}！`, seal: '🏯', type: 'ok' });
 
     this.save();
     this.renderHUD();
@@ -1384,7 +1400,7 @@ class GameApp {
   launchCampaignBattle(camp) {
     const playerTroop = this.getCurrentTroop();
     if (!playerTroop || playerTroop.heroes.length === 0) {
-      alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
+      slgNotice({ title: '出征受阻', body: '您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！', seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -1432,7 +1448,7 @@ class GameApp {
         }
       });
       if (levelUpMessages.length > 0) {
-        alert(`🌟【武将练级突破】\n${levelUpMessages.join('\n')}`);
+        slgNotice({ title: '武将练级突破', body: `🌟【武将练级突破】\n${levelUpMessages.join('\n')}`, seal: '🌟', type: 'ok' });
       }
     } else {
       sound.playSwordClash();
@@ -1461,7 +1477,7 @@ class GameApp {
   launchTrialBattle(trial) {
     const rawPlayerTroop = this.getCurrentTroop();
     if (!rawPlayerTroop || rawPlayerTroop.heroes.length === 0) {
-      alert('您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！');
+      slgNotice({ title: '出征受阻', body: '您的出征军团尚未配置武将，请先前往【编队】配置出战阵容！', seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -1511,7 +1527,7 @@ class GameApp {
       const copperReward = trial.floor * 3000;
       this.state.resources.copper = (this.state.resources.copper || 0) + copperReward;
 
-      alert(`🎉 恭贺主公！力克强敌，斩获演武第 ${trial.floor} 层胜利！获赠 🪙 ${copperReward.toLocaleString()} 铜币！晋级至第 ${this.state.trialFloor} 层！`);
+      slgNotice({ title: '演武通天阁 · 捷报', body: `🎉 恭贺主公！\n力克强敌，斩获演武第 ${trial.floor} 层胜利！\n获赠 🪙 ${copperReward.toLocaleString()} 铜币！\n晋级至第 ${this.state.trialFloor} 层！`, seal: '🏆', type: 'ok' });
     } else {
       sound.playSwordClash();
     }
@@ -1867,7 +1883,7 @@ class GameApp {
   launchSandboxBattle() {
     const playerTroop = this.state.troops[this.state.currentTroopIndex || 0] || this.state.troops[0];
     if (!playerTroop || (playerTroop.heroes || []).filter(Boolean).length === 0) {
-      alert('您的当前军团尚未配置武将，请先前往【编队】配置出战阵容！');
+      slgNotice({ title: '出征受阻', body: '您的当前军团尚未配置武将，请先前往【编队】配置出战阵容！', seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -2591,7 +2607,7 @@ class GameApp {
     }
 
     if (currentCopper < totalCost) {
-      alert(`主公，您的铜币不足！\n强化【${realHero.name}】的自带战法【${tac ? tac.name : '军略'}】至 Lv.${targetLvl} 需要 🪙 ${totalCost.toLocaleString()} 铜币，当前拥有 🪙 ${currentCopper.toLocaleString()} 铜币。`);
+      slgNotice({ title: '战法强化', body: `主公，您的铜币不足！\n强化【${realHero.name}】的自带战法【${tac ? tac.name : '军略'}】至 Lv.${targetLvl} 需要 🪙 ${totalCost.toLocaleString()} 铜币，当前拥有 🪙 ${currentCopper.toLocaleString()} 铜币。`, seal: '🪙', type: 'warn' });
       return false;
     }
 
@@ -2620,7 +2636,7 @@ class GameApp {
     const candidates = this.state.ownedGenerals.filter(g => !assignedIds.has(g.id));
 
     if (candidates.length === 0) {
-      alert('背包中没有其他未上阵的闲置武将！请前往【招募】拜将台招揽更多名将。');
+      slgNotice({ title: '配将提示', body: '背包中没有其他未上阵的闲置武将！请前往【招募】拜将台招揽更多名将。', seal: '🪙', type: 'warn' });
       return;
     }
 
@@ -3085,34 +3101,40 @@ class GameApp {
     if (!tac) return;
 
     if (this.state.ownedTactics.includes(tacId)) {
-      alert(`战法【${tac.name}】已在战法库中解锁，无需重复传承！`);
+      slgNotice({ title: '战法传承', body: `战法【${tac.name}】已在战法库中解锁，无需重复传承！`, seal: '📖', type: 'warn' });
       return;
     }
 
     const currentTroopHeroIds = new Set((this.state.troops || []).flatMap(t => (t.heroes || []).filter(Boolean).map(h => h.id)));
     if (currentTroopHeroIds.has(hero.id)) {
-      alert(`武将【${hero.name}】正在主力出征军团中，不可献祭传承！`);
+      slgNotice({ title: '战法传承', body: `武将【${hero.name}】正在主力出征军团中，不可献祭传承！`, seal: '⚔️', type: 'warn' });
       return;
     }
 
-    if (!confirm(`📖【武将战法传承确认】\n\n主公，确认消耗 1 位闲置武将【${hero.name} (${hero.star}★)】吗？\n传承后将永久领悟解锁 ${tac.quality}级 战法【${tac.name}】(${tac.type})，可为麾下任意武将装配并研习升级！`)) {
-      return;
-    }
+    slgNotice({
+      title: '武将战法传承确认',
+      body: `📖 主公，确认消耗 1 位闲置武将【${hero.name} (${hero.star}★)】吗？\n传承后将永久领悟解锁 ${tac.quality}级 战法【${tac.name}】(${tac.type})，可为麾下任意武将装配并研习升级！`,
+      seal: '📖',
+      type: 'warn',
+      okText: '确认传承',
+      cancelText: '再思',
+      onConfirm: () => {
+        const idx = this.state.ownedGenerals.findIndex(x => x.id === hero.id);
+        if (idx >= 0) {
+          this.state.ownedGenerals.splice(idx, 1);
+          this.state.ownedTactics.push(tacId);
+          if (!this.state.tacticLevels) this.state.tacticLevels = {};
+          this.state.tacticLevels[tacId] = 1;
 
-    const idx = this.state.ownedGenerals.findIndex(x => x.id === hero.id);
-    if (idx >= 0) {
-      this.state.ownedGenerals.splice(idx, 1);
-      this.state.ownedTactics.push(tacId);
-      if (!this.state.tacticLevels) this.state.tacticLevels = {};
-      this.state.tacticLevels[tacId] = 1;
-
-      sound.playVictoryHorn();
-      this.save();
-      this.renderGenerals();
-      this.renderTacticsUpgrade();
-      this.renderHUD();
-      alert(`🎉 恭喜主公！成功献祭武将【${hero.name}】，领悟并解锁 ${tac.quality}级绝技【${tac.name}】！已永久加入战法研习库！`);
-    }
+          sound.playVictoryHorn();
+          this.save();
+          this.renderGenerals();
+          this.renderTacticsUpgrade();
+          this.renderHUD();
+          slgNotice({ title: '战法传承', body: `🎉 恭喜主公！\n成功献祭武将【${hero.name}】，领悟并解锁 ${tac.quality}级绝技【${tac.name}】！\n已永久加入战法研习库！`, seal: '✨', type: 'ok' });
+        }
+      }
+    });
   }
 
   // 升星进阶单个武将 (智能选拔未满红培养主体，保护满红与高红，严格消耗白板副卡)
@@ -3123,17 +3145,17 @@ class GameApp {
     // 1. 汇集该武将的所有同名卡，并过滤掉已满红的卡牌（已满红卡牌独立留存，不阻塞后续同名卡继续培养）
     const sameNameCards = (this.state.ownedGenerals || []).filter(x => x.name === targetHero.name);
     if (sameNameCards.length <= 1) {
-      alert(`⚠️ 背包中没有多余的【${targetHero.name}】同名卡可供进阶！`);
+      slgNotice({ title: '武将进阶', body: `⚠️ 背包中没有多余的【${targetHero.name}】同名卡可供进阶！`, seal: '⚔️', type: 'warn' });
       return;
     }
 
     const nonFullSameNameCards = sameNameCards.filter(x => (x.redStars || 0) < (x.star || 5));
     if (nonFullSameNameCards.length === 0) {
-      alert(`⚠️【进阶封顶】麾下所有【${targetHero.name}】均已达到满红状态，无需继续进阶！`);
+      slgNotice({ title: '武将进阶', body: `⚠️【进阶封顶】麾下所有【${targetHero.name}】均已达到满红状态，无需继续进阶！`, seal: '⚔️', type: 'warn' });
       return;
     }
     if (nonFullSameNameCards.length <= 1) {
-      alert(`⚠️ 背包中没有多余的未满红【${targetHero.name}】同名卡可供进阶消耗！`);
+      slgNotice({ title: '武将进阶', body: `⚠️ 背包中没有多余的未满红【${targetHero.name}】同名卡可供进阶消耗！`, seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -3163,7 +3185,7 @@ class GameApp {
     );
 
     if (candidateMaterials.length === 0) {
-      alert(`⚠️ 未找到可作为进阶材料的【${mainHero.name}】白板副卡！已进阶的高红卡或出征部队已受到安全保护。`);
+      slgNotice({ title: '武将进阶', body: `⚠️ 未找到可作为进阶材料的【${mainHero.name}】白板副卡！已进阶的高红卡或出征部队已受到安全保护。`, seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -3204,10 +3226,14 @@ class GameApp {
     this.renderTroops();
     this.renderHUD();
     const isNowFull = (mainHero.redStars >= maxRed);
-    alert(isNowFull 
-      ? `👑【满红大成】消耗 1 张白板副卡，【${mainHero.name}】成功晋升为 ${maxRed} 星满红名宿！\n武力/智力/统率/速度全面提升 5 点！`
-      : `🌟【进阶大捷】消耗 1 张白板副卡，【${mainHero.name}】成功进阶为 ${mainHero.redStars} 红！\n武力/智力/统率/速度全面提升 5 点！`
-    );
+    slgNotice({
+      title: '武将进阶',
+      body: isNowFull 
+        ? `👑【满红大成】消耗 1 张白板副卡，【${mainHero.name}】成功晋升为 ${maxRed} 星满红名宿！\n武力/智力/统率/速度全面提升 5 点！`
+        : `🌟【进阶大捷】消耗 1 张白板副卡，【${mainHero.name}】成功进阶为 ${mainHero.redStars} 红！\n武力/智力/统率/速度全面提升 5 点！`,
+      seal: isNowFull ? '👑' : '🌟',
+      type: 'ok'
+    });
   }
 
   // 一键同名卡升星进阶 (严密分组选拔未满红主力，支持满红后多余同名卡递进培养第2/第3只)
@@ -3288,7 +3314,7 @@ class GameApp {
     }
 
     if (promotedCount === 0) {
-      alert('背包中暂无满足条件的白板重复同名武将卡！\n单张闲置同名卡已安全为您留存，可用于传承战法或转化换取铜币。');
+      slgNotice({ title: '一键进阶', body: '背包中暂无满足条件的白板重复同名武将卡！\n单张闲置同名卡已安全为您留存，可用于传承战法或转化换取铜币。', seal: '⚔️', type: 'warn' });
       return;
     }
 
@@ -3297,7 +3323,7 @@ class GameApp {
     this.renderGenerals();
     this.renderTroops();
     this.renderHUD();
-    alert(`🎉【一键进阶圆满】共计完成 ${promotedCount} 次红度进阶！\n全员进阶属性已同步提升！`);
+    slgNotice({ title: '红度进阶', body: `🎉【一键进阶圆满】\n共计完成 ${promotedCount} 次红度进阶！\n全员进阶属性已同步提升！`, seal: '⚡', type: 'ok' });
   }
 
   // 单个武将转化铜币（3星300 / 4星1000 / 5星5000，已进阶红星按消耗同名卡数量全额折算返还）
@@ -3314,18 +3340,29 @@ class GameApp {
       ? `👑【名将转化确认】\n\n【${hero.name} (${starStr})】乃稀世名将，可用于上阵统兵、进阶觉醒或传承 S 级绝技！\n确认将其消耗转化吗？转化后武将卡将消失且不可找回，转化为 🪙 ${goldBack.toLocaleString()} 铜币（用于战法研习）。${redExtraNote}`
       : `🪙【武将转化确认】\n\n确认消耗闲置武将【${hero.name} (${starStr})】进行转化吗？\n转化后该武将卡将消失，并转化为 🪙 ${goldBack.toLocaleString()} 铜币（用于战法研习升级）。${redExtraNote}`;
 
-    if (!confirm(confirmMsg)) return;
-
-    const idx = this.state.ownedGenerals.findIndex(x => x.id === hero.id);
-    if (idx >= 0) {
-      this.state.ownedGenerals.splice(idx, 1);
-      this.state.resources.copper = (this.state.resources.copper || 0) + goldBack;
-      sound.playGoldChime();
-      this.save();
-      this.renderGenerals();
-      this.renderHUD();
-      alert(`✔【转化完成】武将【${hero.name}】已成功转化为 🪙 ${goldBack.toLocaleString()} 铜币！`);
-    }
+    const convertBody = hero.star === 5
+      ? confirmMsg.replace('👑【名将转化确认】\n\n', '')
+      : confirmMsg.replace('🪙【武将转化确认】\n\n', '');
+    slgNotice({
+      title: '武将转化确认',
+      body: convertBody,
+      seal: hero.star === 5 ? '👑' : '🪙',
+      type: 'warn',
+      okText: '确认转化',
+      cancelText: '再思',
+      onConfirm: () => {
+        const idx = this.state.ownedGenerals.findIndex(x => x.id === hero.id);
+        if (idx >= 0) {
+          this.state.ownedGenerals.splice(idx, 1);
+          this.state.resources.copper = (this.state.resources.copper || 0) + goldBack;
+          sound.playGoldChime();
+          this.save();
+          this.renderGenerals();
+          this.renderHUD();
+          slgNotice({ title: '武将转化', body: `✔【转化完成】\n武将【${hero.name}】已成功转化为 🪙 ${goldBack.toLocaleString()} 铜币！`, seal: '🪙', type: 'ok' });
+        }
+      }
+    });
   }
 
   // 批量转化全部闲置3星武将
@@ -3334,21 +3371,29 @@ class GameApp {
     const threeStars = this.state.ownedGenerals.filter(g => g.star === 3 && !currentTroopHeroIds.has(g.id));
 
     if (threeStars.length === 0) {
-      alert('当前麾下没有未上阵的 3★ 闲置裨将！');
+      slgNotice({ title: '转化军务', body: '当前麾下没有未上阵的 3★ 闲置裨将！', seal: '🪙', type: 'warn' });
       return;
     }
 
     const copperTotal = threeStars.reduce((sum, g) => sum + 300 * (1 + (g.redStars || 0)), 0);
-    if (!confirm(`🪙【批量转化确认】\n\n确认将麾下全部 ${threeStars.length} 位未上阵的【3★ 裨将】消耗转化吗？\n转化后武将卡将消失，共转化为 🪙 ${copperTotal.toLocaleString()} 铜币（用于战法研习升级）。`)) return;
+    slgNotice({
+      title: '批量转化确认',
+      body: `🪙 确认将麾下全部 ${threeStars.length} 位未上阵的【3★ 裨将】消耗转化吗？\n转化后武将卡将消失，共转化为 🪙 ${copperTotal.toLocaleString()} 铜币（用于战法研习升级）。`,
+      seal: '🪙',
+      type: 'warn',
+      okText: '确认转化',
+      cancelText: '再思',
+      onConfirm: () => {
+        this.state.ownedGenerals = this.state.ownedGenerals.filter(g => !(g.star === 3 && !currentTroopHeroIds.has(g.id)));
+        this.state.resources.copper = (this.state.resources.copper || 0) + copperTotal;
 
-    this.state.ownedGenerals = this.state.ownedGenerals.filter(g => !(g.star === 3 && !currentTroopHeroIds.has(g.id)));
-    this.state.resources.copper = (this.state.resources.copper || 0) + copperTotal;
-
-    sound.playGoldChime();
-    this.save();
-    this.renderGenerals();
-    this.renderHUD();
-    alert(`🪙【批量转化完成】共消耗 ${threeStars.length} 位 3★ 裨将，成功转化为 🪙 ${copperTotal.toLocaleString()} 铜币！`);
+        sound.playGoldChime();
+        this.save();
+        this.renderGenerals();
+        this.renderHUD();
+        slgNotice({ title: '批量转化', body: `🪙【批量转化完成】\n共消耗 ${threeStars.length} 位 3★ 裨将，\n成功转化为 🪙 ${copperTotal.toLocaleString()} 铜币！`, seal: '🪙', type: 'ok' });
+      }
+    });
   }
 
   // 批量转化全部闲置4星良将
@@ -3357,21 +3402,29 @@ class GameApp {
     const fourStars = this.state.ownedGenerals.filter(g => g.star === 4 && !currentTroopHeroIds.has(g.id));
 
     if (fourStars.length === 0) {
-      alert('当前麾下没有未上阵的 4★ 闲置良将！');
+      slgNotice({ title: '转化军务', body: '当前麾下没有未上阵的 4★ 闲置良将！', seal: '🪙', type: 'warn' });
       return;
     }
 
     const copperTotal = fourStars.reduce((sum, g) => sum + 1000 * (1 + (g.redStars || 0)), 0);
-    if (!confirm(`⚠️【四星良将批量转化确认】\n\n确认将麾下全部 ${fourStars.length} 位未上阵的【4★ 良将】消耗转化吗？\n（提示：4★良将可用于传承 A 级战法）\n转化后武将卡将消失，共转化为 🪙 ${copperTotal.toLocaleString()} 铜币（用于战法研习升级）。`)) return;
+    slgNotice({
+      title: '四星良将批量转化确认',
+      body: `⚠️ 确认将麾下全部 ${fourStars.length} 位未上阵的【4★ 良将】消耗转化吗？\n（提示：4★良将可用于传承 A 级战法）\n转化后武将卡将消失，共转化为 🪙 ${copperTotal.toLocaleString()} 铜币（用于战法研习升级）。`,
+      seal: '⚠️',
+      type: 'warn',
+      okText: '确认转化',
+      cancelText: '再思',
+      onConfirm: () => {
+        this.state.ownedGenerals = this.state.ownedGenerals.filter(g => !(g.star === 4 && !currentTroopHeroIds.has(g.id)));
+        this.state.resources.copper = (this.state.resources.copper || 0) + copperTotal;
 
-    this.state.ownedGenerals = this.state.ownedGenerals.filter(g => !(g.star === 4 && !currentTroopHeroIds.has(g.id)));
-    this.state.resources.copper = (this.state.resources.copper || 0) + copperTotal;
-
-    sound.playGoldChime();
-    this.save();
-    this.renderGenerals();
-    this.renderHUD();
-    alert(`🎉【批量转化完成】共消耗 ${fourStars.length} 位 4★ 良将，成功转化为 🪙 ${copperTotal.toLocaleString()} 铜币！`);
+        sound.playGoldChime();
+        this.save();
+        this.renderGenerals();
+        this.renderHUD();
+        slgNotice({ title: '批量转化', body: `🎉【批量转化完成】\n共消耗 ${fourStars.length} 位 4★ 良将，\n成功转化为 🪙 ${copperTotal.toLocaleString()} 铜币！`, seal: '🪙', type: 'ok' });
+      }
+    });
   }
 
   openEquipTacticModal(hero, slot = 1) {
@@ -3658,7 +3711,7 @@ class GameApp {
         this.renderTroops();
         this.save();
         modal.remove();
-        alert(`✔ 已成功将【${hero.name}】槽位 ${slot} 的战法卸下！该战法现已处于闲置状态，可供其他名将装配！`);
+        slgNotice({ title: '战法装配', body: `✔ 已成功将【${hero.name}】槽位 ${slot} 的战法卸下！该战法现已处于闲置状态，可供其他名将装配！`, seal: '🔓', type: 'ok' });
       });
     }
 
@@ -3681,7 +3734,7 @@ class GameApp {
         // 装配到当前武将 (严格校验自带战法互斥)
         const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
         if (realHero.builtInTacticId === id) {
-          alert(`⚠️【${realHero.name}】自带战法与该战法相同，无法重复装配！`);
+          slgNotice({ title: '战法装配', body: `⚠️【${realHero.name}】自带战法与该战法相同，无法重复装配！`, seal: '⚠️', type: 'warn' });
           return;
         }
         if (slot === 1) {
@@ -3704,7 +3757,7 @@ class GameApp {
         const tipMsg = occupiedHeroId 
           ? `✔ 战法唯一性生效：已将【${tac?.name}】从原配武将卸下，成功调配并装配至【${hero.name}】！` 
           : `🎉 成功为【${hero.name}】装配战法【${tac?.name}】！`;
-        alert(tipMsg);
+        slgNotice({ title: '战法装配', body: tipMsg, seal: '🎉', type: 'ok' });
       });
     });
   }
@@ -3965,7 +4018,7 @@ class GameApp {
     const currentCopper = this.state.resources.copper || 0;
 
     if (currentCopper < cost) {
-      alert(`主公，您的铜币不足！\n升级该战法需要 🪙 ${cost.toLocaleString()} 铜币，当前拥有 🪙 ${currentCopper.toLocaleString()} 铜币。\n您可在【麾下名将】中一键解甲闲置3星武将，或通过通关历史战役获取丰厚铜币！`);
+      slgNotice({ title: '战法研习', body: `主公，您的铜币不足！\n升级该战法需要 🪙 ${cost.toLocaleString()} 铜币，当前拥有 🪙 ${currentCopper.toLocaleString()} 铜币。\n您可在【麾下名将】中一键解甲闲置3星武将，或通过通关历史战役获取丰厚铜币！`, seal: '🪙', type: 'warn' });
       return;
     }
 
@@ -4127,7 +4180,7 @@ class GameApp {
     this.renderRechargeModal();
     this.save();
 
-    alert(`🎉【模拟充值到账】\n\n主公，已成功模拟支付 ¥${tier.price} 元！\n始终双倍特权生效：获得 ${tier.baseGold.toLocaleString()} + ${doubleBonus.toLocaleString()}(双倍赠送) = ${totalGet.toLocaleString()} 金珠！\n\n当前金珠余额：${this.state.resources.gold.toLocaleString()} 金珠`);
+    slgNotice({ title: '充值到账', body: `🎉【模拟充值到账】\n\n主公，已成功模拟支付 ¥${tier.price} 元！\n始终双倍特权生效：获得 ${tier.baseGold.toLocaleString()} + ${doubleBonus.toLocaleString()}(双倍赠送) = ${totalGet.toLocaleString()} 金珠！\n\n当前金珠余额：${this.state.resources.gold.toLocaleString()} 金珠`, seal: '💰', type: 'ok' });
   }
 
   doGacha(poolType, count) {
@@ -4154,9 +4207,15 @@ class GameApp {
       const curGold = this.state.resources.gold || 0;
       if (curGold < cost) {
         sound.playDrum();
-        if (confirm(`⚠️ 金铢不足！\n\n招募 ${count} 次需要 ${cost.toLocaleString()} 金铢，当前拥有 ${curGold.toLocaleString()} 金铢。\n是否立即前往【金铢钱庄】模拟充值？(享受始终双倍金珠)`)) {
-          this.openRechargeModal();
-        }
+        slgNotice({
+          title: '金铢不足',
+          body: `⚠️ 招募 ${count} 次需要 ${cost.toLocaleString()} 金铢，当前拥有 ${curGold.toLocaleString()} 金铢。\n是否立即前往【金铢钱庄】模拟充值？(享受始终双倍金珠)`,
+          seal: '⚠️',
+          type: 'danger',
+          okText: '前往充值',
+          cancelText: '再思',
+          onConfirm: () => { this.openRechargeModal(); }
+        });
         return;
       }
       this.state.resources.gold -= cost;
@@ -4164,7 +4223,7 @@ class GameApp {
       const curCopper = this.state.resources.copper || 0;
       if (curCopper < cost) {
         sound.playDrum();
-        alert(`⚠️ 铜币不足！良将招募 ${count} 次需要 ${cost.toLocaleString()} 铜币，当前拥有 ${curCopper.toLocaleString()} 铜币。\n可通过转化闲置武将或通关战役获取铜币！`);
+        slgNotice({ title: '良将招募', body: `⚠️ 铜币不足！良将招募 ${count} 次需要 ${cost.toLocaleString()} 铜币，当前拥有 ${curCopper.toLocaleString()} 铜币。\n可通过转化闲置武将或通关战役获取铜币！`, seal: '⚠️', type: 'warn' });
         return;
       }
       this.state.resources.copper -= cost;
@@ -5273,3 +5332,40 @@ class GameApp {
 window.addEventListener('DOMContentLoaded', () => {
   window.game = new GameApp();
 });
+
+// ============================================================
+// 古典轻提示 slgNotice —— 统一替代原生 alert / 简易 confirm
+//   slgNotice('文本')
+//   slgNotice({ title, body, seal, type, okText, cancelText, onConfirm, onCancel })
+//   type: 'info'(默认) | 'ok' | 'warn' | 'danger'（仅影响标题氛围）
+//   非阻塞：确定/取消通过回调 onConfirm / onCancel 返回
+// ============================================================
+function slgNotice(opts) {
+  const mask = document.getElementById('slgNotice');
+  if (!mask) return;
+  const o = (typeof opts === 'string') ? { body: opts } : (opts || {});
+  const titleEl = document.getElementById('slgNoticeTitle');
+  const bodyEl = document.getElementById('slgNoticeBody');
+  const sealEl = document.getElementById('slgNoticeSeal');
+  const okBtn = document.getElementById('slgNoticeOk');
+  const cancelBtn = document.getElementById('slgNoticeCancel');
+
+  titleEl.textContent = o.title || '主公启奏';
+  bodyEl.textContent = (o.body != null) ? String(o.body) : '';
+  sealEl.textContent = o.seal || '📜';
+  mask.dataset.type = o.type || 'info';
+  okBtn.textContent = o.okText || '遵命';
+
+  const hasCancel = !!o.onCancel || o.cancelText != null;
+  if (hasCancel) {
+    cancelBtn.style.display = '';
+    cancelBtn.textContent = o.cancelText || '再思';
+    cancelBtn.onclick = () => { mask.style.display = 'none'; if (o.onCancel) o.onCancel(); };
+  } else {
+    cancelBtn.style.display = 'none';
+    cancelBtn.onclick = null;
+  }
+  okBtn.onclick = () => { mask.style.display = 'none'; if (o.onConfirm) o.onConfirm(); };
+
+  mask.style.display = 'flex';
+}

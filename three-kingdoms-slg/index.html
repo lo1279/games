@@ -671,6 +671,19 @@
     </div>
   </div>
 
+  <!-- 📜 古典轻提示弹窗（替代原生 alert，由 slgNotice() 调用，mask display 由 JS 接管） -->
+  <div class="modal-mask" id="slgNotice" style="display: none;">
+    <div class="slg-notice">
+      <div class="slg-notice__seal" id="slgNoticeSeal">📜</div>
+      <div class="slg-notice__title" id="slgNoticeTitle">主公启奏</div>
+      <div class="slg-notice__body" id="slgNoticeBody"></div>
+      <div class="slg-notice__actions">
+        <button class="slg-notice__btn slg-notice__btn--ghost" id="slgNoticeCancel" style="display:none;">再思</button>
+        <button class="slg-notice__btn slg-notice__btn--gold" id="slgNoticeOk">遵命</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 核心逻辑调度入口 -->
   <script type="module" src="js/main.js"></script>
 </body>
