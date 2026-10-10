@@ -3343,51 +3343,51 @@ class GameApp {
       const expPct = reqExp > 0 ? Math.min(100, Math.round((gExp / reqExp) * 100)) : 100;
 
       card.innerHTML = `
-        <div class="card-header">
-          <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}</span>
-          <div style="display:flex; align-items:center; gap:4px;">
-            ${isInTroop ? `<span style="font-size:10px; color:#10b981; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:0 4px; border-radius:3px;">出征</span>` : ''}
-            <span class="cost-badge">${g.cost}御</span>
+        <!-- 🎯 原版三战大立绘主视窗 -->
+        <div class="avatar-box general-card-portrait">
+          ${getGeneralAvatarHtml(g, { fontSize: '56px' })}
+          
+          <!-- 顶部浮层：原版阵营标与御值章 -->
+          <div class="card-float-header">
+            <span class="camp-tag" style="background:${campInfo.color};">${campInfo.badge}</span>
+            <div class="card-float-right">
+              ${isInTroop ? `<span class="badge-in-troop">出征</span>` : ''}
+              <span class="cost-badge">${g.cost}御</span>
+            </div>
           </div>
-        </div>
-        <div class="avatar-box">
-          ${getGeneralAvatarHtml(g, { fontSize: '42px' })}
-        </div>
-        <div class="hero-name">
-          <span>${g.name}</span>
-          <span class="hero-level-badge">Lv.${gLvl}</span>
-        </div>
-        
-        <!-- 经验条 -->
-        <div class="hero-exp-box">
-          <div class="hero-exp-text">
-            <span>经验</span>
-            <span>${gLvl>=MAX_GENERAL_LEVEL?'满级':`${gExp}/${reqExp}`}</span>
-          </div>
-          <div class="hero-exp-track">
-            <div class="hero-exp-progress" style="width:${expPct}%;"></div>
-          </div>
-        </div>
 
-        <div class="stars-row">${starsHtml}</div>
-        <div class="apt-row">
-          <span>骑<b class="apt-tag ${g.aptitude.cavalry}">${g.aptitude.cavalry}</b></span>
-          <span>盾<b class="apt-tag ${g.aptitude.shield}">${g.aptitude.shield}</b></span>
-          <span>弓<b class="apt-tag ${g.aptitude.bow}">${g.aptitude.bow}</b></span>
-          <span>枪<b class="apt-tag ${g.aptitude.spear}">${g.aptitude.spear}</b></span>
-        </div>
+          <!-- 底部原版黑金渐变沉浸式铭牌 -->
+          <div class="general-card-footer">
+            <div class="hero-name">
+              <span class="name-text">${g.name}</span>
+              <span class="hero-level-badge">Lv.${gLvl}</span>
+            </div>
 
-        <!-- 极简辅助行 -->
-        <div style="margin-top:2px; display:flex; justify-content:center;">
-          ${canPromote ? `
-            <button class="upgrade-btn btn-promote-hero" style="width:100%; padding:2px 0; font-size:10px; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
-              🌟 进阶
-            </button>
-          ` : isFullRed ? `
-            <span style="font-size:10px; color:#fbbf24; font-weight:bold; padding:2px 0;">👑 满红名宿</span>
-          ` : `
-            <span style="font-size:10px; color:#6b7280; padding:2px 0;">点击查看军略</span>
-          `}
+            <!-- 星级排布 -->
+            <div class="stars-row">${starsHtml}</div>
+
+            <!-- 兵种适性简标 -->
+            <div class="apt-row">
+              <span>骑<b class="apt-tag ${g.aptitude.cavalry}">${g.aptitude.cavalry}</b></span>
+              <span>盾<b class="apt-tag ${g.aptitude.shield}">${g.aptitude.shield}</b></span>
+              <span>弓<b class="apt-tag ${g.aptitude.bow}">${g.aptitude.bow}</b></span>
+              <span>枪<b class="apt-tag ${g.aptitude.spear}">${g.aptitude.spear}</b></span>
+            </div>
+
+            <!-- 微型经验槽 -->
+            <div class="hero-exp-track" title="经验: ${gLvl >= MAX_GENERAL_LEVEL ? '满级' : `${gExp}/${reqExp}`}">
+              <div class="hero-exp-progress" style="width:${expPct}%;"></div>
+            </div>
+
+            <!-- 辅助操作条 -->
+            ${canPromote ? `
+              <button class="upgrade-btn btn-promote-hero" style="width:100%; padding:2px 0; margin-top:3px; font-size:10px; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                🌟 进阶
+              </button>
+            ` : isFullRed ? `
+              <div style="font-size:9px; color:#fbbf24; font-weight:bold; text-align:center; margin-top:2px;">👑 满红名宿</div>
+            ` : ''}
+          </div>
         </div>
       `;
 

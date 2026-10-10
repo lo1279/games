@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/games/minesweeper/index",
+    "pages/about/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#0a0c14",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "星云电竞 · 游戏大厅",
+    "backgroundColor": "#0a0c14",
+    "backgroundTextStyle": "dark",
+    "backgroundColorTop": "#0a0c14",
+    "backgroundColorBottom": "#0a0c14"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

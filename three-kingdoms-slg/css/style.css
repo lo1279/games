@@ -1365,194 +1365,225 @@ body {
 }
 
 /* ================= 武将卡牌 (Card) 样式 ================= */
-/* 阶段 3 收敛：保留 145deg 斜向渐变（武将卡的立体感来源）与 170px 固定宽，
-   底色改为令牌渐变 —— 用 --bg-raised→--bg-dark 替代 #232832→#13171e，
-   取值来源统一但视觉明度关系不变。 */
+/* 原版三战大立绘卡面：180px 宽，黄金 3:4 比例，整体作为画幅容器 */
 .general-card {
-  width: 170px;
-  background: linear-gradient(145deg, var(--bg-raised) 0%, var(--bg-dark) 100%);
-  border: var(--bw) solid var(--line-subtle);
-  border-radius: var(--r-md);
-  padding: var(--sp-3);
+  width: 180px;
+  background: #11141a;
+  border: 1.5px solid var(--line-subtle);
+  border-radius: 8px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: var(--sh-sm);
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
   transition: transform var(--t-mid) var(--ease-in-out),
+              box-shadow var(--t-mid) var(--ease-in-out),
               border-color var(--t-mid) var(--ease-in-out);
+  cursor: pointer;
+  user-select: none;
 }
 
-/* 阶段 3：武将卡的三个状态变体是核心辨识度，保留但统一取令牌。
-   位移量对齐 --card--hover 的 -3px，使全站卡片悬浮手感一致。 */
 .general-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px) scale(1.02);
   border-color: var(--border-gold);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 12px rgba(251, 191, 36, 0.35);
+  z-index: 2;
 }
 
 /* 五星名将：金边 + 金色辉光 */
 .general-card.star-5 {
-  border-color: var(--warn-border);
-  box-shadow: var(--sh-gold);
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
 }
 
-/* 满红星（顶配）：红边 + 内外双层红光，全站最强的存在感 */
+.general-card.star-5:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.55), 0 8px 24px rgba(0, 0, 0, 0.8);
+}
+
+/* 满红星（顶配）：红金双辉光 */
 .general-card.full-red {
-  border-color: var(--danger-border) !important;
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.5), inset 0 0 8px var(--danger-bg) !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.55), inset 0 0 8px rgba(239, 68, 68, 0.25) !important;
 }
 
 .star-red {
   color: var(--danger-text) !important;
   font-weight: var(--fw-black);
-  text-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.85);
 }
 
-/* 金星：刻意保持 #f59e0b（琥珀）而非令牌 --warn-text(#fcd34d)。
-   后者更浅，与 .star-red 的正红并置时金边会显得发白、失去"贵重感"。
-   这是「令牌收敛」必须保留例外的一个例子：语义相近不等于观感等价。 */
 .star-gold {
   color: #f59e0b;
+  text-shadow: 0 0 4px rgba(245, 158, 11, 0.5);
 }
 
-.general-card .card-header {
+/* 🎯 原版三战大立绘主视窗 (240px 纵深视窗) */
+.general-card .avatar-box.general-card-portrait {
+  width: 100%;
+  height: 240px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 25%, #242c3b 0%, #0c0e14 100%);
+  display: block;
+}
+
+/* 智能自适应立绘：黄金比例上半身全幅展现 */
+.general-card .general-card-portrait .general-avatar-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute;
+  inset: 0;
+}
+
+.general-card .general-card-portrait .general-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 8%;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.general-card:hover .general-card-portrait .general-avatar-img {
+  transform: scale(1.08);
+}
+
+/* 顶部悬浮角标栏 */
+.general-card .card-float-header {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  z-index: 5;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  pointer-events: none;
 }
 
 .general-card .camp-tag {
   font-size: 11px;
   font-weight: 800;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
   color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  letter-spacing: 1px;
+}
+
+.general-card .card-float-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.general-card .badge-in-troop {
+  font-size: 10px;
+  font-weight: bold;
+  color: #34d399;
+  background: rgba(6, 78, 59, 0.85);
+  border: 1px solid #10b981;
+  padding: 1px 5px;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 .general-card .cost-badge {
   font-size: 11px;
-  font-weight: 700;
-  color: #fbbf24;
+  font-weight: 800;
+  color: #fde047;
+  background: rgba(15, 17, 24, 0.82);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
-.general-card .avatar-box {
-  width: 100%;
-  height: 92px;
-  background: radial-gradient(circle at 50% 30%, #1c222c 0%, #0d1016 100%);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 42px;
-  margin-bottom: 6px;
-  border: 1px solid rgba(255,255,255,0.08);
-  position: relative;
-  overflow: hidden;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
-}
-
-.general-avatar-wrapper {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0f1217;
-}
-
-/* 🎯 智能自适应立绘：抗拉伸、自动聚焦头部上半身、底部渐隐融合 */
-.general-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 15%;
-  display: block;
-  transition: transform 0.25s ease;
-}
-
-.general-card:hover .general-avatar-img {
-  transform: scale(1.06);
-}
-
-/* 底部微暗渐变：避免立绘硬切，与卡片底部属性自然接壤 */
-.general-avatar-wrapper::after {
-  content: '';
+/* 🎯 底部原版黑金渐变沉浸式铭牌 */
+.general-card .general-card-footer {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 28%;
-  background: linear-gradient(to bottom, transparent 0%, rgba(13, 16, 22, 0.75) 100%);
-  pointer-events: none;
+  z-index: 4;
+  padding: 34px 8px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: linear-gradient(
+    to top,
+    rgba(10, 12, 17, 0.98) 0%,
+    rgba(14, 17, 25, 0.92) 55%,
+    rgba(14, 17, 25, 0.45) 82%,
+    transparent 100%
+  );
 }
-
 
 .general-card .hero-name {
-  font-size: 14px;
-  font-weight: bold;
-  text-align: center;
-  color: #fff;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: space-between;
+  margin: 0;
 }
 
-.hero-level-badge {
+.general-card .hero-name .name-text {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.general-card .hero-level-badge {
   font-size: 10px;
   font-weight: 800;
   color: #fbbf24;
-  background: rgba(251, 191, 36, 0.15);
-  border: 1px solid #d97706;
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-
-.hero-exp-box {
-  width: 100%;
-  margin: 3px 0 6px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.hero-exp-text {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9px;
-  color: #9ca3af;
-}
-
-.hero-exp-track {
-  width: 100%;
-  height: 4px;
-  background: #1f2937;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.hero-exp-progress {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 1.3;
 }
 
 .general-card .stars-row {
-  text-align: center;
-  color: #f59e0b;
+  text-align: left;
   font-size: 12px;
-  margin-bottom: 6px;
+  line-height: 1;
+  margin: 1px 0 2px 0;
 }
 
 .general-card .apt-row {
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  background: rgba(0,0,0,0.3);
-  padding: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 2px 5px;
   border-radius: 4px;
-  margin-bottom: 6px;
+  margin: 1px 0;
+}
+
+.general-card .hero-exp-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.general-card .hero-exp-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 2px;
 }
 
 .apt-tag.S { color: #fbbf24; font-weight: bold; }
@@ -3874,6 +3905,15 @@ body {
 
   .bottom-nav .nav-tab-btn .icon {
     font-size: 16px !important;
+  }
+
+  /* 武将卡牌移动端自适应：双列排布，大立绘高度适配 */
+  .general-card {
+    width: 100% !important;
+    max-width: 180px !important;
+  }
+  .general-card .avatar-box.general-card-portrait {
+    height: 220px !important;
   }
 
   /* 抽卡揭晓浮层移动端自适应 */

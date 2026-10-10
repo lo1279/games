@@ -10,6 +10,10 @@ coverage/
 # Production
 # Note: Keep mythology-deckbuilder/dist and three-kingdoms-td/dist for GitHub Pages / direct running
 
+# 云端发布产物（由 tools/build-web-hall.sh 生成，约 64MB）
+#纯生成物，不入库；需要发布时本地跑一次脚本重建即可
+web-hall/
+
 # Misc
 .DS_Store
 *.pem

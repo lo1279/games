@@ -1,0 +1,31 @@
+<!-- pages/about/index.wxml -->
+<view class="page-bg about-page">
+  <view class="about-card">
+    <text class="about-title">星云电竞 · 游戏大厅</text>
+    <text class="about-subtitle">原生微信小程序版</text>
+  </view>
+
+  <view class="about-block">
+    <text class="block-title">移植说明</text>
+    <text class="block-text">本小程序为纯原生实现，不使用任何网页容器。个人主体小程序无法配置业务域名，因此 web-view 内嵌 H5 的方案不可用，所有游戏均以 WXML/WXSS 重写。</text>
+  </view>
+
+  <view class="about-block">
+    <text class="block-title">已开放（{{playableGames.length}} / {{totalGames}}）</text>
+    <view class="game-tags">
+      <text wx:for="{{playableGames}}" wx:key="*this" class="game-tag tag-ok">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="about-block">
+    <text class="block-title">待移植（{{pendingGames.length}}）</text>
+    <view class="game-tags">
+      <text wx:for="{{pendingGames}}" wx:key="*this" class="game-tag tag-pending">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="about-block">
+    <text class="block-title">数据存储</text>
+    <text class="block-text">收藏与游玩纪录均保存在本机微信缓存中，卸载小程序或清理缓存后重置，不会上传服务器。</text>
+  </view>
+</view>

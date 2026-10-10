@@ -15,9 +15,27 @@
     "minifyWXML": true
   },
   "compileType": "miniprogram",
+  "libVersion": "3.17.3",
+  "projectname": "games-hub",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      { "type": "folder", "value": "three-kingdoms-td" },
+      { "type": "folder", "value": "three-kingdoms-slg" },
+      { "type": "folder", "value": "mythology-deckbuilder" },
+      { "type": "folder", "value": "life-simulator" },
+      { "type": "folder", "value": "dice-game" },
+      { "type": "folder", "value": "super-mario" },
+      { "type": "folder", "value": "tank-battle" },
+      { "type": "folder", "value": "tetris" },
+      { "type": "folder", "value": "thunder-fighter" },
+      { "type": "folder", "value": "minesweeper" },
+      { "type": "folder", "value": "css" },
+      { "type": "folder", "value": "tools" },
+      { "type": "file", "value": "index.html" },
+      { "type": "file", "value": "launch_hall.bat" },
+      { "type": "file", "value": "README.md" }
+    ],
     "include": []
   },
   "appid": "wxc4a594dbf45190a1",

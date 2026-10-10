@@ -1,0 +1,73 @@
+/* pages/about/index.wxss */
+.about-page {
+  padding: 32rpx;
+}
+
+.about-card {
+  padding: 44rpx 32rpx;
+  border-radius: 28rpx;
+  text-align: center;
+  background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.24) 0%, transparent 65%);
+  border: 1rpx solid rgba(255, 255, 255, 0.09);
+}
+
+.about-title {
+  display: block;
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.about-subtitle {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #8b95b5;
+}
+
+.about-block {
+  margin-top: 28rpx;
+  padding: 30rpx 28rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid rgba(255, 255, 255, 0.07);
+}
+
+.block-title {
+  display: block;
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #a5b4fc;
+  margin-bottom: 14rpx;
+}
+
+.block-text {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.75;
+  color: #97a1c0;
+}
+
+.game-tags {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.game-tag {
+  margin: 0 12rpx 12rpx 0;
+  padding: 8rpx 18rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+}
+
+.tag-ok {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1rpx solid rgba(16, 185, 129, 0.3);
+}
+
+.tag-pending {
+  color: #6b7694;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.09);
+}

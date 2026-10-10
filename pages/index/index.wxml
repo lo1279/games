@@ -1,0 +1,184 @@
+<!-- pages/index/index.wxml - 游戏大厅首页 -->
+<view class="page-bg">
+
+  <!-- ===== 顶部统计徽章 ===== -->
+  <view class="hub-stats">
+    <view class="stat-item">
+      <text class="stat-label">📦 收录</text>
+      <text class="stat-value">{{totalGames}}</text>
+      <text class="stat-label">款</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-label">🎮 可玩</text>
+      <text class="stat-value">{{playableCount}}</text>
+      <text class="stat-label">款</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-label">🔥 累计</text>
+      <text class="stat-value">{{totalPlays}}</text>
+      <text class="stat-label">次</text>
+    </view>
+  </view>
+
+  <!-- ===== Hero 区域 ===== -->
+  <view class="hero">
+    <view class="hero-tag">✨ 精选单机游戏合集</view>
+    <view class="hero-title">点开即玩 · 纯净无广告</view>
+    <view class="hero-desc">原生小程序版游戏大厅，全部游戏无需下载、打开微信即玩，自动保存游玩纪录。</view>
+    <view class="hero-actions">
+      <view class="btn-primary hero-btn" bindtap="onRandomPlay">
+        <text>🎲 试试手气</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ===== 分类 Tab（横向滚动） ===== -->
+  <scroll-view class="category-tabs" scroll-x enable-flex scroll-with-animation="{{false}}">
+    <view class="tabs-inner">
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        class="tab-item {{activeCategory === item.id ? 'tab-active' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onCategoryChange"
+      >
+        <text class="tab-text">{{item.label}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- ===== 搜索 + 排序 ===== -->
+  <view class="toolbar">
+    <view class="search-box">
+      <text class="search-icon">🔍</text>
+      <input
+        class="search-input"
+        type="text"
+        value="{{searchKeyword}}"
+        placeholder="搜索游戏名称或标签"
+        placeholder-class="search-placeholder"
+        bindinput="onSearchInput"
+        confirm-type="search"
+      />
+      <text wx:if="{{searchKeyword}}" class="search-clear" bindtap="onSearchClear">✕</text>
+    </view>
+
+    <picker
+      class="sort-picker"
+      mode="selector"
+      range="{{sortOptions}}"
+      range-key="label"
+      value="{{sortIndex}}"
+      bindchange="onSortChange"
+    >
+      <view class="sort-btn">
+        <text class="sort-text">{{sortOptions[sortIndex].label}}</text>
+        <text class="sort-arrow">▼</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- ===== 游戏卡片网格 ===== -->
+  <view class="games-grid">
+    <view
+      wx:for="{{games}}"
+      wx:key="id"
+      class="game-card {{item.playable ? '' : 'card-locked'}}"
+      style="border-top: 6rpx solid {{item.accentColor}};"
+      data-id="{{item.id}}"
+      bindtap="onGameTap"
+    >
+      <!-- 未移植遮罩 -->
+      <view wx:if="{{!item.playable}}" class="card-lock-badge">
+        <text class="lock-icon">🚧</text>
+        <text class="lock-text">移植中</text>
+      </view>
+
+      <!-- 收藏按钮：阻止冒泡，避免误触发卡片点击 -->
+      <view
+        class="fav-btn {{item.isFavorite ? 'fav-active' : ''}}"
+        data-id="{{item.id}}"
+        catchtap="onToggleFavorite"
+      >
+        <text class="fav-icon">{{item.isFavorite ? '❤️' : '🤍'}}</text>
+      </view>
+
+      <view class="card-head">
+        <text class="card-icon">{{item.icon}}</text>
+        <view class="card-title-box">
+          <text class="card-title">{{item.title}}</text>
+          <text class="card-en">{{item.englishTitle}}</text>
+        </view>
+      </view>
+
+      <text class="card-summary">{{item.summary}}</text>
+
+      <view class="card-tags">
+        <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="card-tag">{{tag}}</text>
+      </view>
+
+      <view class="card-foot">
+        <text class="card-rating">⭐ {{item.rating}}</text>
+        <text wx:if="{{item.playCount > 0}}" class="card-plays">已玩 {{item.playCount}} 次</text>
+        <text class="card-action">{{item.playable ? '开始游戏' : '敬请期待'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ===== 空状态 ===== -->
+  <view wx:if="{{games.length === 0}}" class="empty-state">
+    <text class="empty-icon">🕹️</text>
+    <text class="empty-text">{{activeCategory === 'fav' ? '还没有收藏任何游戏' : '没有找到匹配的游戏'}}</text>
+  </view>
+
+  <view class="footer-note">
+    <text>原生小程序版 · {{playableCount}} / {{totalGames}} 款已开放</text>
+  </view>
+
+  <!-- ===== 游戏详情弹窗 ===== -->
+  <view wx:if="{{showDetail}}" class="modal-mask" bindtap="onDetailClose">
+    <view class="modal-panel" catchtap="noop">
+      <view class="modal-close" bindtap="onDetailClose">✕</view>
+
+      <view class="modal-head">
+        <text class="modal-icon">{{detailGame.icon}}</text>
+        <view class="modal-head-text">
+          <text class="modal-title">{{detailGame.title}}</text>
+          <text class="modal-en">{{detailGame.englishTitle}}</text>
+        </view>
+      </view>
+
+      <view class="modal-section">
+        <text class="modal-section-title">游戏简介</text>
+        <text class="modal-desc">{{detailGame.summary}}</text>
+      </view>
+
+      <view class="modal-section">
+        <text class="modal-section-title">操作指引</text>
+        <text class="modal-controls">{{detailGame.controls}}</text>
+      </view>
+
+      <view class="modal-section">
+        <text class="modal-section-title">核心特色</text>
+        <view class="modal-features">
+          <view wx:for="{{detailGame.features}}" wx:for-item="f" wx:key="*this" class="feature-item">
+            <text class="feature-dot">▸</text>
+            <text class="feature-text">{{f}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="modal-fav-row" data-id="{{detailGame.id}}" bindtap="onToggleFavorite">
+        <text class="modal-fav-icon">{{detailGame.isFavorite ? '❤️' : '🤍'}}</text>
+        <text class="modal-fav-text">{{detailGame.isFavorite ? '已收藏' : '收藏此游戏'}}</text>
+      </view>
+
+      <view class="btn-primary modal-play" bindtap="onDetailPlay">
+        <text>▶ 立即开始游戏</text>
+      </view>
+    </view>
+  </view>
+
+</view>

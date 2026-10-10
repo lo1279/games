@@ -730,7 +730,8 @@ class MarioGame {
 
       ctx.fillStyle = '#a0a0a0';
       ctx.font = '6px "Press Start 2P", monospace';
-      ctx.fillText('© 1985 NINTENDO / GAME HUB', this.width / 2, 192);
+      // 原为 '© 1985 NINTENDO'，因涉及第三方商标已移除，改为中性署名
+      ctx.fillText('GAME HUB ARCADE', this.width / 2, 192);
     }
     // 3. 城堡救出奇诺比奥过场彩蛋对话框
     else if (this.gameState === 'CASTLE_CLEAR' && this.castleClearSeqTimer > 210) {

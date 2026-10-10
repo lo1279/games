@@ -1,5 +1,5 @@
 appId: wbapp_e4AAf18vVSyi8IVkeuxBLN
-name: 三国SLG战棋
-localDir: D:\ai项目\games\three-kingdoms-slg
+name: 星云电竞游戏大厅
+localDir: D:\ai项目\games\web-hall
 appType: web
 entryHtml: index.html
