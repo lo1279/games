@@ -416,7 +416,7 @@ const FOUR_AND_FIVE_STARS = [
     bio: '关羽次子，有父风骨，与张苞义结金兰。兵刃输出附带高额倒戈吸血，与张苞上阵时互相护卫增伤！'
   },
   {
-    id: 'gen_zhang_bao',
+    id: 'gen_zhang_bao_shu',
     name: '张苞',
     camp: 'shu',
     star: 5,

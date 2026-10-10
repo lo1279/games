@@ -75,7 +75,7 @@ export const BONDS_DATA = [
     id: 'bond_hu_chen',
     name: '江表虎臣',
     requiredCount: 3,
-    heroNames: ['太史慈', '甘宁', '周泰', '凌统', '程普', '黄盖', '韩当'],
+    heroNames: ['太史慈', '甘宁', '周泰', '凌统', '程普', '黄盖', '韩当', '蒋钦', '徐盛'],
     desc: '使我军全体统率提升 20 点，自身暴击会心几率提升 5%！',
     statBonus: { command: 20 },
     effect: {
@@ -131,7 +131,7 @@ export const BONDS_DATA = [
   {
     id: 'bond_he_bei',
     name: '河北庭柱',
-    requiredCount: 3,
+    requiredCount: 2,
     heroNames: ['颜良', '文丑', '张郃'],
     desc: '使我军全体武力、统率各提升 14 点，河北猛将撼阵！',
     statBonus: { force: 14, command: 14 },
@@ -141,8 +141,8 @@ export const BONDS_DATA = [
     id: 'bond_jiang_dong',
     name: '江东之英',
     requiredCount: 3,
-    heroNames: ['孙坚', '孙策', '孙权'],
-    desc: '父子同心！使我军全体武力与统率各提升 15 点，强化攻防韧性！',
+    heroNames: ['孙坚', '孙策', '孙权', '孙尚香'],
+    desc: '父子兄妹同心！使我军全体武力与统率各提升 15 点，强化攻防韧性！',
     statBonus: { force: 15, command: 15 },
     effect: {}
   },
@@ -177,6 +177,93 @@ export const BONDS_DATA = [
     statBonus: { force: 15 },
     effect: {
       prepShield: { count: 2, duration: 2 }
+    }
+  },
+  {
+    id: 'bond_hu_wei',
+    name: '虎卫神威',
+    requiredCount: 3,
+    heroNames: ['曹操', '典韦', '许褚'],
+    desc: '曹魏禁卫军之魂！使我军全体武力提升 15 点，受到兵刃伤害降低 12%！',
+    statBonus: { force: 15 },
+    effect: {
+      bladeDmgReduction: 0.12
+    }
+  },
+  {
+    id: 'bond_lao_dang',
+    name: '老当益壮',
+    requiredCount: 3,
+    heroNames: ['黄忠', '严颜', '黄盖', '程普'],
+    desc: '烈士暮年壮心不已！使我军全体统率提升 21 点，受到暴击伤害降低 15%！',
+    statBonus: { command: 21 },
+    effect: {
+      critDmgReduction: 0.15
+    }
+  },
+  {
+    id: 'bond_san_zu',
+    name: '三足鼎立',
+    requiredCount: 3,
+    heroNames: ['刘备', '曹操', '孙权'],
+    desc: '三皇聚首鼎立天下！战斗前 2 回合，使我军全体造成的伤害提升 16%，受到的伤害降低 16%！',
+    statBonus: { force: 10, intel: 10, command: 10, speed: 10 },
+    effect: {
+      firstTwoRoundsDmgBonus: 0.16,
+      firstTwoRoundsDmgReduction: 0.16
+    }
+  },
+  {
+    id: 'bond_xi_liang',
+    name: '西凉霸雄',
+    requiredCount: 2,
+    heroNames: ['马超', '马云禄'],
+    desc: '西凉锦马骁骑！使我军全体武力、速度各提升 15 点，战斗前 2 回合获得【必中】！',
+    statBonus: { force: 15, speed: 15 },
+    effect: {
+      trueStrike: 2
+    }
+  },
+  {
+    id: 'bond_huang_jin',
+    name: '黄巾之乱',
+    requiredCount: 2,
+    heroNames: ['张角', '张宝'],
+    desc: '苍天已死黄天当立！使我军全体武力与智力各提升 12 点！',
+    statBonus: { force: 12, intel: 12 },
+    effect: {}
+  },
+  {
+    id: 'bond_wei_zong',
+    name: '曹魏宗族',
+    requiredCount: 3,
+    heroNames: ['曹操', '曹仁', '夏侯惇', '夏侯渊', '曹彰'],
+    desc: '诸夏侯曹宗族血脉！使我军全体统率提升 16 点，战斗前 2 回合受到的兵刃伤害降低 8%！',
+    statBonus: { command: 16 },
+    effect: {
+      bladeDmgReduction: 0.08
+    }
+  },
+  {
+    id: 'bond_chi_bi',
+    name: '赤壁之战',
+    requiredCount: 3,
+    heroNames: ['周瑜', '诸葛亮', '黄盖'],
+    desc: '谈笑间樯橹灰飞烟灭！使我军全体速度提升 15 点，主将谋略伤害提升 10%！',
+    statBonus: { speed: 15 },
+    effect: {
+      leaderTacticalDmgBonus: 0.10
+    }
+  },
+  {
+    id: 'bond_guan_men',
+    name: '将门虎女',
+    requiredCount: 3,
+    heroNames: ['关羽', '关银屏', '关平', '关兴'],
+    desc: '武圣家风英烈辈出！使我军全体武力提升 15 点，造成的兵刃伤害提升 5%！',
+    statBonus: { force: 15 },
+    effect: {
+      bladeDmgBonus: 0.05
     }
   }
 ];

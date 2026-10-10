@@ -270,6 +270,15 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
   const playerHeroes = playerTroop.heroes.map((h, i) => createBattleHero(h, pArm, i === 0, true, options.tacticLevels || {}, playerSeenTactics));
   const enemyHeroes = enemyTroop.heroes.map((h, i) => createBattleHero(h, eArm, i === 0, false, options.enemyTacticLevels || {}, enemySeenTactics));
 
+  playerHeroes.forEach(h => {
+    h.buffs.myTeam = playerHeroes;
+    h.buffs.oppTeam = enemyHeroes;
+  });
+  enemyHeroes.forEach(h => {
+    h.buffs.myTeam = enemyHeroes;
+    h.buffs.oppTeam = playerHeroes;
+  });
+
   // 每次推演前清空最近伤害上下文
   lastDamageContext = null;
 
@@ -403,6 +412,50 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         if (bond.effect.prepShield) {
           heroes.forEach(h => {
             grantShield(0, h, bond.effect.prepShield.count || 2, bond.effect.prepShield.duration || 2, log, bond.name);
+          });
+        }
+        // 受到兵刃伤害削减 (南蛮之乱 -8%，虎卫神威 -12%，曹魏宗族 -8%)
+        if (bond.effect.bladeDmgReduction) {
+          heroes.forEach(h => {
+            h.buffs.bladeReceivedMod = Math.max(0.1, (h.buffs.bladeReceivedMod || 1.0) - bond.effect.bladeDmgReduction);
+          });
+        }
+        // 造成的兵刃伤害提升 (将门虎女 +5%)
+        if (bond.effect.bladeDmgBonus) {
+          heroes.forEach(h => {
+            h.buffs.bladeDealtMod = (h.buffs.bladeDealtMod || 1.0) + bond.effect.bladeDmgBonus;
+          });
+        }
+        // 造成的主动谋略伤害提升 (四大都督 +6%)
+        if (bond.effect.activeTacticalDmgBonus) {
+          heroes.forEach(h => {
+            h.buffs.tacticalDealtMod = (h.buffs.tacticalDealtMod || 1.0) + bond.effect.activeTacticalDmgBonus;
+          });
+        }
+        // 主将谋略伤害提升 (赤壁之战 +10%)
+        if (bond.effect.leaderTacticalDmgBonus) {
+          const leader = heroes.find(h => h.isLeader);
+          if (leader) {
+            leader.buffs.tacticalDealtMod = (leader.buffs.tacticalDealtMod || 1.0) + bond.effect.leaderTacticalDmgBonus;
+          }
+        }
+        // 前2回合获得必中 (西凉霸雄)
+        if (bond.effect.trueStrike) {
+          heroes.forEach(h => {
+            h.buffs.trueStrike = true;
+          });
+        }
+        // 战斗前2回合攻防双增 (三足鼎立：造成伤害+16%，受伤害-16%)
+        if (bond.effect.firstTwoRoundsDmgBonus) {
+          heroes.forEach(h => {
+            h.buffs.damageDealtMod = (h.buffs.damageDealtMod || 1.0) + bond.effect.firstTwoRoundsDmgBonus;
+            h.buffs.damageReceivedMod = Math.max(0.1, (h.buffs.damageReceivedMod || 1.0) - (bond.effect.firstTwoRoundsDmgReduction || 0.16));
+          });
+        }
+        // 受到暴击伤害降低 (老当益壮 -15%)
+        if (bond.effect.critDmgReduction) {
+          heroes.forEach(h => {
+            h.buffs.critDmgReduction = (h.buffs.critDmgReduction || 0) + bond.effect.critDmgReduction;
           });
         }
         // 受到伤害削减 (国色天香 -6%)
@@ -879,6 +932,12 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         actor.buffs.meiHuo = true;
         logFn(0, `🌸【${actor.label}】身负秘策【${tactic.name}】：受到普通攻击时将使攻击者陷入混乱、计穷、缴械或虚弱！`, 'buff');
       }
+
+      // 🌟 士争先赴 (乐进/张辽传承：自带主动战法伤害提升20%)
+      if (tactic.id === 'tac_shi_zheng_xian_fu') {
+        actor.buffs.ownActiveBonus = 0.20;
+        logFn(0, `【${actor.label}】研习被动【${tactic.name}】：自身自带主动战法伤害提升 20%，发动前有 50% 几率对敌全体发动兵刃轰击！`, 'skill');
+      }
     });
   };
 
@@ -996,6 +1055,50 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
               hero.buffs.damageDealtMod = (hero.buffs.damageDealtMod || 1.0) + item.val;
               log(round, `⌛【${hero.label}】身上【料事如神】降伤压制到期失效，伤害输出恢复正常！`, 'buff', { actor: hero });
               return false; // 已恢复，从列表中移除
+            }
+            return true;
+          });
+        }
+        // 🌟 限时造成的伤害增益到期恢复 (如胡笳十八拍)
+        if (hero.buffs.timedDealtModBuffs && hero.buffs.timedDealtModBuffs.length > 0) {
+          hero.buffs.timedDealtModBuffs = hero.buffs.timedDealtModBuffs.filter(item => {
+            if (round >= item.expireRound) {
+              hero.buffs.damageDealtMod = Math.max(0.1, (hero.buffs.damageDealtMod || 1.0) - item.val);
+              log(round, `⌛【${hero.label}】身上【${item.name}】增伤效果到期失效！`, 'buff', { actor: hero });
+              return false;
+            }
+            return true;
+          });
+        }
+        // 🌟 限时受到的伤害减免到期恢复 (如胡笳十八拍)
+        if (hero.buffs.timedReceivedModBuffs && hero.buffs.timedReceivedModBuffs.length > 0) {
+          hero.buffs.timedReceivedModBuffs = hero.buffs.timedReceivedModBuffs.filter(item => {
+            if (round >= item.expireRound) {
+              hero.buffs.damageReceivedMod = (hero.buffs.damageReceivedMod || 1.0) + item.val;
+              log(round, `⌛【${hero.label}】身上【${item.name}】减伤护佑到期失效！`, 'buff', { actor: hero });
+              return false;
+            }
+            return true;
+          });
+        }
+        // 🌟 限时兵刃易伤到期恢复 (如狮子奋迅)
+        if (hero.buffs.timedBladeReceivedBuffs && hero.buffs.timedBladeReceivedBuffs.length > 0) {
+          hero.buffs.timedBladeReceivedBuffs = hero.buffs.timedBladeReceivedBuffs.filter(item => {
+            if (round >= item.expireRound) {
+              hero.buffs.bladeReceivedMod = Math.max(0.1, (hero.buffs.bladeReceivedMod || 1.0) - item.val);
+              log(round, `⌛【${hero.label}】身上【${item.name}】兵刃易伤破绽愈合，受到兵刃伤害恢复正常！`, 'buff', { actor: hero });
+              return false;
+            }
+            return true;
+          });
+        }
+        // 🌟 限时主动战法发动率到期恢复 (如狮子奋迅、十二奇策)
+        if (hero.buffs.timedActiveRateBuffs && hero.buffs.timedActiveRateBuffs.length > 0) {
+          hero.buffs.timedActiveRateBuffs = hero.buffs.timedActiveRateBuffs.filter(item => {
+            if (round >= item.expireRound) {
+              hero.buffs.activeRateBonus = Math.max(0, (hero.buffs.activeRateBonus || 0) - item.val);
+              log(round, `⌛【${hero.label}】身上【${item.name}】战法发动率加成时效已过！`, 'buff', { actor: hero });
+              return false;
             }
             return true;
           });
@@ -1511,6 +1614,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
           if (highestForce) {
             highestForce.buffs.continuousAttack = true;
             highestForce.buffs.damageDealtMod = (highestForce.buffs.damageDealtMod || 1.0) + 0.20;
+            highestForce.buffs.chuiXinTempBonus = 0.20;
             log(round, `🪷 垂心万物偶数破阵！【${actor.label}】指引军锋，令【${highestForce.label}】获得【连击】并增伤 20%！`, 'buff', { actor, target: highestForce });
           }
         }
@@ -1521,6 +1625,9 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         const panTaoDmg = Math.max(50, Math.round((actor.buffs.panTaoDmg || 1200) * Math.sqrt(actor.currentSoldiers / 100)));
         actor.currentSoldiers = Math.max(0, actor.currentSoldiers - panTaoDmg);
         actor.stats.damageTaken += panTaoDmg;
+        if (actor.buffs.panTaoSourceActor) {
+          actor.buffs.panTaoSourceActor.stats.damageDealt += panTaoDmg;
+        }
         log(round, `🩸【${actor.label}】身中剧毒叛逃侵蚀，受到 ${panTaoDmg} 点真实破防崩解伤害！(余兵:${actor.currentSoldiers})`, 'action', { target: actor });
         actor.buffs.panTao--;
         if (checkLeaderDeath(round)) break battleLoop;
@@ -1588,6 +1695,16 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         if (actor.buffs.shareDamageDuration <= 0) {
           actor.buffs.shareDamageTarget = null;
           actor.buffs.shareDamageRate = 0;
+          actor.buffs.shareDamageIsGuanXing = false;
+        }
+      }
+
+      // 🌟 王元姬【垂心万物】临时连击与增伤在行动结束后安全回收
+      if (actor.buffs.chuiXinTempBonus) {
+        actor.buffs.damageDealtMod = Math.max(0.1, (actor.buffs.damageDealtMod || 1.0) - actor.buffs.chuiXinTempBonus);
+        actor.buffs.chuiXinTempBonus = 0;
+        if (!actor.tactics.some(t => t.id === 'tac_shen_she')) {
+          actor.buffs.continuousAttack = false;
         }
       }
 
@@ -1597,6 +1714,14 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
 
     // 每回合末：维护全员【抵御】等有持续时间限制的状态
     [...playerHeroes, ...enemyHeroes].filter(h => h.currentSoldiers > 0).forEach(h => {
+      // 🌟 王元姬偶数回合连击增伤保底回收 (防止行动顺序滞后武将跨回合驻留)
+      if (h.buffs.chuiXinTempBonus) {
+        h.buffs.damageDealtMod = Math.max(0.1, (h.buffs.damageDealtMod || 1.0) - h.buffs.chuiXinTempBonus);
+        h.buffs.chuiXinTempBonus = 0;
+        if (!h.tactics.some(t => t.id === 'tac_shen_she')) {
+          h.buffs.continuousAttack = false;
+        }
+      }
       if (h.buffs.shieldDuration > 0) {
         h.buffs.shieldDuration--;
         if (h.buffs.shieldDuration <= 0 && h.buffs.shieldLayers > 0) {
@@ -1867,6 +1992,9 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
       isCrit = true;
       critType = 'tactical';
       critMult = actor.buffs?.tacticalCritDamage || 2.0;
+      if (target.buffs?.critDmgReduction) {
+        critMult = Math.max(1.1, critMult - target.buffs.critDmgReduction);
+      }
       modTags += '【⚡奇谋暴击】';
     }
 
@@ -1896,6 +2024,9 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
       isCrit = true;
       critType = 'blade';
       critMult = actor.buffs?.critDamage || 1.5;
+      if (target.buffs?.critDmgReduction) {
+        critMult = Math.max(1.1, critMult - target.buffs.critDmgReduction);
+      }
       modTags += '【💥会心暴击】';
     }
 
@@ -1985,7 +2116,7 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     }
   }
 
-  // 貂蝉【闭月】伤害分担机制 (受击时将一定比例伤害转移给敌军替身目标承受)
+  // 貂蝉【闭月】与关兴【双雄同袍】伤害分担机制
   if (finalDmg > 0 && target.buffs.shareDamageTarget && target.buffs.shareDamageTarget.currentSoldiers > 0 && target.buffs.shareDamageRate > 0) {
     const proxy = target.buffs.shareDamageTarget;
     const shareRate = target.buffs.shareDamageRate;
@@ -1993,7 +2124,11 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     finalDmg = Math.max(0, finalDmg - sharedDmg);
     proxy.currentSoldiers = Math.max(0, proxy.currentSoldiers - sharedDmg);
     proxy.stats.damageTaken += sharedDmg;
-    log(round, `🌹【${target.label}】闭月倾城！借力化解，将 ${sharedDmg} 点伤害转移至【${proxy.label}】承受！(余兵:${proxy.currentSoldiers})`, 'buff', { actor: target, target: proxy });
+    if (target.buffs.shareDamageIsGuanXing) {
+      log(round, `🤝【${proxy.label}】双雄同袍！挺身替【${target.label}】分担承受了 ${sharedDmg} 点伤害！(关兴余兵:${proxy.currentSoldiers})`, 'buff', { actor: proxy, target });
+    } else {
+      log(round, `🌹【${target.label}】闭月倾城！借力化解，将 ${sharedDmg} 点伤害转移至【${proxy.label}】承受！(余兵:${proxy.currentSoldiers})`, 'buff', { actor: target, target: proxy });
+    }
   }
 
   // 🌟 陆抗【校胜帷幄】主将伤害分担机制 (陆抗替主将分担 30% 伤害)
@@ -2033,10 +2168,14 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     if (reflectDmg > 0 && actor.currentSoldiers > 0) {
       actor.currentSoldiers = Math.max(0, actor.currentSoldiers - reflectDmg);
       actor.stats.damageTaken += reflectDmg;
+      target.stats.damageDealt += reflectDmg; // 归集反弹伤害给张星彩
       log(round, `🛡️【${target.label}】甚得人心重甲反弹！反震【${actor.label}】造成 ${reflectDmg} 点兵刃伤害！(余兵:${actor.currentSoldiers})`, 'action', { actor: target, target: actor });
     }
     if (Math.random() < 0.35) {
-      grantShield(round, target, 1, 2, log, '甚得人心');
+      const teamMates = (target.buffs?.myTeam || [target]).filter(h => h.currentSoldiers > 0);
+      teamMates.forEach(m => {
+        grantShield(round, m, 1, 2, log, '甚得人心');
+      });
     }
   }
 
@@ -2098,9 +2237,7 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
 
   // 🌟 严颜【不老长枪】受创反击 (受到伤害35%几率使敌军群体2人陷入计穷1回合，并使我军主将获得洞察2回合)
   if (finalDmg > 0 && target.currentSoldiers > 0 && target.tactics.some(t => t.id === 'tac_bu_lao_chang_qiang') && Math.random() < 0.35) {
-    const oppTeam = actor.isPlayer ? (actor.isPlayer ? [] : []) : [];
-    // 获取攻击方所在队伍
-    const attackerTeam = [actor, ...(actor.buffs?.opponentsRef || [])];
+    const attackerTeam = (actor.buffs?.myTeam || [actor]);
     const enemies = attackerTeam.filter(h => h && h.currentSoldiers > 0 && !h.buffs.insight);
     const target2 = getRandomElements(enemies, 2);
     target2.forEach(e => {
@@ -2108,7 +2245,7 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
       log(round, `🛡️ 不老长枪断头之勇！【${target.label}】受创横枪反制，敌将【${e.label}】陷入【计穷】1回合！`, 'debuff', { actor: target, target: e });
     });
     // 自身队伍主将获得洞察
-    const defTeamLeader = target.buffs?.myTeamLeader || (target.isLeader ? target : null);
+    const defTeamLeader = (target.buffs?.myTeam || [target]).find(h => h.isLeader) || (target.isLeader ? target : null);
     if (defTeamLeader && defTeamLeader.currentSoldiers > 0) {
       defTeamLeader.buffs.insight = true;
       log(round, `✨ 不老长枪老将护阵！主将【${defTeamLeader.label}】获老将庇护，进入【洞察】状态免受一切控制！`, 'buff', { actor: target, target: defTeamLeader });
@@ -3516,6 +3653,10 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       if (Math.random() < 0.50) {
         m.buffs.damageDealtMod = (m.buffs.damageDealtMod || 1.0) + bonusPct;
         m.buffs.damageReceivedMod = Math.max(0.1, (m.buffs.damageReceivedMod || 1.0) - reduxPct);
+        if (!m.buffs.timedDealtModBuffs) m.buffs.timedDealtModBuffs = [];
+        m.buffs.timedDealtModBuffs.push({ expireRound: round + 2, val: bonusPct, name: '胡笳十八拍' });
+        if (!m.buffs.timedReceivedModBuffs) m.buffs.timedReceivedModBuffs = [];
+        m.buffs.timedReceivedModBuffs.push({ expireRound: round + 2, val: reduxPct, name: '胡笳十八拍' });
         log(round, `✨ 胡笳清音激扬！【${m.label}】获得增益：造成伤害提升 ${(bonusPct * 100).toFixed(1)}%，受伤害降低 ${(reduxPct * 100).toFixed(1)}%(受智力影响，持续2回合)！`, 'buff', { actor, target: m });
       }
     });
@@ -3528,7 +3669,12 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       const rawDmg = Math.round((actor.force * 1.8 - target.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 2.28) * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, target, rawDmg, log, '狮子奋迅', { damageType: 'blade' });
       target.buffs.bladeReceivedMod = (target.buffs.bladeReceivedMod || 1.0) + 0.15;
-      actor.buffs.activeRateBonus = (actor.buffs.activeRateBonus || 0) + (tac.activeRateBonus || 15);
+      if (!target.buffs.timedBladeReceivedBuffs) target.buffs.timedBladeReceivedBuffs = [];
+      target.buffs.timedBladeReceivedBuffs.push({ expireRound: round + 2, val: 0.15, name: '狮子奋迅' });
+      const rateBonus = tac.activeRateBonus || 15;
+      actor.buffs.activeRateBonus = (actor.buffs.activeRateBonus || 0) + rateBonus;
+      if (!actor.buffs.timedActiveRateBuffs) actor.buffs.timedActiveRateBuffs = [];
+      actor.buffs.timedActiveRateBuffs.push({ expireRound: round + 2, val: rateBonus, name: '狮子奋迅' });
       if (actualDmg > 0) {
         log(round, `🦁 狮子奋迅豪气贯日！吕布之女画戟狂舞，对【${target.label}】造成 ${actualDmg} 点狂暴兵刃重创，使其受兵刃伤害提升15%！自身主动战法几率提升15%(持续2回合)！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
@@ -3646,7 +3792,9 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
     const bonusRate = Math.round((tac.activeRateBonus || 6) * (1 + Math.max(0, (actor.intel - 100) / 300)));
     team.filter(h => h.currentSoldiers > 0).forEach(m => {
       m.buffs.activeRateBonus = (m.buffs.activeRateBonus || 0) + bonusRate;
-      log(round, `✨ 十二奇策点拨全军！【${m.label}】主动战法发动几率提升 ${bonusRate}%！`, 'buff', { actor, target: m });
+      if (!m.buffs.timedActiveRateBuffs) m.buffs.timedActiveRateBuffs = [];
+      m.buffs.timedActiveRateBuffs.push({ expireRound: round + 1, val: bonusRate, name: '十二奇策' });
+      log(round, `✨ 十二奇策点拨全军！【${m.label}】主动战法发动几率提升 ${bonusRate}%(持续1回合)！`, 'buff', { actor, target: m });
     });
   }
   // 🌟 刀劈千军 (关兴自带：单体兵刃220% + 30%倒戈吸血2回合 + 分担张苞伤害)
@@ -3660,11 +3808,12 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       if (actualDmg > 0) {
         log(round, `🗡️ 刀劈千军青龙再现！关兴青龙偃月重斩【${target.label}】造成 ${actualDmg} 点狂暴兵刃重创，获得 30% 倒戈吸血！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
       }
-      const zhangBao = team.find(h => h.id === 'gen_zhang_bao' && h.currentSoldiers > 0);
+      const zhangBao = team.find(h => h.id === 'gen_zhang_bao_shu' && h.currentSoldiers > 0);
       if (zhangBao) {
         zhangBao.buffs.shareDamageTarget = actor;
         zhangBao.buffs.shareDamageRate = 0.30;
         zhangBao.buffs.shareDamageDuration = 2;
+        zhangBao.buffs.shareDamageIsGuanXing = true;
         log(round, `🤝 双雄破阵义结金兰！关兴挺身替张苞分担 30% 伤害持续2回合！`, 'buff', { actor, target: zhangBao });
       }
     }

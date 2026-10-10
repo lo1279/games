@@ -376,22 +376,24 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid #374151;
+  background: linear-gradient(180deg, rgba(42, 30, 18, 0.92), rgba(21, 16, 10, 0.92));
+  border: 1px solid var(--bronze);
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 13px;
+  color: #e7d9bd;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .res-badge span.val {
   font-weight: 700;
-  color: #fff;
+  color: #f0e3c8;
 }
 
-.res-badge.gold { border-color: #d97706; background: rgba(217, 119, 6, 0.15); }
+.res-badge.gold { border-color: var(--border-gold); background: rgba(217, 119, 6, 0.18); }
 .res-badge.gold span.val { color: #fde047; }
-.res-badge.orders { border-color: #3b82f6; }
+.res-badge.orders { border-color: #4f86d6; }
 
 /* 主工作视窗容器 */
 .slg-viewport {
@@ -467,8 +469,8 @@ body {
   font-size: 13px;
   padding: 6px 16px;
   border-radius: var(--r-sm);
-  background: rgba(17, 24, 39, 0.7);
-  border: 1px solid var(--border-dark);
+  background: rgba(26, 20, 12, 0.55);
+  border: 1px solid rgba(154, 119, 72, 0.45);
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
@@ -478,17 +480,18 @@ body {
 }
 
 .sub-nav-tab-btn:hover {
-  color: #e5e7eb;
-  border-color: #4b5563;
-  background: rgba(31, 41, 55, 0.85);
+  color: #e7d9bd;
+  border-color: var(--bronze-light);
+  background: rgba(42, 30, 18, 0.85);
 }
 
 .sub-nav-tab-btn.active {
-  background: linear-gradient(135deg, rgba(217, 119, 6, 0.3) 0%, rgba(180, 83, 9, 0.2) 100%) !important;
-  border: 1px solid #f59e0b !important;
-  color: var(--btn-on-text) !important;
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%) !important;
+  border: 1px solid var(--gold-bright) !important;
+  color: #ffe9a8 !important;
   font-weight: 800 !important;
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35) !important;
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.4),
+    0 0 14px rgba(245, 158, 11, 0.35) !important;
 }
 
 /* ⚔️ 征战模块二级分段导航控制器（经典战役 / 演武通天阁 / 假想敌演习沙盒） */
@@ -526,7 +529,7 @@ body {
   padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #a99a7d;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 7px;
@@ -559,9 +562,9 @@ body {
 }
 
 .battle-subtab-btn:hover:not(.active) {
-  color: #e2e8f0;
-  background: rgba(30, 41, 59, 0.65);
-  border-color: rgba(100, 116, 139, 0.45);
+  color: #e7d9bd;
+  background: rgba(42, 30, 18, 0.7);
+  border-color: rgba(154, 119, 72, 0.5);
   transform: translateY(-1px);
 }
 
@@ -586,12 +589,12 @@ body {
 }
 
 .battle-subtab-btn.active {
-  color: #fef3c7 !important;
+  color: #ffe9a8 !important;
   font-weight: 800;
-  background: linear-gradient(180deg, rgba(217, 119, 6, 0.32) 0%, rgba(180, 83, 9, 0.52) 100%);
-  border: 1px solid #f59e0b;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(253, 224, 71, 0.38);
-  text-shadow: 0 1px 6px rgba(245, 158, 11, 0.55);
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--gold-bright);
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.45),
+    0 4px 14px rgba(245, 158, 11, 0.3);
 }
 
 .battle-subtab-btn.active .subtab-icon {
@@ -690,11 +693,11 @@ body {
 }
 
 .btn-filter-camp.active, .btn-filter-star.active {
-  background: rgba(251, 191, 36, 0.2) !important;
-  border-color: rgba(251, 191, 36, 0.5) !important;
-  color: var(--btn-on-text) !important;
+  background: linear-gradient(180deg, rgba(58, 42, 24, 0.92), rgba(36, 24, 9, 0.92)) !important;
+  border-color: rgba(226, 200, 115, 0.6) !important;
+  color: #ffe9a8 !important;
   font-weight: 800;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.35), 0 0 8px rgba(245, 158, 11, 0.25);
 }
 
 /* ================= 沙盘大地图样式 ================= */
@@ -1716,29 +1719,28 @@ body {
   flex: 1;
   padding: 10px 4px;
   border-radius: var(--r-md);
-  border: none;
+  border: 1px solid var(--gold-bright);
   font-weight: 700;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #fff;
+  background: linear-gradient(180deg, #4a3414 0%, #2a1c0a 100%);
+  color: #ffe9a8;
   cursor: pointer;
   line-height: 1.35;
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .gacha-btn-fast50 {
-  background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%);
-  border: 1px solid rgba(216, 180, 254, 0.45);
-  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+  border-color: #8b5cf6;
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .gacha-btn-fast100 {
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  border: 1px solid rgba(252, 165, 165, 0.5);
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+  border-color: var(--cinnabar-bright);
+  box-shadow: inset 0 0 0 1px rgba(207, 70, 54, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .gacha-btn-copper-fast {
-  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
-  border: 1px solid rgba(94, 234, 212, 0.35);
+  border-color: #2f9bd6;
+  box-shadow: inset 0 0 0 1px rgba(47, 155, 214, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .gacha-btn:hover:not(:disabled) {
@@ -3074,14 +3076,14 @@ body {
 }
 
 .btn-start-battle {
-  background: linear-gradient(135deg, var(--btn-danger-from) 0%, var(--btn-danger-to) 100%);
-  color: #fff;
-  border: none;
+  background: linear-gradient(180deg, #3e221c 0%, #230f0c 100%);
+  color: #ffd9d4;
+  border: 1px solid var(--cinnabar-bright);
   padding: 8px 18px;
   border-radius: var(--r-sm);
   font-size: 13px;
   font-weight: 800;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(207, 70, 54, 0.45), 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
 .btn-start-battle:hover:not(:disabled) {
@@ -3192,13 +3194,14 @@ body {
 }
 
 .btn-inherit-tactic {
-  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-  color: #fff;
+  background: linear-gradient(180deg, #312244 0%, #1b1029 100%);
+  color: #e3c9ff;
   border: 1px solid #8b5cf6;
   padding: 4px 10px;
   border-radius: var(--r-xs);
   font-size: 11px;
   font-weight: bold;
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.4);
 }
 
 .btn-inherit-tactic:hover:not(:disabled) {
@@ -3220,17 +3223,17 @@ body {
 }
 
 .troop-tab-btn:hover {
-  background: #1f2430;
-  color: #fff;
-  border-color: #4b5563;
+  background: rgba(42, 30, 18, 0.9);
+  color: #e7d9bd;
+  border-color: var(--bronze-light);
 }
 
 .troop-tab-btn.active {
-  background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.15) 100%);
-  border-color: var(--btn-primary-from);
-  color: var(--text-gold);
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border-color: var(--gold-bright);
+  color: #ffe9a8;
   font-weight: bold;
-  box-shadow: 0 0 10px rgba(217, 119, 6, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.4), 0 0 10px rgba(217, 119, 6, 0.3);
 }
 
 .sandbox-slot-card {
@@ -3986,27 +3989,29 @@ body {
 /* 资源徽章：内联写死了 border/color，此处统一接管边框与字重 */
 .res-badge {
   border-radius: var(--r-sm) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid var(--bronze) !important;
+  background: linear-gradient(180deg, rgba(42, 30, 18, 0.92), rgba(21, 16, 10, 0.92)) !important;
+  color: #e7d9bd !important;
   font-weight: 500 !important;
   letter-spacing: 0.2px;
-  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease !important;
+  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease, box-shadow var(--t-mid) ease !important;
 }
 
 .res-badge:hover {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: linear-gradient(180deg, rgba(58, 42, 24, 0.95), rgba(36, 24, 9, 0.95)) !important;
+  border-color: var(--bronze-light) !important;
 }
 
 .res-badge span.val {
   font-weight: 700 !important;
   font-variant-numeric: tabular-nums;
+  color: #f0e3c8 !important;
 }
 
 /* 金铢徽章保留金色识别，但压低饱和避免与主按钮抢焦点 */
 .res-badge.gold {
-  border-color: rgba(217, 119, 6, 0.55) !important;
-  background: rgba(217, 119, 6, 0.1) !important;
+  border-color: rgba(226, 200, 115, 0.55) !important;
+  background: rgba(217, 119, 6, 0.14) !important;
 }
 
 /* ---------- ② 底部导航：图标上浮 + 顶部金色指示条 ---------- */
@@ -4065,137 +4070,157 @@ body {
    实测：白字配 #10b981 绿仅 2.41:1（远低于 AA 的 4.5:1，会看不清）；
         深字配亮绿为 7.04:1（AAA）。下同。 */
 .upgrade-btn {
-  /* 兜底文字色与背景：JS 动态渲染的部分按钮（btn-change-hero /
-     btn-add-hero / btn-modal-change-tac1|2 等）内联既无 background 也无 color，
-     原本依赖外层继承。精修层一旦加了 border 就会打断继承链，
-     导致深色字落在深色底上不可见。此处显式兜底，杜绝此类回归。 */
-  background: linear-gradient(180deg, #52525b 0%, #3f3f46 100%);
-  color: #f4f4f5;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  /* 青铜木牌按钮：JS 动态渲染的部分按钮（btn-change-hero / btn-add-hero /
+     btn-modal-change-tac1|2 等）内联既无 background 也无 color，原本依赖外层继承。
+     精修层一旦加了 border 就会打断继承链，导致深色字落在深色底上不可见。
+     此处显式兜底为「木底 + 青铜边 + 鎏金内线」，杜绝此类回归，并与 Phase5 木牍金边统一。 */
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  color: #f0e3c8;
+  border: 1px solid var(--bronze);
   border-radius: var(--r-sm) !important;
   font-weight: 700 !important;
   letter-spacing: 0.3px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 2px 6px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 0 0 1px rgba(197, 155, 39, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.5) !important;
   transition: filter var(--t-mid) ease, transform var(--t-fast) ease,
-    box-shadow var(--t-mid) ease !important;
+    box-shadow var(--t-mid) ease, border-color var(--t-mid) ease !important;
 }
 
 .upgrade-btn:hover:not(:disabled) {
-  filter: brightness(1.14);
   transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 5px 14px rgba(0, 0, 0, 0.55) !important;
+  border-color: var(--bronze-light);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(226, 200, 115, 0.5),
+    0 5px 14px rgba(0, 0, 0, 0.55),
+    0 0 12px rgba(197, 155, 39, 0.22) !important;
 }
 
 .upgrade-btn:active:not(:disabled) {
   transform: translateY(1px) scale(0.97);
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* 绿色系按钮（收益/屯田/预设）——亮绿配深字 7.04:1 AAA */
+.upgrade-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.45);
+}
+
+/* ===== 语义色变体：在统一「木牌」基底上以描边 / 辉光区分语义，兼顾原版古典与可用性 =====
+   内联渐变被 !important 木底覆盖，色相仅作边线 / 辉光点缀（嗅探机制见上方说明）。 */
+/* 绿色系（收益 / 屯田 / 预设 / 招募单次）——玉绿描边 */
 .upgrade-btn[style*="059669"],
 .upgrade-btn[style*="047857"],
-.upgrade-btn[style*="065f46"] {
-  background: linear-gradient(180deg, #34d399 0%, #059669 100%) !important;
-  border: 1px solid rgba(6, 95, 70, 0.6);
-  color: #04231a !important;
+.upgrade-btn[style*="065f46"],
+.upgrade-btn[style*="10b981"] {
+  background: linear-gradient(180deg, #2c3a26 0%, #182415 100%) !important;
+  border-color: #2f9e6f !important;
+  color: #bdf3d6 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(52, 211, 153, 0.28) !important;
 }
 
-/* 金橙系主操作——亮金配深字 8.31:1 AAA */
+/* 金橙系主操作（主 CTA / 升级 / 招募十连 / 卡池预览）——鎏金描边（最强强调） */
 .upgrade-btn[style*="f59e0b"],
-.upgrade-btn[style*="d97706"] {
-  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%) !important;
-  border: 1px solid rgba(180, 83, 9, 0.6);
-  color: #2b1a02 !important;
+.upgrade-btn[style*="d97706"],
+.upgrade-btn[style*="854d0e"],
+.upgrade-btn[style*="b45309"],
+.upgrade-btn[style*="ea580c"],
+.upgrade-btn[style*="c2410c"],
+.upgrade-btn[style*="251,191,36"] {
+  background: linear-gradient(180deg, #4a3414 0%, #2a1c0a 100%) !important;
+  border-color: var(--gold-bright) !important;
+  color: #ffe9a8 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(226, 200, 115, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(245, 158, 11, 0.34) !important;
 }
 
-/* 红色系消耗/危险操作——亮红配深字 6.45:1 AA */
+/* 红色系消耗 / 危险操作——朱红描边 */
 .upgrade-btn[style*="dc2626"],
 .upgrade-btn[style*="ef4444"],
-.upgrade-btn[style*="991b1b"] {
-  background: linear-gradient(180deg, #f87171 0%, #dc2626 100%) !important;
-  border: 1px solid rgba(153, 27, 27, 0.6);
-  color: #2b0705 !important;
+.upgrade-btn[style*="991b1b"],
+.upgrade-btn[style*="b91c1c"] {
+  background: linear-gradient(180deg, #3e221c 0%, #230f0c 100%) !important;
+  border-color: var(--cinnabar-bright) !important;
+  color: #ffc9c4 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(239, 68, 68, 0.30) !important;
 }
 
-/* 紫色系（战法传承 / 四星分解）——亮紫配深字 8.33:1 AAA */
+/* 紫色系（战法传承 / 四星分解）——紫描边 */
 .upgrade-btn[style*="7c3aed"],
 .upgrade-btn[style*="5b21b6"] {
-  background: linear-gradient(180deg, #c084fc 0%, #8b5cf6 100%) !important;
-  border: 1px solid rgba(91, 33, 182, 0.55);
-  color: #1e0a3c !important;
+  background: linear-gradient(180deg, #312244 0%, #1b1029 100%) !important;
+  border-color: #8b5cf6 !important;
+  color: #e3c9ff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(139, 92, 246, 0.30) !important;
 }
 
-/* 中性灰系（次要操作 / 分解 / 清空）——白字配暗灰 10.31:1 AAA */
-.upgrade-btn[style*="374151"],
-.upgrade-btn[style*="4b5563"] {
-  background: linear-gradient(180deg, #6b7280 0%, #374151 100%) !important;
-  border: 1px solid rgba(156, 163, 175, 0.4);
-  color: #f9fafb !important;
-}
-
-/* 蓝色系（试炼/演武/水系战法）——亮蓝配深字 8.33:1 AAA */
+/* 蓝色系（试炼 / 演武 / 水系战法）——青蓝描边 */
 .upgrade-btn[style*="0284c7"],
 .upgrade-btn[style*="0369a1"],
 .upgrade-btn[style*="1e3a8a"] {
-  background: linear-gradient(180deg, #7dd3fc 0%, #0284c7 100%) !important;
-  border: 1px solid rgba(3, 105, 161, 0.6);
-  color: #04283d !important;
+  background: linear-gradient(180deg, #1c2c3e 0%, #0f1822 100%) !important;
+  border-color: #2f9bd6 !important;
+  color: #bfe9ff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(56, 189, 248, 0.28) !important;
 }
 
-/* 棕色系（蜀国阵营预设 #854d0e）——亮棕配深字 */
-.upgrade-btn[style*="854d0e"] {
-  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%) !important;
-  border: 1px solid rgba(120, 53, 15, 0.6);
-  color: #2b1a02 !important;
+/* 中性灰系（次要操作 / 分解 / 清空）——最弱强调，仅青铜边 */
+.upgrade-btn[style*="374151"],
+.upgrade-btn[style*="4b5563"] {
+  background: linear-gradient(180deg, #34302a 0%, #211d18 100%) !important;
+  border-color: #6b7280 !important;
+  color: #d6dae0 !important;
 }
 
-/* 半透明金边按钮（卡池预览）——保留"查看"语义，实底 + 深字 4.22:1 AA-L。
-   用 alpha 背景会让对比度随下方卡片颜色漂移，故改为实底保证可读。 */
-.upgrade-btn[style*="251,191,36"] {
-  background: linear-gradient(180deg, #fde68a 0%, #fbbf24 100%) !important;
-  border: 1px solid rgba(180, 83, 9, 0.6) !important;
-  color: #2b1a02 !important;
-}
-
-/* 半透明幽灵按钮（屯田单次 / 英雄详情 / 换将等低优先级操作）
-   内联为 rgba(255,255,255,0.08)+#4b5563 边框，统一压成更克制的描边幽灵态。
-   注意：源码中 rgba 三种写法并存（0.08 / 0.1 / 0.06），且无空格分隔，
-   故用不透明度片段 255,255,255,0.0 统一匹配，避免带括号的写法漏命中。 */
+/* 幽灵按钮（低优先级：换将 / 详情 / 移除）——透明木纹描边 */
 .upgrade-btn[style*="255,255,255,0.0"] {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #f1f5f9 !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(197, 155, 39, 0.30) !important;
+  color: #e7d9bd !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
 }
 
 .upgrade-btn[style*="255,255,255,0.0"]:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.13) !important;
-  border-color: rgba(255, 255, 255, 0.32) !important;
+  background: rgba(197, 155, 39, 0.12) !important;
+  border-color: var(--gold-bright) !important;
+  color: #ffe9a8 !important;
 }
 
 /* 无背景（纯文字型操作，如"移除"） */
 .upgrade-btn[style*="background:transparent"],
 .upgrade-btn[style*="background: transparent"] {
   background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  color: #e2e8f0 !important;
+  border: 1px solid rgba(197, 155, 39, 0.28) !important;
+  color: #e2d6bd !important;
 }
 
-/* ---------- ④ 重置按钮：内联写死的红色过艳，降为中性警示色 ---------- */
+/* ---------- ④ 重置按钮：木牌 + 朱红描边，危险态警示 ---------- */
 #btnResetGame {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
-  color: #fca5a5 !important;
+  background: linear-gradient(180deg, #3e221c 0%, #230f0c 100%) !important;
+  border: 1px solid var(--cinnabar-bright) !important;
+  color: #ffc9c4 !important;
   border-radius: var(--r-sm) !important;
   font-weight: 600 !important;
   padding: 5px 11px !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 0 10px rgba(207, 70, 54, 0.25) !important;
 }
 
 #btnResetGame:hover {
-  background: rgba(239, 68, 68, 0.16) !important;
-  border-color: rgba(239, 68, 68, 0.7) !important;
+  background: linear-gradient(180deg, #4a2820 0%, #2a120d 100%) !important;
+  border-color: #e0584a !important;
+  color: #ffd9d4 !important;
 }
 
 /* ---------- ⑤ 页面区块标题：内联 18px 偏小且无层级，加左金线 + 提字号 ---------- */
@@ -4274,6 +4299,7 @@ body {
 }
 
 .nav-tab-btn[style*="color:"].active {
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%) !important;
   box-shadow: inset 0 0 0 1px currentColor, 0 0 10px rgba(251, 191, 36, 0.22);
 }
 
@@ -5094,12 +5120,15 @@ body {
   font-weight: var(--fw-bold);
   line-height: var(--lh-normal);
   white-space: nowrap;
+  background: linear-gradient(180deg, rgba(42, 30, 18, 0.9), rgba(21, 16, 10, 0.9));
+  border: 1px solid var(--bronze);
+  color: #e7d9bd;
 }
-.tag--ok   { background: var(--ok-bg);     border: var(--bw) solid var(--ok-border);     color: var(--ok-text); }
-.tag--gold { background: var(--warn-bg);   border: var(--bw) solid var(--warn-border);   color: var(--warn-text); }
+.tag--ok   { background: var(--ok-bg);     border-color: rgba(52, 211, 153, 0.55);  color: var(--ok-text); }
+.tag--gold { background: var(--warn-bg);   border-color: rgba(226, 200, 115, 0.55); color: var(--warn-text); }
 /* 实心标签：白字，用于「充值」「双倍」等强提示 */
-.tag--solid { background: var(--danger-border); color: #fff; }
-.tag--plain { background: var(--ok-border); color: #fff; }
+.tag--solid { background: var(--cinnabar); border-color: var(--cinnabar-bright); color: #fff; }
+.tag--plain { background: rgba(16, 185, 129, 0.6); border-color: #34d399; color: #fff; }
 
 /* ---------- 筛选按钮组 ---------- */
 /* 「阵营: 全部 魏 蜀 吴 群」这类深底胶囊容器。
@@ -5795,3 +5824,214 @@ body {
   from { opacity: 0; transform: translateY(10px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* =========================================================
+   Phase 3 · 数据看板 / 进度条 / 卡片质感（青铜木牍统一）
+   设计约束：多数卡片在 JS 内联写了 background/borderColor，
+   故统一层用「box-shadow 青铜内框 + 伪元素鎏金角饰」实现，
+   这两类声明叠在背景之上、不被内联压制；纯 CSS 卡片额外套木底。
+   ========================================================= */
+
+/* ---------- Phase 3-A: 古典进度槽（保底可视化强化） ---------- */
+.pity-bar {
+  height: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, var(--wood-900) 0%, #0b0805 100%);
+  border: 1px solid var(--bronze);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(197,155,39,0.18);
+}
+.pity-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 55% 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.13), transparent);
+  pointer-events: none;
+}
+.pity-fill {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #c8841a 0%, #f6c453 55%, #ffe9a8 100%);
+  box-shadow: 0 0 10px rgba(246,196,83,0.55), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+/* 金光流光：填充上的横向高光扫过 */
+.pity-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  transform: translateX(-100%);
+  animation: pityShine 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pityShine {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(240%); }
+}
+
+/* ---------- Phase 3-B: 数据看板瓦片 + 横幅 ---------- */
+.stat-tile {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--bronze);
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.18), 0 4px 12px rgba(0,0,0,0.4);
+}
+.stat-tile--sunken {
+  background: var(--bg-sunken);
+  border-color: var(--border-dark);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+}
+/* 普通提示横幅：木底 + 青铜边 + 左侧朱红印条；保留 gold/ok 语义色不变 */
+.notice:not(.notice--gold):not(.notice--ok) {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, rgba(42,30,18,0.92), rgba(21,16,10,0.94));
+  border: 1px solid var(--bronze);
+  border-left: 4px solid var(--cinnabar);
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.14);
+}
+
+/* ---------- Phase 3-C: 卡片质感（青铜内框 + 角饰 + hover 微光） ---------- */
+/* 青铜内描边：box-shadow 叠在背景之上，不受内联 background/borderColor 影响，
+   故对全部卡片（含 JS 内联主题的 resource-land-card / campaign-card / troop-hero-card）统一生效。 */
+.resource-land-card,
+.campaign-card,
+.trial-card,
+.troop-hero-card,
+.general-card {
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.28), 0 4px 14px rgba(0,0,0,0.45);
+}
+/* 左上 + 右下 鎏金 L 形角饰（伪元素，不被内联背景压制） */
+.resource-land-card::before, .campaign-card::before,
+.trial-card::before, .troop-hero-card::before, .general-card::before {
+  content: "";
+  position: absolute;
+  top: 5px; left: 5px;
+  width: 12px; height: 12px;
+  border-top: 2px solid var(--gold-bright);
+  border-left: 2px solid var(--gold-bright);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.resource-land-card::after, .campaign-card::after,
+.trial-card::after, .troop-hero-card::after, .general-card::after {
+  content: "";
+  position: absolute;
+  bottom: 5px; right: 5px;
+  width: 12px; height: 12px;
+  border-bottom: 2px solid var(--gold-bright);
+  border-right: 2px solid var(--gold-bright);
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* hover：上浮 + 青铜辉光（transform 不受内联影响） */
+.resource-land-card:hover,
+.campaign-card:hover,
+.trial-card:hover,
+.general-card:hover {
+  transform: translateY(-4px);
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.4), 0 10px 26px rgba(0,0,0,0.5), 0 0 16px rgba(236,200,115,0.18);
+}
+/* 仅对纯 CSS 卡片（无内联背景）套木底，避免与内联主题色冲突 */
+.trial-card {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--bronze);
+}
+.general-card {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--bronze);
+}
+
+/* =========================================================
+   Phase 4 · 微交互（切换过渡 / hover 平滑 / 按钮压感 / 列表入场 / 提示层次）
+   原则：全部为「平滑既有变化」与「一次性入场」，
+   不新增显隐机制、不改动 JS、不引入零引用令牌（缓动用字面量 cubic-bezier）。
+   ========================================================= */
+
+/* ---------- Phase 4-A：子标签 active 切换过渡补齐 ---------- */
+/* sub-nav-tab-btn 原仅 hover 有过渡，active 切换是瞬间跳变；补过渡 + 轻压感 */
+.sub-nav-tab-btn {
+  transition: background-color .2s ease, border-color .2s ease,
+    color .2s ease, box-shadow .2s ease, transform .18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sub-nav-tab-btn:active { transform: scale(0.97); }
+
+/* troop-tab-btn 同理：补过渡 + 轻压感 */
+.troop-tab-btn {
+  transition: background-color .2s ease, border-color .2s ease,
+    color .2s ease, box-shadow .2s ease, transform .18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.troop-tab-btn:active { transform: scale(0.97); }
+
+/* 顶部/底部主导航：补按下压感（hover 已有，缺按压缩手感） */
+.nav-tab-btn:active { transform: scale(0.94); }
+
+/* ---------- Phase 4-B：卡片 hover 平滑 + 角饰微亮 ---------- */
+/* Phase 3 卡片 hover 用 transform/box-shadow，但基类无 transition → 瞬移；补平滑。
+   trial-card 已有 transition:all .2s，故从此组排除避免覆盖其原有过渡。 */
+.resource-land-card,
+.campaign-card,
+.troop-hero-card,
+.general-card {
+  transition: transform .22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow .22s ease;
+}
+/* 四角鎏金角饰：hover 微亮 + 平滑过渡（伪元素 layer 不受内联背景压制） */
+.resource-land-card::before, .campaign-card::before, .trial-card::before,
+.troop-hero-card::before, .general-card::before,
+.resource-land-card::after, .campaign-card::after, .trial-card::after,
+.troop-hero-card::after, .general-card::after {
+  transition: opacity .2s ease;
+}
+.resource-land-card:hover::before, .campaign-card:hover::before, .trial-card:hover::before,
+.troop-hero-card:hover::before, .general-card:hover::before,
+.resource-land-card:hover::after, .campaign-card:hover::after, .trial-card:hover::after,
+.troop-hero-card:hover::after, .general-card:hover::after {
+  opacity: 0.9;
+}
+
+/* ---------- Phase 4-C：按钮统一压感 + 过渡补齐 ---------- */
+/* gacha-btn / btn-start-battle / btn-inherit-tactic 基类缺 transition → hover/active 瞬移 */
+.gacha-btn {
+  transition: transform .12s ease, filter .15s ease, box-shadow .2s ease;
+}
+.btn-start-battle {
+  transition: transform .12s ease, filter .15s ease, box-shadow .2s ease;
+}
+.btn-inherit-tactic {
+  transition: transform .12s ease, filter .15s ease, box-shadow .2s ease;
+}
+.btn-inherit-tactic:active:not(:disabled) { transform: scale(0.97); }
+
+/* ---------- Phase 4-D：列表柔和入场（一次性淡入上移） ---------- */
+/* ⚠️ animation 用 backwards 填充：delay 期间保持首帧(opacity:0)，
+   播完释放 transform，不锁 hover 的 translateY(-4px)。
+   切 tab 显示时元素重渲染，动画自然重播，强化「展开」观感。 */
+@keyframes slgListIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.resource-land-card,
+.campaign-card,
+.troop-hero-card,
+.general-card {
+  animation: slgListIn .42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.trial-card {
+  animation: slgListIn .42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* ---------- Phase 4-E：slgNotice 入场层次（印章→标题→正文→按钮 依次弹入） ---------- */
+@keyframes slgNoticeChildIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.slg-notice__seal    { animation: slgNoticeChildIn .35s .08s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slg-notice__title   { animation: slgNoticeChildIn .35s .16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slg-notice__body    { animation: slgNoticeChildIn .35s .24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slg-notice__actions { animation: slgNoticeChildIn .35s .32s cubic-bezier(0.22, 1, 0.36, 1) both; }

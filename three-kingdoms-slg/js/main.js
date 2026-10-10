@@ -3895,7 +3895,11 @@ class GameApp {
     `;
 
     document.body.appendChild(modal);
-    modal.querySelector('#btnTacModalClose').addEventListener('click', () => modal.remove());
+    modal.querySelector('#btnTacModalClose').addEventListener('click', () => {
+      modal.remove();
+      const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
+      this.openHeroDetailModal(realHero);
+    });
 
     // 多维联动筛选状态与逻辑
     const modalFilters = {
@@ -4029,6 +4033,7 @@ class GameApp {
         this.renderTroops();
         this.save();
         modal.remove();
+        this.openHeroDetailModal(realHero);
         slgNotice({ title: '战法装配', body: `✔ 已成功将【${hero.name}】槽位 ${slot} 的战法卸下！该战法现已处于闲置状态，可供其他名将装配！`, seal: '🔓', type: 'ok' });
       });
     }
@@ -4070,6 +4075,7 @@ class GameApp {
         this.renderTroops();
         this.save();
         modal.remove();
+        this.openHeroDetailModal(realHero);
 
         const tac = TACTICS_MAP.get(id);
         const tipMsg = occupiedHeroId 
