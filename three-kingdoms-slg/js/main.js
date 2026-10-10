@@ -2157,6 +2157,225 @@ class GameApp {
     this.troopsContainer.appendChild(el);
   }
 
+  // 浮动战报轻提示 (升级数值即时动效通知)
+  showFloatingToast(msg, icon = '⚡') {
+    let toast = document.getElementById('slgFloatingToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'slgFloatingToast';
+      toast.style.cssText = `
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-20px);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+        border: 1px solid rgba(251, 191, 36, 0.6);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(245, 158, 11, 0.3);
+        border-radius: 8px;
+        padding: 10px 18px;
+        color: #f8fafc;
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        backdrop-filter: blur(8px);
+        max-width: 90vw;
+        text-align: center;
+      `;
+      document.body.appendChild(toast);
+    }
+    toast.innerHTML = `<span style="font-size:16px;">${icon}</span> <span>${msg}</span>`;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    
+    if (this._floatingToastTimer) clearTimeout(this._floatingToastTimer);
+    this._floatingToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(-20px)';
+    }, 2800);
+  }
+
+  // 计算武将当前所装配战法带来的常驻被动/指挥四维属性加成 (战法升级时属性实时成长)
+  getHeroEquippedTacticsStatBonus(hero) {
+    if (!hero) return { force: 0, intel: 0, command: 0, speed: 0 };
+    const realHero = this.state.ownedGenerals.find(g => g.id === hero.id) || hero;
+    const builtInTac = TACTICS_MAP.get(realHero.builtInTacticId);
+    const tac1 = TACTICS_MAP.get(realHero.equippedTactic1);
+    const tac2 = TACTICS_MAP.get(realHero.equippedTactic2);
+
+    const builtInLvl = Math.max(1, Math.min(MAX_TACTIC_LEVEL, realHero.builtInTacticLevel || this.state.tacticLevels?.[realHero.builtInTacticId] || 1));
+    const tac1Lvl = tac1 ? Math.max(1, Math.min(MAX_TACTIC_LEVEL, this.state.tacticLevels?.[tac1.id] || 1)) : 1;
+    const tac2Lvl = tac2 ? Math.max(1, Math.min(MAX_TACTIC_LEVEL, this.state.tacticLevels?.[tac2.id] || 1)) : 1;
+
+    let force = 0, intel = 0, command = 0, speed = 0;
+    const list = [
+      { tac: builtInTac, lvl: builtInLvl },
+      { tac: tac1, lvl: tac1Lvl },
+      { tac: tac2, lvl: tac2Lvl }
+    ];
+
+    list.forEach(({ tac, lvl }) => {
+      if (!tac) return;
+      const eff = getTacticEffectiveProps(tac, lvl);
+      // 全四维加成 (如赵云【一身是胆】、传承【百炼成钢】)
+      if (eff.statBoost) {
+        force += eff.statBoost;
+        intel += eff.statBoost;
+        command += eff.statBoost;
+        speed += eff.statBoost;
+      }
+      if (tac.id === 'tac_bai_lian_cheng_gang' && eff.statBuff) {
+        force += eff.statBuff;
+        intel += eff.statBuff;
+        command += eff.statBuff;
+        speed += eff.statBuff;
+      }
+      // 单项属性加成 (如【奋发】、【虎痴】、【守而必固】)
+      if (eff.statBoostForce) force += eff.statBoostForce;
+      if (eff.statBoostCmd) command += eff.statBoostCmd;
+      if (eff.statBoostSpeed) speed += eff.statBoostSpeed;
+      if (tac.id === 'tac_shou_er_bi_gu' && eff.statBuff) {
+        command += eff.statBuff;
+      }
+    });
+
+    return { force, intel, command, speed };
+  }
+
+  // 格式化战法当前等级 vs 下一级实战属性数值对比阶梯 (全槽位通用)
+  formatTacticCompareHtml(tac, currentLvl) {
+    if (!tac) return '';
+    const lvl = Math.max(1, Math.min(MAX_TACTIC_LEVEL, parseInt(currentLvl) || 1));
+    const isMax = (lvl >= MAX_TACTIC_LEVEL);
+    const curP = getTacticEffectiveProps(tac, lvl);
+    const nxtP = isMax ? null : getTacticEffectiveProps(tac, lvl + 1);
+    const parts = [];
+
+    // 发动几率
+    if (tac.rate && tac.rate < 100) {
+      parts.push(`<span>发动率: <b style="color:#f472b6;">${curP.rate}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${nxtP.rate}%</span>`}</span>`);
+    }
+    // 伤害率
+    if (tac.damageRate) {
+      const label = tac.id === 'tac_jue_di_fan_ji' ? '反击伤害' : (tac.damageType === 'tactical' ? '谋略伤害' : '伤害率');
+      parts.push(`<span>${label}: <b class="val-gold">${Math.round(curP.damageRate * 100)}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtP.damageRate * 100)}%</span>`}</span>`);
+    }
+    // 治疗率 / 急救
+    if (tac.healRate || tac.emergencyHealRate) {
+      const curHeal = curP.healRate || curP.emergencyHealRate;
+      const nxtHeal = nxtP ? (nxtP.healRate || nxtP.emergencyHealRate) : 0;
+      parts.push(`<span>治疗率: <b class="val-copper">${Math.round(curHeal * 100)}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtHeal * 100)}%</span>`}</span>`);
+    }
+    // 减伤率
+    if (tac.damageReduction || tac.teamDamageReduction || tac.selfDamageReduction) {
+      const curRed = curP.damageReduction || curP.teamDamageReduction || curP.selfDamageReduction;
+      const nxtRed = nxtP ? (nxtP.damageReduction || nxtP.teamDamageReduction || nxtP.selfDamageReduction) : 0;
+      parts.push(`<span>减伤率: <b style="color:#60a5fa;">${Math.round(curRed * 100)}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtRed * 100)}%</span>`}</span>`);
+    }
+    // 增伤率
+    if (tac.damageBonus || tac.teamDamageBonus) {
+      const curBonus = curP.damageBonus || curP.teamDamageBonus;
+      const nxtBonus = nxtP ? (nxtP.damageBonus || nxtP.teamDamageBonus) : 0;
+      parts.push(`<span>增伤率: <b style="color:#fb923c;">+${Math.round(curBonus * 100)}%</b>${isMax ? '' : ` <span class="val-ok">➜ +${Math.round(nxtBonus * 100)}%</span>`}</span>`);
+    }
+    // 全属性增益
+    if (tac.statBoost || (tac.id === 'tac_bai_lian_cheng_gang' && tac.statBuff)) {
+      const curStat = curP.statBoost || curP.statBuff;
+      const nxtStat = nxtP ? (nxtP.statBoost || nxtP.statBuff) : 0;
+      parts.push(`<span>全四维: <b style="color:#38bdf8;">+${curStat}</b>${isMax ? '' : ` <span class="val-ok">➜ +${nxtStat}</span>`}</span>`);
+    }
+    // 单项属性增益
+    if (tac.statBoostForce) {
+      parts.push(`<span>武力: <b style="color:#fbbf24;">+${curP.statBoostForce}</b>${isMax ? '' : ` <span class="val-ok">➜ +${nxtP.statBoostForce}</span>`}</span>`);
+    }
+    if (tac.statBoostCmd) {
+      parts.push(`<span>统率: <b style="color:#34d399;">+${curP.statBoostCmd}</b>${isMax ? '' : ` <span class="val-ok">➜ +${nxtP.statBoostCmd}</span>`}</span>`);
+    }
+    if (tac.statBoostSpeed) {
+      parts.push(`<span>速度: <b style="color:#f472b6;">+${curP.statBoostSpeed}</b>${isMax ? '' : ` <span class="val-ok">➜ +${nxtP.statBoostSpeed}</span>`}</span>`);
+    }
+    // 属性削减 (如破阵摧坚、燕人咆哮)
+    if (tac.statDebuff) {
+      parts.push(`<span>削减属性: <b class="val-damage">-${curP.statDebuff}</b>${isMax ? '' : ` <span class="val-ok">➜ -${nxtP.statDebuff}</span>`}</span>`);
+    }
+    // 叠加属性增益 (如绝地反击、守而必固)
+    if (tac.statBuff && !tac.statBoost && tac.id !== 'tac_bai_lian_cheng_gang') {
+      const label = tac.id === 'tac_jue_di_fan_ji' ? '每层武力' : (tac.id === 'tac_shou_er_bi_gu' ? '统率提升' : '属性提升');
+      parts.push(`<span>${label}: <b class="val-gold">+${curP.statBuff}</b>${isMax ? '' : ` <span class="val-ok">➜ +${nxtP.statBuff}</span>`}</span>`);
+    }
+    // 主动几率加成 (如白眉)
+    if (tac.activeRateBonus) {
+      parts.push(`<span>主动几率: <b style="color:#a78bfa;">+${curP.activeRateBonus}%</b>${isMax ? '' : ` <span class="val-ok">➜ +${nxtP.activeRateBonus}%</span>`}</span>`);
+    }
+    // 暴击率 / 连击 / 溅射 / 灼烧
+    if (tac.critRateBonus) {
+      parts.push(`<span>会心几率: <b style="color:#fde047;">+${Math.round(curP.critRateBonus * 100)}%</b>${isMax ? '' : ` <span class="val-ok">➜ +${Math.round(nxtP.critRateBonus * 100)}%</span>`}</span>`);
+    }
+    if (tac.splashRate) {
+      parts.push(`<span>溅射率: <b class="val-gold">${Math.round(curP.splashRate * 100)}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtP.splashRate * 100)}%</span>`}</span>`);
+    }
+    if (tac.burnDamage) {
+      parts.push(`<span>灼烧伤害: <b style="color:#f87171;">${Math.round(curP.burnDamage * 100)}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtP.burnDamage * 100)}%</span>`}</span>`);
+    }
+    if (tac.disarmRate && tac.disarmRate < 100) {
+      parts.push(`<span>缴械几率: <b style="color:#fb7185;">${curP.disarmRate}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${nxtP.disarmRate}%</span>`}</span>`);
+    }
+    if (tac.counterActiveRate) {
+      parts.push(`<span>打断反击: <b style="color:#c084fc;">${curP.counterActiveRate}%</b>${isMax ? '' : ` <span class="val-ok">➜ ${nxtP.counterActiveRate}%</span>`}</span>`);
+    }
+
+    if (parts.length === 0) {
+      parts.push(`<span>战法效能倍率: <b style="color:#38bdf8;">${Math.round(curP.scale * 100)}%</b>${isMax ? ' (已满额)' : ` <span class="val-ok">➜ ${Math.round(nxtP.scale * 100)}%</span>`}</span>`);
+    }
+
+    return `
+      <div style="font-size:11px; color:#cbd5e1; margin-top:5px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.08); display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px;">
+        <span style="color:#fbbf24; font-weight:bold; font-size:10px; background:rgba(217,119,6,0.2); border:1px solid rgba(217,119,6,0.4); padding:0 4px; border-radius:3px;">📈 属性提升预览</span>
+        ${parts.join('<span style="color:#4b5563; margin:0 3px;">|</span>')}
+      </div>
+    `;
+  }
+
+  // 生成战法升级前后实战数值跃升文本摘要 (用于反馈提示)
+  getTacticUpgradeGainSummary(tac, oldLvl, newLvl) {
+    if (!tac) return '';
+    const pOld = getTacticEffectiveProps(tac, oldLvl);
+    const pNew = getTacticEffectiveProps(tac, newLvl);
+    const gains = [];
+    if (tac.rate && tac.rate < 100 && pNew.rate !== pOld.rate) gains.push(`发动率 ${pOld.rate}% ➜ ${pNew.rate}%`);
+    if (tac.damageRate && pNew.damageRate !== pOld.damageRate) gains.push(`伤害率 ${Math.round(pOld.damageRate * 100)}% ➜ ${Math.round(pNew.damageRate * 100)}%`);
+    if ((tac.healRate || tac.emergencyHealRate)) {
+      const hOld = Math.round((pOld.healRate || pOld.emergencyHealRate) * 100);
+      const hNew = Math.round((pNew.healRate || pNew.emergencyHealRate) * 100);
+      if (hOld !== hNew) gains.push(`治疗率 ${hOld}% ➜ ${hNew}%`);
+    }
+    if (tac.damageReduction || tac.teamDamageReduction || tac.selfDamageReduction) {
+      const rOld = Math.round((pOld.damageReduction || pOld.teamDamageReduction || pOld.selfDamageReduction) * 100);
+      const rNew = Math.round((pNew.damageReduction || pNew.teamDamageReduction || pNew.selfDamageReduction) * 100);
+      if (rOld !== rNew) gains.push(`减伤率 ${rOld}% ➜ ${rNew}%`);
+    }
+    if (tac.damageBonus || tac.teamDamageBonus) {
+      const bOld = Math.round((pOld.damageBonus || pOld.teamDamageBonus) * 100);
+      const bNew = Math.round((pNew.damageBonus || pNew.teamDamageBonus) * 100);
+      if (bOld !== bNew) gains.push(`增伤率 +${bOld}% ➜ +${bNew}%`);
+    }
+    if (tac.statBoost && pNew.statBoost !== pOld.statBoost) gains.push(`全四维属性 +${pOld.statBoost} ➜ +${pNew.statBoost}`);
+    if (tac.id === 'tac_bai_lian_cheng_gang' && pNew.statBuff !== pOld.statBuff) gains.push(`全四维属性 +${pOld.statBuff} ➜ +${pNew.statBuff}`);
+    if (tac.statBoostForce && pNew.statBoostForce !== pOld.statBoostForce) gains.push(`武力 +${pOld.statBoostForce} ➜ +${pNew.statBoostForce}`);
+    if (tac.statBoostCmd && pNew.statBoostCmd !== pOld.statBoostCmd) gains.push(`统率 +${pOld.statBoostCmd} ➜ +${pNew.statBoostCmd}`);
+    if (tac.statBoostSpeed && pNew.statBoostSpeed !== pOld.statBoostSpeed) gains.push(`速度 +${pOld.statBoostSpeed} ➜ +${pNew.statBoostSpeed}`);
+    if (tac.statDebuff && pNew.statDebuff !== pOld.statDebuff) gains.push(`削减属性 -${pOld.statDebuff} ➜ -${pNew.statDebuff}`);
+    if (tac.statBuff && !tac.statBoost && tac.id !== 'tac_bai_lian_cheng_gang' && pNew.statBuff !== pOld.statBuff) gains.push(`属性提升 +${pOld.statBuff} ➜ +${pNew.statBuff}`);
+    if (tac.activeRateBonus && pNew.activeRateBonus !== pOld.activeRateBonus) gains.push(`主动几率 +${pOld.activeRateBonus}% ➜ +${pNew.activeRateBonus}%`);
+    if (gains.length === 0) gains.push(`战法效能倍率 ${Math.round(pOld.scale * 100)}% ➜ ${Math.round(pNew.scale * 100)}%`);
+    return gains.join('，');
+  }
+
   // 武将全息详情弹窗 (战法配装、五维属性与成长、兵种适性)
   openHeroDetailModal(hero) {
     // 确保从 ownedGenerals 获取最新引用
@@ -2275,16 +2494,29 @@ class GameApp {
               <!-- 四维核心战斗属性与成长率 -->
               ${(() => {
                 const redBonus = redStars * 5;
-                const curForce = Math.round(realHero.force + (realHero.forceGrowth || 1.0) * (hLvl - 1));
-                const curIntel = Math.round(realHero.intel + (realHero.intelGrowth || 1.0) * (hLvl - 1));
-                const curCommand = Math.round(realHero.command + (realHero.commandGrowth || 1.0) * (hLvl - 1));
-                const curSpeed = Math.round(realHero.speed + (realHero.speedGrowth || 1.0) * (hLvl - 1));
-                const redInlineTag = redBonus > 0
-                  ? ` <span style="font-size:11px; color:#f87171; font-weight:bold;">(红+${redBonus})</span>`
-                  : '';
+                const tacBonus = this.getHeroEquippedTacticsStatBonus(realHero);
+                const baseForce = Math.round(realHero.force + (realHero.forceGrowth || 1.0) * (hLvl - 1));
+                const baseIntel = Math.round(realHero.intel + (realHero.intelGrowth || 1.0) * (hLvl - 1));
+                const baseCommand = Math.round(realHero.command + (realHero.commandGrowth || 1.0) * (hLvl - 1));
+                const baseSpeed = Math.round(realHero.speed + (realHero.speedGrowth || 1.0) * (hLvl - 1));
+
+                const curForce = baseForce + tacBonus.force;
+                const curIntel = baseIntel + tacBonus.intel;
+                const curCommand = baseCommand + tacBonus.command;
+                const curSpeed = baseSpeed + tacBonus.speed;
+
+                const formatStatTag = (redVal, tacVal) => {
+                  const parts = [];
+                  if (redVal > 0) parts.push(`<span style="color:#f87171;">红+${redVal}</span>`);
+                  if (tacVal > 0) parts.push(`<span style="color:#38bdf8;">战法+${tacVal}</span>`);
+                  return parts.length > 0 ? ` <span style="font-size:11px; font-weight:bold;">(${parts.join(' | ')})</span>` : '';
+                };
+
                 const redHeaderBadge = redBonus > 0
                   ? `<span style="font-size:11px; background:${isFullRed ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)' : 'rgba(239,68,68,0.2)'}; color:${isFullRed ? '#fde047' : '#fca5a5'}; border:1px solid ${isFullRed ? '#fbbf24' : '#ef4444'}; padding:1px 7px; border-radius:4px; font-weight:bold;">${isFullRed ? `👑 满红(${redStars}红)` : `🔥 进阶${redStars}红`} · 全属性 +${redBonus}</span>`
                   : `<span class="card-micro">白板(0红) · 进阶每红全属性 +5</span>`;
+
+                const hasTacStat = (tacBonus.force > 0 || tacBonus.intel > 0 || tacBonus.command > 0 || tacBonus.speed > 0);
 
                 return `
                   <div class="hero-detail-section">
@@ -2294,19 +2526,19 @@ class GameApp {
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                       <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                        <span>🗡️ 武力: <b style="color:#fde047; font-size:15px;">${curForce}</b>${redInlineTag}</span>
+                        <span>🗡️ 武力: <b style="color:#fde047; font-size:15px;">${curForce}</b>${formatStatTag(redBonus, tacBonus.force)}</span>
                         <span class="hero-growth-tag" style="color:#fbbf24;">(+${realHero.forceGrowth || 1.0}/级)</span>
                       </div>
                       <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                        <span>🧠 智力: <b style="color:#60a5fa; font-size:15px;">${curIntel}</b>${redInlineTag}</span>
+                        <span>🧠 智力: <b style="color:#60a5fa; font-size:15px;">${curIntel}</b>${formatStatTag(redBonus, tacBonus.intel)}</span>
                         <span class="hero-growth-tag" style="color:#93c5fd;">(+${realHero.intelGrowth || 1.0}/级)</span>
                       </div>
                       <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                        <span>🛡️ 统率: <b style="color:#34d399; font-size:15px;">${curCommand}</b>${redInlineTag}</span>
+                        <span>🛡️ 统率: <b style="color:#34d399; font-size:15px;">${curCommand}</b>${formatStatTag(redBonus, tacBonus.command)}</span>
                         <span class="hero-growth-tag val-copper">(+${realHero.commandGrowth || 1.0}/级)</span>
                       </div>
                       <div class="card-row--split" style="background:rgba(0,0,0,0.35); padding:7px 10px; border-radius:6px; border:1px solid #2d3340">
-                        <span>⚡ 速度: <b style="color:#f472b6; font-size:15px;">${curSpeed}</b>${redInlineTag}</span>
+                        <span>⚡ 速度: <b style="color:#f472b6; font-size:15px;">${curSpeed}</b>${formatStatTag(redBonus, tacBonus.speed)}</span>
                         <span class="hero-growth-tag" style="color:#f9a8d4;">(+${realHero.speedGrowth || 1.0}/级)</span>
                       </div>
                     </div>
@@ -2314,6 +2546,11 @@ class GameApp {
                       ${redBonus > 0
                         ? `💡 相比同级白板（Lv.1 初始 武${realHero.force - redBonus} / 智${realHero.intel - redBonus} / 统${realHero.command - redBonus} / 速${realHero.speed - redBonus}），${redStars}红进阶已永久提升四维各 <b class="val-danger">+${redBonus}</b> 点`
                         : `💡 当前为白板属性（Lv.1 初始 武${realHero.force} / 智${realHero.intel} / 统${realHero.command} / 速${realHero.speed}），消耗同名卡每进阶 1 红四维各 <b class="val-gold">+5</b> 点`}
+                      ${hasTacStat ? `
+                        <div style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(56,189,248,0.25); color:#7dd3fc;">
+                          ✨ <b>战法被动四维已生效</b>：武力+${tacBonus.force} · 智力+${tacBonus.intel} · 统率+${tacBonus.command} · 速度+${tacBonus.speed}（升级所配战法属性实时跃升）
+                        </div>
+                      ` : ''}
                     </div>
                   </div>
                 `;
@@ -2361,43 +2598,13 @@ class GameApp {
                     const canAffordMax = currentCopper >= maxRemainingCost;
 
                     // 计算当前等级与下一级属性成长预览
-                    let builtInCompareHtml = '';
-                    if (builtInTac) {
-                      const curP = getTacticEffectiveProps(builtInTac, builtInLvl);
-                      const nxtP = isBuiltInMax ? null : getTacticEffectiveProps(builtInTac, builtInLvl + 1);
-                      const parts = [];
-                      if (builtInTac.rate && builtInTac.rate < 100) {
-                        parts.push(`<span>发动率: <b style="color:#f472b6;">${curP.rate}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${nxtP.rate}%</span>`}</span>`);
-                      }
-                      if (builtInTac.damageRate) {
-                        parts.push(`<span>伤害率: <b class="val-gold">${Math.round(curP.damageRate * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtP.damageRate * 100)}%</span>`}</span>`);
-                      }
-                      if (builtInTac.healRate || builtInTac.emergencyHealRate) {
-                        const curHeal = curP.healRate || curP.emergencyHealRate;
-                        const nxtHeal = nxtP ? (nxtP.healRate || nxtP.emergencyHealRate) : 0;
-                        parts.push(`<span>治疗率: <b class="val-copper">${Math.round(curHeal * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtHeal * 100)}%</span>`}</span>`);
-                      }
-                      if (builtInTac.statBoost || builtInTac.statBoostForce || builtInTac.statBoostCmd) {
-                        const curStat = curP.statBoost || curP.statBoostForce || curP.statBoostCmd;
-                        const nxtStat = nxtP ? (nxtP.statBoost || nxtP.statBoostForce || nxtP.statBoostCmd) : 0;
-                        parts.push(`<span>属性加成: <b style="color:#38bdf8;">+${curStat}</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ +${nxtStat}</span>`}</span>`);
-                      }
-                      if (builtInTac.teamDamageBonus || builtInTac.selfDamageReduction || builtInTac.shareDamageRate) {
-                        const curBonus = curP.teamDamageBonus || curP.selfDamageReduction || curP.shareDamageRate;
-                        const nxtBonus = nxtP ? (nxtP.teamDamageBonus || nxtP.selfDamageReduction || nxtP.shareDamageRate) : 0;
-                        parts.push(`<span>核心增益: <b style="color:#fb923c;">${Math.round(curBonus * 100)}%</b>${isBuiltInMax ? '' : ` <span class="val-ok">➜ ${Math.round(nxtBonus * 100)}%</span>`}</span>`);
-                      }
-                      if (parts.length === 0) {
-                        parts.push(`<span>战法效能倍率: <b style="color:#38bdf8;">${Math.round(curP.scale * 100)}%</b>${isBuiltInMax ? ' (已满额)' : ` <span class="val-ok">➜ ${Math.round(nxtP.scale * 100)}%</span>`}</span>`);
-                      }
-                      builtInCompareHtml = parts.join('<span style="color:#4b5563; margin:0 6px;">|</span>');
-                    }
+                    const builtInCompareHtml = builtInTac ? this.formatTacticCompareHtml(builtInTac, builtInLvl) : '';
 
                     return `
                       <div style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor}; padding:8px 12px; border-radius:6px;">
                         <div class="card-row--split card-row--wrap" style="gap:8px; flex-wrap:wrap">
                           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                            <span style="color:${color}; font-weight:bold; font-size:12px;">[自带战法] ${builtInTac ? builtInTac.name : '军略'}</span>
+                            <span class="btn-preview-tactic-inline" data-tid="${builtInTac?.id || ''}" data-lvl="${builtInLvl}" style="color:${color}; font-weight:bold; font-size:12px; cursor:pointer;" title="点击预览自带战法全息机制与数值推演">[自带战法] ${builtInTac ? builtInTac.name : '军略'} 🔍</span>
                             <span style="font-size:10px; color:${color}; background:${bgBadge}; border:1px solid ${borderBadge}; padding:1px 6px; border-radius:3px;">
                               ${qualityBadgeText} · ${typeZh}
                             </span>
@@ -2421,11 +2628,7 @@ class GameApp {
                           `) : ''}
                         </div>
                         <div style="font-size:11px; color:#cbd5e1; margin-top:4px; line-height:1.4;">${builtInTac ? builtInTac.desc : '名将核心自带军略'}</div>
-                        ${builtInCompareHtml ? `
-                          <div style="font-size:11px; color:#9ca3af; margin-top:5px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.08); display:flex; flex-wrap:wrap; align-items:center;">
-                            ${builtInCompareHtml}
-                          </div>
-                        ` : ''}
+                        ${builtInCompareHtml}
                       </div>
                     `;
                   })()}
@@ -2437,25 +2640,54 @@ class GameApp {
                     const color1 = isS1 ? '#fbbf24' : '#c084fc';
                     const typeZh1 = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[tac1?.type] || '战法';
                     const borderColor1 = tac1 ? (isS1 ? 'rgba(217,119,6,0.45)' : 'rgba(147,51,234,0.45)') : '#374151';
+
+                    const currentCopper = this.state.resources?.copper || 0;
+                    const tac1Lvl = tac1 ? Math.max(1, Math.min(MAX_TACTIC_LEVEL, this.state.tacticLevels?.[tac1.id] || 1)) : 1;
+                    const isTac1Max = (tac1Lvl >= MAX_TACTIC_LEVEL);
+                    const nextCost1 = isTac1Max ? 0 : (TACTIC_UPGRADE_COSTS[tac1Lvl] || 26000);
+                    let maxCost1 = 0;
+                    for (let lv = tac1Lvl; lv < MAX_TACTIC_LEVEL; lv++) {
+                      maxCost1 += (TACTIC_UPGRADE_COSTS[lv] || 26000);
+                    }
+                    const canAffordNext1 = currentCopper >= nextCost1;
+                    const canAffordMax1 = currentCopper >= maxCost1;
+
                     return `
                       <div class="card-row--split" style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor1}; padding:8px 12px; border-radius:6px; gap:8px">
                         <div style="flex:1; min-width:0;">
                           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法①]</span>
                             ${tac1 ? `
-                              <span style="color:${color1}; font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac1.name}</span>
+                              <span class="btn-preview-tactic-inline" data-tid="${tac1.id}" data-lvl="${tac1Lvl}" style="color:${color1}; font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;" title="点击预览【${tac1.name}】全息战法机制与数值推演">${tac1.name} 🔍</span>
                               <span style="font-size:10px; color:${color1}; background:${isS1 ? 'rgba(251,191,36,0.15)' : 'rgba(192,132,252,0.15)'}; border:1px solid ${isS1 ? '#d97706' : '#9333ea'}; padding:0 4px; border-radius:3px;">
                                 ${isS1 ? '🌟 S级' : '💜 A级'} · ${typeZh1}
                               </span>
-                              <span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac1.id] || 1}</span>
+                              <span style="font-size:10px; color:${isTac1Max ? '#fde047' : '#6ee7b7'}; background:${isTac1Max ? 'rgba(217,119,6,0.25)' : 'rgba(5,150,105,0.2)'}; border:1px solid ${isTac1Max ? '#f59e0b' : '#059669'}; padding:0 4px; border-radius:3px; flex-shrink:0; font-weight:bold;">
+                                ${isTac1Max ? '👑 Lv.10 MAX' : `Lv.${tac1Lvl} / ${MAX_TACTIC_LEVEL}`}
+                              </span>
                             ` : `
                               <span style="color:#9ca3af; font-size:12px;">未装配</span>
                             `}
                           </div>
-                          <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac1 ? (tac1.desc.length > 38 ? tac1.desc.substring(0, 38) + '...' : tac1.desc) : '点击右侧按钮装配传承战法'}</div>
+                          <div style="font-size:11px; color:#cbd5e1; margin-top:2px; line-height:1.3;">${tac1 ? (tac1.desc.length > 50 ? tac1.desc.substring(0, 50) + '...' : tac1.desc) : '点击右侧按钮装配传承战法'}</div>
+                          ${tac1 ? this.formatTacticCompareHtml(tac1, tac1Lvl) : ''}
                         </div>
                         ${isOwned ? `
-                          <button class="upgrade-btn btn-modal-change-tac1" style="padding:4px 10px; font-size:11px; white-space:nowrap; flex-shrink:0;">换配</button>
+                          <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
+                            ${tac1 ? (isTac1Max ? `
+                              <span style="font-size:10px; color:#fbbf24; font-weight:bold; margin-right:2px;">👑 MAX</span>
+                            ` : `
+                              <button class="upgrade-btn btn-modal-upgrade-tac1" style="padding:3px 7px; font-size:11px; background:${canAffordNext1 ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : '#4b5563'};" title="消耗 ${nextCost1.toLocaleString()} 铜币升级战法至 Lv.${tac1Lvl + 1}">
+                                🪙 升至Lv.${tac1Lvl + 1}
+                              </button>
+                              ${tac1Lvl < MAX_TACTIC_LEVEL - 1 ? `
+                                <button class="upgrade-btn btn-modal-max-tac1" style="padding:3px 7px; font-size:11px; background:${canAffordMax1 ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : '#4b5563'};" title="共需 ${maxCost1.toLocaleString()} 铜币直接升至 Lv.10 满级">
+                                  ⚡ 满级
+                                </button>
+                              ` : ''}
+                            `) : ''}
+                            <button class="upgrade-btn btn-modal-change-tac1" style="padding:3px 8px; font-size:11px; white-space:nowrap; flex-shrink:0;">${tac1 ? '换配' : '+ 装配'}</button>
+                          </div>
                         ` : `
                           <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
                         `}
@@ -2470,25 +2702,54 @@ class GameApp {
                     const color2 = isS2 ? '#fbbf24' : '#c084fc';
                     const typeZh2 = { command: '指挥', passive: '被动', active: '主动', assault: '突击' }[tac2?.type] || '战法';
                     const borderColor2 = tac2 ? (isS2 ? 'rgba(217,119,6,0.45)' : 'rgba(147,51,234,0.45)') : '#374151';
+
+                    const currentCopper = this.state.resources?.copper || 0;
+                    const tac2Lvl = tac2 ? Math.max(1, Math.min(MAX_TACTIC_LEVEL, this.state.tacticLevels?.[tac2.id] || 1)) : 1;
+                    const isTac2Max = (tac2Lvl >= MAX_TACTIC_LEVEL);
+                    const nextCost2 = isTac2Max ? 0 : (TACTIC_UPGRADE_COSTS[tac2Lvl] || 26000);
+                    let maxCost2 = 0;
+                    for (let lv = tac2Lvl; lv < MAX_TACTIC_LEVEL; lv++) {
+                      maxCost2 += (TACTIC_UPGRADE_COSTS[lv] || 26000);
+                    }
+                    const canAffordNext2 = currentCopper >= nextCost2;
+                    const canAffordMax2 = currentCopper >= maxCost2;
+
                     return `
                       <div class="card-row--split" style="background:rgba(0,0,0,0.3); border:1px solid ${borderColor2}; padding:8px 12px; border-radius:6px; gap:8px">
                         <div style="flex:1; min-width:0;">
                           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             <span style="color:#fbbf24; font-weight:bold; font-size:12px; flex-shrink:0;">[传承战法②]</span>
                             ${tac2 ? `
-                              <span style="color:${color2}; font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${tac2.name}</span>
+                              <span class="btn-preview-tactic-inline" data-tid="${tac2.id}" data-lvl="${tac2Lvl}" style="color:${color2}; font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;" title="点击预览【${tac2.name}】全息战法机制与数值推演">${tac2.name} 🔍</span>
                               <span style="font-size:10px; color:${color2}; background:${isS2 ? 'rgba(251,191,36,0.15)' : 'rgba(192,132,252,0.15)'}; border:1px solid ${isS2 ? '#d97706' : '#9333ea'}; padding:0 4px; border-radius:3px;">
                                 ${isS2 ? '🌟 S级' : '💜 A级'} · ${typeZh2}
                               </span>
-                              <span style="font-size:10px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:0 4px; border-radius:3px; flex-shrink:0;">Lv.${this.state.tacticLevels?.[tac2.id] || 1}</span>
+                              <span style="font-size:10px; color:${isTac2Max ? '#fde047' : '#6ee7b7'}; background:${isTac2Max ? 'rgba(217,119,6,0.25)' : 'rgba(5,150,105,0.2)'}; border:1px solid ${isTac2Max ? '#f59e0b' : '#059669'}; padding:0 4px; border-radius:3px; flex-shrink:0; font-weight:bold;">
+                                ${isTac2Max ? '👑 Lv.10 MAX' : `Lv.${tac2Lvl} / ${MAX_TACTIC_LEVEL}`}
+                              </span>
                             ` : `
                               <span style="color:#9ca3af; font-size:12px;">未装配</span>
                             `}
                           </div>
-                          <div style="font-size:11px; color:#9ca3af; margin-top:2px; line-height:1.3;">${tac2 ? (tac2.desc.length > 38 ? tac2.desc.substring(0, 38) + '...' : tac2.desc) : '点击右侧按钮装配第二战法'}</div>
+                          <div style="font-size:11px; color:#cbd5e1; margin-top:2px; line-height:1.3;">${tac2 ? (tac2.desc.length > 50 ? tac2.desc.substring(0, 50) + '...' : tac2.desc) : '点击右侧按钮装配第二战法'}</div>
+                          ${tac2 ? this.formatTacticCompareHtml(tac2, tac2Lvl) : ''}
                         </div>
                         ${isOwned ? `
-                          <button class="upgrade-btn btn-modal-change-tac2" style="padding:4px 10px; font-size:11px; white-space:nowrap; flex-shrink:0;">换配</button>
+                          <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
+                            ${tac2 ? (isTac2Max ? `
+                              <span style="font-size:10px; color:#fbbf24; font-weight:bold; margin-right:2px;">👑 MAX</span>
+                            ` : `
+                              <button class="upgrade-btn btn-modal-upgrade-tac2" style="padding:3px 7px; font-size:11px; background:${canAffordNext2 ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : '#4b5563'};" title="消耗 ${nextCost2.toLocaleString()} 铜币升级战法至 Lv.${tac2Lvl + 1}">
+                                🪙 升至Lv.${tac2Lvl + 1}
+                              </button>
+                              ${tac2Lvl < MAX_TACTIC_LEVEL - 1 ? `
+                                <button class="upgrade-btn btn-modal-max-tac2" style="padding:3px 7px; font-size:11px; background:${canAffordMax2 ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : '#4b5563'};" title="共需 ${maxCost2.toLocaleString()} 铜币直接升至 Lv.10 满级">
+                                  ⚡ 满级
+                                </button>
+                              ` : ''}
+                            `) : ''}
+                            <button class="upgrade-btn btn-modal-change-tac2" style="padding:3px 8px; font-size:11px; white-space:nowrap; flex-shrink:0;">${tac2 ? '换配' : '+ 装配'}</button>
+                          </div>
                         ` : `
                           <span style="font-size:10px; color:#6b7280; padding:2px 6px;">招募后解锁</span>
                         `}
@@ -2536,6 +2797,18 @@ class GameApp {
 
     modal.querySelector('#btnHeroDetailClose').addEventListener('click', () => modal.remove());
 
+    // 绑定战法内联点击全息预览
+    modal.querySelectorAll('.btn-preview-tactic-inline').forEach(el => {
+      el.addEventListener('click', () => {
+        const tid = el.getAttribute('data-tid');
+        const lvl = parseInt(el.getAttribute('data-lvl') || '1', 10);
+        if (tid) {
+          sound.playDrum();
+          this.openTacticDetailModal(tid, lvl, realHero);
+        }
+      });
+    });
+
     // 绑定自带战法单级强化
     modal.querySelector('.btn-modal-upgrade-builtin')?.addEventListener('click', () => {
       if (this.upgradeHeroBuiltInTactic(realHero, false)) {
@@ -2552,10 +2825,42 @@ class GameApp {
       }
     });
 
+    // 绑定槽位1传承战法单级强化
+    modal.querySelector('.btn-modal-upgrade-tac1')?.addEventListener('click', () => {
+      if (tac1 && this.upgradeTactic(tac1.id, false)) {
+        modal.remove();
+        this.openHeroDetailModal(realHero);
+      }
+    });
+
+    // 绑定槽位1传承战法一键满级
+    modal.querySelector('.btn-modal-max-tac1')?.addEventListener('click', () => {
+      if (tac1 && this.upgradeTactic(tac1.id, true)) {
+        modal.remove();
+        this.openHeroDetailModal(realHero);
+      }
+    });
+
     // 绑定槽位1换配
     modal.querySelector('.btn-modal-change-tac1')?.addEventListener('click', () => {
       modal.remove();
       this.openEquipTacticModal(realHero, 1);
+    });
+
+    // 绑定槽位2传承战法单级强化
+    modal.querySelector('.btn-modal-upgrade-tac2')?.addEventListener('click', () => {
+      if (tac2 && this.upgradeTactic(tac2.id, false)) {
+        modal.remove();
+        this.openHeroDetailModal(realHero);
+      }
+    });
+
+    // 绑定槽位2传承战法一键满级
+    modal.querySelector('.btn-modal-max-tac2')?.addEventListener('click', () => {
+      if (tac2 && this.upgradeTactic(tac2.id, true)) {
+        modal.remove();
+        this.openHeroDetailModal(realHero);
+      }
     });
 
     // 绑定槽位2换配
@@ -2563,6 +2868,7 @@ class GameApp {
       modal.remove();
       this.openEquipTacticModal(realHero, 2);
     });
+
 
     // 绑定模态框中的传承
     const btnModalInherit = modal.querySelector('.btn-modal-inherit');
@@ -2618,6 +2924,18 @@ class GameApp {
     this.syncTroopHeroTactics(realHero.id);
 
     sound.playVictoryHorn();
+    const summary = this.getTacticUpgradeGainSummary(tac, currentLvl, targetLvl);
+    if (toMax) {
+      slgNotice({
+        title: '战法臻至巅峰 MAX',
+        body: `👑 恭贺主公！\n【${realHero.name}】自带战法【${tac ? tac.name : '军略'}】已登峰造极研习至 Lv.10 满级！\n\n📈 【实战数值跃升】：\n${summary}`,
+        seal: '👑',
+        type: 'ok'
+      });
+    } else {
+      this.showFloatingToast(`【${tac ? tac.name : '军略'}】研习至 Lv.${targetLvl}！${summary}`, '🎉');
+    }
+
     this.save();
     this.renderHUD();
     this.renderTroops();
@@ -3879,9 +4197,19 @@ class GameApp {
           const nextRed = nextProps ? (nextProps.damageReduction || nextProps.teamDamageReduction) : 0;
           statCompareHtml += `<div>减伤率: <b style="color:#60a5fa;">${(curRed * 100).toFixed(0)}%</b> ${isMax ? '' : `<span class="val-ok">➜ ${(nextRed * 100).toFixed(0)}%</span>`}</div>`;
         }
-        if (tac.statBuff) {
+        if (tac.statBuff || tac.statBoost || tac.statBoostForce || tac.statBoostCmd || tac.statBoostSpeed) {
           if (tac.id === 'tac_jue_di_fan_ji') {
             statCompareHtml += `<div>受击武力: <b class="val-gold">+${currentProps.statBuff}/次</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.statBuff}/次</span>`}</div>`;
+          } else if (tac.statBoost || (tac.id === 'tac_bai_lian_cheng_gang' && tac.statBuff)) {
+            const curVal = currentProps.statBoost || currentProps.statBuff;
+            const nxtVal = nextProps ? (nextProps.statBoost || nextProps.statBuff) : 0;
+            statCompareHtml += `<div>全四维属性: <b style="color:#38bdf8;">+${curVal}</b> ${isMax ? '' : `<span class="val-ok">➜ +${nxtVal}</span>`}</div>`;
+          } else if (tac.statBoostForce) {
+            statCompareHtml += `<div>武力提升: <b style="color:#fbbf24;">+${currentProps.statBoostForce}</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.statBoostForce}</span>`}</div>`;
+          } else if (tac.statBoostCmd) {
+            statCompareHtml += `<div>统率提升: <b style="color:#34d399;">+${currentProps.statBoostCmd}</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.statBoostCmd}</span>`}</div>`;
+          } else if (tac.statBoostSpeed) {
+            statCompareHtml += `<div>速度提升: <b style="color:#f472b6;">+${currentProps.statBoostSpeed}</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.statBoostSpeed}</span>`}</div>`;
           } else {
             statCompareHtml += `<div>属性提升: <b style="color:#38bdf8;">+${currentProps.statBuff}</b> ${isMax ? '' : `<span class="val-ok">➜ +${nextProps.statBuff}</span>`}</div>`;
           }
@@ -4008,28 +4336,326 @@ class GameApp {
     });
   }
 
-  // 强化战法
-  upgradeTactic(tId) {
+  // 强化战法 (支持单级强化与一键满级)
+  upgradeTactic(tId, toMax = false) {
     if (!this.state.tacticLevels) this.state.tacticLevels = {};
     const currentLvl = this.state.tacticLevels[tId] || 1;
-    if (currentLvl >= MAX_TACTIC_LEVEL) return;
+    if (currentLvl >= MAX_TACTIC_LEVEL) return false;
 
-    const cost = TACTIC_UPGRADE_COSTS[currentLvl] || 26000;
-    const currentCopper = this.state.resources.copper || 0;
+    let targetLvl = currentLvl + 1;
+    let totalCost = TACTIC_UPGRADE_COSTS[currentLvl] || 26000;
 
-    if (currentCopper < cost) {
-      slgNotice({ title: '战法研习', body: `主公，您的铜币不足！\n升级该战法需要 🪙 ${cost.toLocaleString()} 铜币，当前拥有 🪙 ${currentCopper.toLocaleString()} 铜币。\n您可在【麾下名将】中一键解甲闲置3星武将，或通过通关历史战役获取丰厚铜币！`, seal: '🪙', type: 'warn' });
-      return;
+    if (toMax) {
+      totalCost = 0;
+      for (let lv = currentLvl; lv < MAX_TACTIC_LEVEL; lv++) {
+        totalCost += (TACTIC_UPGRADE_COSTS[lv] || 26000);
+      }
+      targetLvl = MAX_TACTIC_LEVEL;
     }
 
-    this.state.resources.copper -= cost;
-    this.state.tacticLevels[tId] = currentLvl + 1;
+    const currentCopper = this.state.resources.copper || 0;
+    const tac = TACTICS_MAP.get(tId);
+    if (currentCopper < totalCost) {
+      slgNotice({ title: '战法研习', body: `主公，您的铜币不足！\n强化【${tac ? tac.name : '战法'}】至 Lv.${targetLvl} 需要 🪙 ${totalCost.toLocaleString()} 铜币，当前拥有 🪙 ${currentCopper.toLocaleString()} 铜币。\n您可在【麾下名将】中一键转化闲置武将，或通过通关历史战役获取丰厚铜币！`, seal: '🪙', type: 'warn' });
+      return false;
+    }
+
+    this.state.resources.copper -= totalCost;
+    this.state.tacticLevels[tId] = targetLvl;
 
     sound.playVictoryHorn();
+    const summary = this.getTacticUpgradeGainSummary(tac, currentLvl, targetLvl);
+    if (toMax) {
+      slgNotice({
+        title: '战法臻至巅峰 MAX',
+        body: `👑 恭贺主公！\n战法【${tac ? tac.name : '战法'}】已登峰造极研习至 Lv.10 满级！\n\n📈 【实战数值跃升】：\n${summary}`,
+        seal: '👑',
+        type: 'ok'
+      });
+    } else {
+      this.showFloatingToast(`【${tac ? tac.name : '战法'}】研习至 Lv.${targetLvl}！${summary}`, '🎉');
+    }
+
     this.save();
     this.renderHUD();
     this.renderTacticsUpgrade();
     this.renderGenerals();
+    return true;
+  }
+
+  // ================= 全局通用战法全息预览与研习弹窗 =================
+  openTacticDetailModal(tacticIdOrObj, specLevel = null, heroContext = null) {
+    const tId = (typeof tacticIdOrObj === 'string') ? tacticIdOrObj : tacticIdOrObj?.id;
+    const isNormalAttack = (tId === 'normal_attack');
+
+    let tac = isNormalAttack
+      ? {
+          id: 'normal_attack',
+          name: '普通攻击',
+          type: 'normal',
+          quality: 'B',
+          rate: 100,
+          desc: '每回合行动阶段发动的常规物理兵刃攻击（基准伤害率 100%）。受【缴械】控制影响无法发动；受【连击】影响可一回合行动攻击 2 次；攻击后可连携触发【突击战法】；可被援护或受击反击。',
+          damageType: 'physical',
+          damageRate: 1.0
+        }
+      : (TACTICS_MAP.get(tId) || (typeof tacticIdOrObj === 'object' ? tacticIdOrObj : null));
+
+    if (!tac) {
+      slgNotice({ title: '战法检索', body: '未找到该战法的档案记录', seal: '❓', type: 'warn' });
+      return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-mask';
+
+    const quality = tac.quality || 'A';
+    const isS = quality === 'S';
+    const isA = quality === 'A';
+    const qColor = isS ? '#fbbf24' : (isA ? '#c084fc' : '#60a5fa');
+    const qBorder = isS ? '#d97706' : (isA ? '#9333ea' : '#2563eb');
+    const qBg = isS ? 'rgba(217,119,6,0.15)' : (isA ? 'rgba(147,51,234,0.15)' : 'rgba(37,99,235,0.15)');
+
+    const typeZh = {
+      command: '指挥战法',
+      passive: '被动战法',
+      active: '主动战法',
+      assault: '突击战法',
+      normal: '普通攻击',
+      formation: '阵法战法',
+      arm: '兵种战法'
+    }[tac.type] || '战法';
+
+    const dmgZh = {
+      physical: '⚔️ 兵刃伤害',
+      tactical: '🔮 谋略伤害',
+      heal: '🩹 急救恢复',
+      buff: '🛡️ 状态增益/控制'
+    }[tac.damageType] || (tac.damageRate ? '⚔️ 伤害' : (tac.healRate ? '🩹 恢复' : '🛡️ 军略'));
+
+    // 计算当前战法等级
+    const isOwnedTactic = (this.state.ownedTactics || []).includes(tac.id);
+    const globalLevel = this.state.tacticLevels?.[tac.id] || 1;
+    const currentLvl = Math.max(1, Math.min(MAX_TACTIC_LEVEL, specLevel !== null ? specLevel : (isOwnedTactic ? globalLevel : 1)));
+    const isMax = (currentLvl >= MAX_TACTIC_LEVEL);
+
+    // 计算升级成本
+    const nextCost = isMax ? 0 : (TACTIC_UPGRADE_COSTS[currentLvl] || 26000);
+    let maxCost = 0;
+    for (let lv = currentLvl; lv < MAX_TACTIC_LEVEL; lv++) {
+      maxCost += (TACTIC_UPGRADE_COSTS[lv] || 26000);
+    }
+    const currentCopper = this.state.resources?.copper || 0;
+    const canAffordNext = currentCopper >= nextCost;
+    const canAffordMax = currentCopper >= maxCost;
+
+    // 计算 Lv.1、当前等级、Lv.10 属性成长推演
+    const p1 = getTacticEffectiveProps(tac, 1);
+    const pCur = getTacticEffectiveProps(tac, currentLvl);
+    const pMax = getTacticEffectiveProps(tac, MAX_TACTIC_LEVEL);
+
+    const statRows = [];
+    if (tac.rate && tac.rate < 100) {
+      statRows.push({
+        label: '发动概率',
+        cur: `${pCur.rate}%`,
+        max: `${pMax.rate}%`,
+        note: `Lv.1 (${p1.rate}%) ➜ Lv.10 (${pMax.rate}%)`
+      });
+    }
+    if (tac.damageRate) {
+      statRows.push({
+        label: '杀敌伤害率',
+        cur: `${Math.round(pCur.damageRate * 100)}%`,
+        max: `${Math.round(pMax.damageRate * 100)}%`,
+        note: `Lv.1 (${Math.round(p1.damageRate * 100)}%) ➜ Lv.10 (${Math.round(pMax.damageRate * 100)}%)`
+      });
+    }
+    if (tac.healRate || tac.emergencyHealRate) {
+      const cHeal = pCur.healRate || pCur.emergencyHealRate;
+      const mHeal = pMax.healRate || pMax.emergencyHealRate;
+      const bHeal = p1.healRate || p1.emergencyHealRate;
+      statRows.push({
+        label: '伤兵治疗率',
+        cur: `${Math.round(cHeal * 100)}%`,
+        max: `${Math.round(mHeal * 100)}%`,
+        note: `Lv.1 (${Math.round(bHeal * 100)}%) ➜ Lv.10 (${Math.round(mHeal * 100)}%)`
+      });
+    }
+    if (tac.damageReduction || tac.teamDamageReduction || tac.selfDamageReduction) {
+      const cRed = pCur.damageReduction || pCur.teamDamageReduction || pCur.selfDamageReduction;
+      const mRed = pMax.damageReduction || pMax.teamDamageReduction || pMax.selfDamageReduction;
+      const bRed = p1.damageReduction || p1.teamDamageReduction || p1.selfDamageReduction;
+      statRows.push({
+        label: '受到伤害减免',
+        cur: `${Math.round(cRed * 100)}%`,
+        max: `${Math.round(mRed * 100)}%`,
+        note: `Lv.1 (${Math.round(bRed * 100)}%) ➜ Lv.10 (${Math.round(mRed * 100)}%)`
+      });
+    }
+    if (tac.statBoost || tac.statBoostForce || tac.statBoostCmd) {
+      const cStat = pCur.statBoost || pCur.statBoostForce || pCur.statBoostCmd;
+      const mStat = pMax.statBoost || pMax.statBoostForce || pMax.statBoostCmd;
+      const bStat = p1.statBoost || p1.statBoostForce || p1.statBoostCmd;
+      statRows.push({
+        label: '全维属性加成',
+        cur: `+${cStat}`,
+        max: `+${mStat}`,
+        note: `Lv.1 (+${bStat}) ➜ Lv.10 (+${mStat})`
+      });
+    }
+    if (tac.teamDamageBonus) {
+      statRows.push({
+        label: '群体伤害增幅',
+        cur: `+${Math.round(pCur.teamDamageBonus * 100)}%`,
+        max: `+${Math.round(pMax.teamDamageBonus * 100)}%`,
+        note: `Lv.1 (+${Math.round(p1.teamDamageBonus * 100)}%) ➜ Lv.10 (+${Math.round(pMax.teamDamageBonus * 100)}%)`
+      });
+    }
+
+    // 寻找战法来源与谱系
+    const inheritInfo = TACTIC_INHERIT_SOURCES[tac.id];
+    let sourceHtml = '';
+    if (inheritInfo && inheritInfo.names && inheritInfo.names.length > 0) {
+      sourceHtml = `
+        <div style="background:rgba(124,58,237,0.1); border:1px solid rgba(124,58,237,0.3); border-radius:6px; padding:6px 10px; margin-top:8px;">
+          <div style="font-size:11px; color:#c084fc; font-weight:bold;">📖 传承谱系来源武将：</div>
+          <div style="font-size:12px; color:#e2e8f0; margin-top:2px;">【${inheritInfo.names.join('】、【')}】</div>
+        </div>
+      `;
+    } else {
+      // 检查是否为专属自带战法
+      const ownerHero = GENERALS_DATA.find(g => g.builtInTacticId === tac.id);
+      if (ownerHero) {
+        sourceHtml = `
+          <div style="background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:6px; padding:6px 10px; margin-top:8px;">
+            <div style="font-size:11px; color:#fbbf24; font-weight:bold;">👑 名将专属自带战法：</div>
+            <div style="font-size:12px; color:#e2e8f0; margin-top:2px;">【${ownerHero.name}】(${ownerHero.star}★ ${CAMPS[ownerHero.camp]?.name || ''})</div>
+          </div>
+        `;
+      }
+    }
+
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width:540px; width:95%; max-height:88vh;">
+        <div class="modal-header">
+          <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
+            <span>📖 战法全息军略预览</span>
+            <span style="font-size:11px; font-weight:bold; color:${qColor}; background:${qBg}; border:1px solid ${qBorder}; padding:1px 6px; border-radius:4px;">
+              ${quality}级 · ${typeZh}
+            </span>
+          </div>
+          <button class="modal-close-btn" id="btnTacDetailClose">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding:14px 18px; display:flex; flex-direction:column; gap:10px; overflow-y:auto;">
+          <!-- 战法名与核心徽章 -->
+          <div style="background:linear-gradient(135deg, rgba(31,41,55,0.6) 0%, rgba(17,24,39,0.8) 100%); border:1px solid #374151; border-radius:8px; padding:12px 14px;">
+            <div class="card-row--split">
+              <div style="font-size:18px; font-weight:900; color:${qColor}; display:flex; align-items:center; gap:8px;">
+                <span>${tac.name}</span>
+                <span style="font-size:11px; color:#6ee7b7; background:rgba(5,150,105,0.2); border:1px solid #059669; padding:1px 6px; border-radius:3px;">
+                  ${isMax ? '👑 Lv.10 臻至满级' : `当前研习 Lv.${currentLvl} / ${MAX_TACTIC_LEVEL}`}
+                </span>
+              </div>
+              <span style="font-size:11px; color:#cbd5e1; background:rgba(0,0,0,0.4); border:1px solid #4b5563; padding:2px 8px; border-radius:4px;">
+                ${dmgZh}
+              </span>
+            </div>
+
+            <!-- 战法描述文字 -->
+            <div style="font-size:12px; color:#cbd5e1; line-height:1.6; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.08);">
+              ${tac.desc}
+            </div>
+            ${sourceHtml}
+          </div>
+
+          <!-- 数值推演面板 -->
+          <div style="background:rgba(0,0,0,0.3); border:1px solid #2d3340; border-radius:8px; padding:10px 14px;">
+            <div class="card-row--split" style="font-size:12px; font-weight:bold; color:#fbbf24; margin-bottom:8px;">
+              <span>📊 战法实战效能推演 (Lv.${currentLvl})</span>
+              <span style="font-size:10px; color:#9ca3af; font-weight:normal;">效能随研习等级平滑成长</span>
+            </div>
+
+            ${statRows.length > 0 ? statRows.map(r => `
+              <div class="card-row--split" style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px;">
+                <span style="color:#9ca3af;">${r.label}:</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <b style="color:#6ee7b7; font-size:12px;">${r.cur}</b>
+                  <span class="card-micro" style="color:#6b7280;">(${r.note})</span>
+                </div>
+              </div>
+            `).join('') : `
+              <div style="font-size:11px; color:#9ca3af; padding:4px 0;">
+                战法效能倍率: <b class="val-gold">${Math.round(pCur.scale * 100)}%</b> <span class="card-micro">(Lv.1 为 55% ➜ Lv.10 达到 100% 满额效能)</span>
+              </div>
+            `}
+          </div>
+
+          <!-- 研习强化操作区 (若支持直接升级且拥有) -->
+          ${(isOwnedTactic && !isNormalAttack) ? `
+            <div style="background:rgba(0,0,0,0.35); border:1px solid ${isMax ? '#d97706' : '#059669'}; border-radius:8px; padding:10px 14px; margin-top:4px;">
+              <div class="card-row--split" style="font-size:11px; margin-bottom:8px;">
+                <span style="color:#d1d5db;">铜币余额: <b class="val-copper">🪙 ${currentCopper.toLocaleString()}</b></span>
+                <span style="color:${isMax ? '#fbbf24' : '#6ee7b7'}; font-weight:bold;">
+                  ${isMax ? '👑 已臻至巅峰满级 MAX' : `升级至 Lv.${currentLvl + 1} 需 🪙 ${nextCost.toLocaleString()}`}
+                </span>
+              </div>
+              <div style="display:flex; gap:8px;">
+                ${isMax ? `
+                  <button class="upgrade-btn" style="flex:1; padding:6px 0; font-size:12px; background:linear-gradient(135deg, #d97706 0%, #78350f 100%); cursor:default;" disabled>
+                    👑 战法已达巅峰满级 MAX
+                  </button>
+                ` : `
+                  <button class="upgrade-btn btn-modal-tactic-upgrade" style="flex:1; padding:6px 0; font-size:12px; background:${canAffordNext ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : '#4b5563'};">
+                    🪙 强化至 Lv.${currentLvl + 1} (${nextCost.toLocaleString()}铜币)
+                  </button>
+                  ${currentLvl < MAX_TACTIC_LEVEL - 1 ? `
+                    <button class="upgrade-btn btn-modal-tactic-max" style="padding:6px 14px; font-size:12px; background:${canAffordMax ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' : '#4b5563'};">
+                      ⚡ 一键满级
+                    </button>
+                  ` : ''}
+                `}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnTacDetailClose').addEventListener('click', () => modal.remove());
+
+    // 绑定弹窗内快速升级
+    modal.querySelector('.btn-modal-tactic-upgrade')?.addEventListener('click', () => {
+      if (this.upgradeTactic(tac.id, false)) {
+        modal.remove();
+        this.openTacticDetailModal(tac.id, (this.state.tacticLevels?.[tac.id] || 1), heroContext);
+        if (heroContext) {
+          // 若有武将详情上下文，刷新武将弹窗
+          const activeHeroModal = document.querySelector('.modal-mask:not(:last-child)');
+          if (activeHeroModal) {
+            activeHeroModal.remove();
+            this.openHeroDetailModal(heroContext);
+          }
+        }
+      }
+    });
+
+    modal.querySelector('.btn-modal-tactic-max')?.addEventListener('click', () => {
+      if (this.upgradeTactic(tac.id, true)) {
+        modal.remove();
+        this.openTacticDetailModal(tac.id, MAX_TACTIC_LEVEL, heroContext);
+        if (heroContext) {
+          const activeHeroModal = document.querySelector('.modal-mask:not(:last-child)');
+          if (activeHeroModal) {
+            activeHeroModal.remove();
+            this.openHeroDetailModal(heroContext);
+          }
+        }
+      }
+    });
   }
 
   // ================= 4. 金铢钱庄 · 模拟充值系统 (始终双倍金珠) =================
@@ -4836,14 +5462,14 @@ class GameApp {
         const starStr = '★'.repeat(h.star || 4);
         const campObj = CAMPS[h.camp] || { name: '群', color: '#888' };
         
-        // 战法徽章（S级橙金 / A级紫晶 / B级湛蓝）
+        // 战法徽章（S级橙金 / A级紫晶 / B级湛蓝，支持点击预览）
         const tacticsHtml = (h.tactics || []).map((t, idx) => {
           const isInnate = (idx === 0);
           const q = isInnate
             ? ((h.star || 4) >= 5 ? 'S' : ((h.star || 4) === 4 ? 'A' : 'B'))
             : (t.quality || 'A');
           const qClass = q === 'S' ? 'q-s' : (q === 'B' ? 'q-b' : 'q-a');
-          return `<span class="lineup-tac-badge ${qClass}" title="${t.desc || ''}">[${isInnate ? '自带' : '配'}] ${t.name} Lv.${t.level || 1}</span>`;
+          return `<span class="lineup-tac-badge ${qClass} clickable-tactic-preview" data-tid="${t.id}" data-lvl="${t.level || 1}" title="点击预览【${t.name}】全息战法机制与数值推演" style="cursor:pointer;">[${isInnate ? '自带' : '配'}] ${t.name} Lv.${t.level || 1} 🔍</span>`;
         }).join('');
 
         return `
@@ -5087,7 +5713,7 @@ class GameApp {
               <td style="text-align:left; padding-left:8px;">
                 <div style="display:flex; align-items:center; gap:4px;">
                   <span class="tac-badge-tag ${badgeClass}">[${badgePrefix}]</span>
-                  <span style="font-weight:600; color:${qColor};">${ts.name}</span>
+                  <span class="clickable-tactic-preview" data-tid="${ts.id}" data-lvl="${ts.level || 1}" style="font-weight:600; color:${qColor}; cursor:pointer; text-decoration:underline dashed rgba(255,255,255,0.3); text-underline-offset:2px;" title="点击预览【${ts.name}】全息战法机制与数值推演">${ts.name} 🔍</span>
                 </div>
               </td>
               <td><span class="tac-type-pill ${typeClass}">${typeName}</span></td>
@@ -5119,7 +5745,7 @@ class GameApp {
               ? ((h.star || 4) >= 5 ? 'S' : ((h.star || 4) === 4 ? 'A' : 'B'))
               : (t.quality || 'A');
             const c = q === 'S' ? '#fbbf24' : (q === 'B' ? '#60a5fa' : '#c084fc');
-            return `<span style="color:${c}; font-weight:600;">${t.name}</span>`;
+            return `<span class="clickable-tactic-preview" data-tid="${t.id}" data-lvl="${t.level || 1}" style="color:${c}; font-weight:600; cursor:pointer;" title="点击预览【${t.name}】战法详情">${t.name}</span>`;
           }).join('<span style="color:#6b7280; margin:0 3px;">·</span>');
 
           return `
@@ -5317,6 +5943,19 @@ class GameApp {
           }
         });
         sound.playDrum();
+      });
+    });
+
+    // 绑定战报中所有战法徽章与表格名称的点击全息预览
+    this.battleDetailBody.querySelectorAll('.clickable-tactic-preview').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tid = el.getAttribute('data-tid');
+        const lvl = parseInt(el.getAttribute('data-lvl') || '1', 10);
+        if (tid) {
+          sound.playDrum();
+          this.openTacticDetailModal(tid, lvl);
+        }
       });
     });
 

@@ -37,6 +37,20 @@ export function getArmAdvantageMultiplier(attackerArm, defenderArm) {
 }
 
 /**
+ * 从数组中随机抽取指定数量的不重复元素 (Fisher-Yates 纯随机算法，彻底根除写死 slice(0, 2) 缺陷)
+ */
+export function getRandomElements(arr, count) {
+  if (!arr || arr.length === 0) return [];
+  if (arr.length <= count) return [...arr];
+  const pool = [...arr];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, count);
+}
+
+/**
  * 战前部队实例初始化
  */
 function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels = {}, teamSeenTactics = new Set()) {
@@ -176,7 +190,12 @@ function createBattleHero(heroData, troopArm, isLeader, isPlayer, tacticLevels =
         immuneBurn: false,       // 祝融夫人：免疫灼烧
         tacticalCritRate: 0,     // 奇谋暴击几率 (太平道法)
         tacticalCritDamage: 2.0, // 奇谋暴击倍率
-        isPreparingActive: null // 准备战法中
+        isPreparingActive: null, // 准备战法中
+        yiYiCharges: 0,          // 以逸待劳：受下几次伤害减免剩余次数
+        yiYiReduction: 0,        // 以逸待劳：单次减伤幅度
+        zhouTaiProtector: null,  // 肉身铁壁：替自身分摊伤害的守护者武将
+        zhouTaiShareRate: 0,     // 肉身铁壁：分摊比例 (如 0.40)
+        liaoShiDebuffs: []       // 料事如神等限时降伤待恢复记录
       },
 
       // 战报统计数据
@@ -386,17 +405,21 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       if (tactic.id === 'tac_ba_men_jin_suo') {
         const leader = team.find(h => h.isLeader);
         if (leader) leader.buffs.firstStrike = true;
-        opposingTeam.slice(0, 2).forEach(opp => {
-          const redVal = tactic.damageReduction || 0.3;
+        const baseRed = tactic.damageReduction || 0.30;
+        const redVal = Math.min(0.85, baseRed * (1 + Math.max(0, actor.intel - 80) * 0.0035));
+        const targets = getRandomElements(opposingTeam, 2);
+        targets.forEach(opp => {
           opp.buffs.damageDealtMod -= redVal;
           opp.buffs.baMenActive = true;
           opp.buffs.baMenVal = redVal;
         });
-        logFn(0, `【${actor.label}】施展指挥战法【${tactic.name}】：我方主将获得先攻，敌方群体伤害降低 30%！`, 'skill');
+        const targetNames = targets.map(t => `【${t.label}】`).join('、');
+        logFn(0, `【${actor.label}】施展指挥战法【${tactic.name}】：我方主将获得先攻，敌方群体${targetNames}造成的伤害大幅降低 ${(redVal * 100).toFixed(1)}%(受智力加成，持续3回合)！`, 'skill');
       }
       // 盛气凌敌
       if (tactic.id === 'tac_sheng_qi_ling_di') {
-        opposingTeam.slice(0, 2).forEach(opp => {
+        const targets = getRandomElements(opposingTeam, 2);
+        targets.forEach(opp => {
           if (!opp.buffs.insight && Math.random() * 100 < (tactic.disarmRate || 90)) {
             opp.buffs.disarmed = tactic.firstRounds || 2;
             logFn(0, `【${actor.label}】触发指挥战法【${tactic.name}】：敌将【${opp.label}】陷入【缴械】，前2回合无法普通攻击！`, 'debuff', { target: opp });
@@ -407,9 +430,17 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       }
       // 曹操 乱世奸雄
       if (tactic.id === 'tac_luan_shi_jian_xiong') {
-        team.forEach(mate => mate.buffs.damageDealtMod += tactic.teamDamageBonus || 0.16);
-        actor.buffs.damageReceivedMod -= tactic.selfDamageReduction || 0.18;
-        logFn(0, `【${actor.label}】发动指挥战法【${tactic.name}】：友军伤害增加 16%，自身减伤 18%！`, 'skill');
+        const baseTeamBonus = tactic.teamDamageBonus || 0.16;
+        const teamBonus = Math.min(0.40, baseTeamBonus * (1 + Math.max(0, actor.intel - 80) * 0.0025));
+        const baseSelfRed = tactic.selfDamageReduction || 0.18;
+        const selfRed = Math.min(0.50, baseSelfRed * (1 + Math.max(0, actor.command - 80) * 0.0025));
+        team.forEach(mate => {
+          if (mate !== actor) {
+            mate.buffs.damageDealtMod += teamBonus;
+          }
+        });
+        actor.buffs.damageReceivedMod -= selfRed;
+        logFn(0, `【${actor.label}】发动指挥战法【${tactic.name}】：友军伤害提升 ${(teamBonus * 100).toFixed(1)}%(受智力加成)，自身受到伤害降低 ${(selfRed * 100).toFixed(1)}%(受统率加成)！`, 'skill');
       }
       // 白马义从
       if (tactic.id === 'tac_bai_ma_yi_cong') {
@@ -420,13 +451,15 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       }
       // 御敌屏障
       if (tactic.id === 'tac_yu_di_ping_zhang') {
-        team.slice(0, 2).forEach(mate => {
-          const redVal = tactic.teamDamageReduction || 0.25;
+        const targets = getRandomElements(team, 2);
+        const redVal = tactic.teamDamageReduction || 0.25;
+        targets.forEach(mate => {
           mate.buffs.damageReceivedMod -= redVal;
           mate.buffs.yuDiActive = true;
           mate.buffs.yuDiVal = redVal;
         });
-        logFn(0, `【${actor.label}】施展指挥战法【${tactic.name}】：我军群体受伤害降低 25%！`, 'skill');
+        const targetNames = targets.map(t => `【${t.label}】`).join('、');
+        logFn(0, `【${actor.label}】施展指挥战法【${tactic.name}】：我军群体${targetNames}受到伤害降低 ${(redVal * 100).toFixed(1)}%(持续4回合)！`, 'skill');
       }
       // 青囊相助
       if (tactic.id === 'tac_qing_nang_xiang_zhu') {
@@ -442,10 +475,12 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       if (tactic.id === 'tac_shi_sheng_shi_bai') {
         const leader = team.find(h => h.isLeader);
         if (leader) {
+          const redVal = tactic.damageReduction || 0.50;
           leader.buffs.insight = true;
-          leader.buffs.damageReceivedMod -= 0.50;
+          leader.buffs.damageReceivedMod -= redVal;
           leader.buffs.shiShengActive = true;
-          logFn(0, `【${actor.label}】施展指挥【${tactic.name}】：主将【${leader.label}】前2回合获得洞察免疫控制，减伤50%！`, 'skill', { target: leader });
+          leader.buffs.shiShengVal = redVal;
+          logFn(0, `【${actor.label}】施展指挥【${tactic.name}】：主将【${leader.label}】前2回合获得洞察免疫控制，受到伤害降低 ${(redVal * 100).toFixed(1)}%！`, 'skill', { target: leader });
         }
       }
       // 吕蒙 白衣渡江
@@ -456,22 +491,28 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
       }
       // 左慈 金丹秘术
       if (tactic.id === 'tac_jin_dan_mi_shu') {
+        const evaRate = tactic.evasionRate || 0.60;
         team.forEach(mate => {
-          mate.buffs.evasionRate = 0.60;
+          mate.buffs.jinDanEvasion = evaRate;
+          mate.buffs.evasionRate = (mate.buffs.evasionRate || 0) + evaRate;
         });
-        logFn(0, `【${actor.label}】施展仙术【${tactic.name}】：前2回合我军全体获得 60%【金丹规避】！`, 'buff');
+        logFn(0, `【${actor.label}】施展仙术【${tactic.name}】：前2回合我军全体获得 ${(evaRate * 100).toFixed(0)}%【金丹规避】！`, 'buff');
       }
       // 马超 槊血复骑
       if (tactic.id === 'tac_shuo_xue_fu_qi') {
-        actor.force += 34;
+        const boostF = tactic.statBoostForce || 34;
+        actor.force += boostF;
         actor.buffs.hasSplash = true;
-        logFn(0, `【${actor.label}】触发被动【${tactic.name}】：武力提升 34 点，普攻附带全军溅射！`, 'skill');
+        actor.buffs.splashRate = tactic.splashRate || 0.54;
+        logFn(0, `【${actor.label}】触发被动【${tactic.name}】：武力提升 ${boostF} 点，普攻附带全军溅射！`, 'skill');
       }
       // 甘宁 锦帆百狩
       if (tactic.id === 'tac_jin_fan_bai_shou') {
-        actor.buffs.critRate = (actor.buffs.critRate || 0) + 0.50;
-        actor.buffs.critDamage = (actor.buffs.critDamage || 1.5) + 0.70;
-        logFn(0, `【${actor.label}】触发被动【${tactic.name}】：会心几率暴涨 50%，暴击伤害提升 120%！`, 'skill');
+        const cRate = tactic.critRateBonus || 0.50;
+        const cDmg = tactic.critDamageBonus || 0.70;
+        actor.buffs.critRate = (actor.buffs.critRate || 0) + cRate;
+        actor.buffs.critDamage = (actor.buffs.critDamage || 1.5) + cDmg;
+        logFn(0, `【${actor.label}】触发被动【${tactic.name}】：会心几率暴涨 ${(cRate * 100).toFixed(0)}%，暴击伤害提升 ${(cDmg * 100 + 50).toFixed(0)}%！`, 'skill');
       }
       // 百炼成钢
       if (tactic.id === 'tac_bai_lian_cheng_gang') {
@@ -497,6 +538,7 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         const oppLeader = opposingTeam.find(h => h.isLeader);
         if (oppLeader) {
           oppLeader.buffs.tauntTarget = actor;
+          oppLeader.buffs.tauntExpireRound = 4;
           logFn(0, `【${actor.label}】施展指挥【${tactic.name}】：统率暴涨 ${boost} 点，锁定并嘲讽敌方主将【${oppLeader.label}】前4回合强制攻击自身！`, 'skill', { target: oppLeader });
         }
       }
@@ -512,30 +554,57 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         const bonus = tactic.activeRateBonus || 12;
         logFn(0, `【${actor.label}】触发被动【${tactic.name}】：马氏白眉，主动战法发动几率提高 ${bonus}%！`, 'skill');
       }
-      // 国士之风 (凌统：前3回合先攻+必中+增伤28%)
+      // 国士之风 (凌统：前3回合先攻+必中+增伤)
       if (tactic.id === 'tac_guo_shi_zhi_feng') {
+        const bonus = tactic.damageBonus || 0.28;
         actor.buffs.firstStrike = true;
         actor.buffs.trueStrike = true;
-        actor.buffs.damageDealtMod = (actor.buffs.damageDealtMod || 1.0) + 0.28;
+        actor.buffs.damageDealtMod = (actor.buffs.damageDealtMod || 1.0) + bonus;
         actor.buffs.guoShiActive = true;
+        actor.buffs.guoShiBonus = bonus;
         const teammates = team.filter(m => m !== actor);
         if (teammates.length > 0) {
           const friend = teammates[Math.floor(Math.random() * teammates.length)];
           friend.buffs.firstStrike = true;
           friend.buffs.trueStrike = true;
-          friend.buffs.damageDealtMod = (friend.buffs.damageDealtMod || 1.0) + 0.28;
+          friend.buffs.damageDealtMod = (friend.buffs.damageDealtMod || 1.0) + bonus;
           friend.buffs.guoShiActive = true;
-          logFn(0, `【${actor.label}】发动指挥【${tactic.name}】：令自身与【${friend.label}】获得前3回合【先攻】与【必中】(无视规避)，伤害提升 28%！`, 'skill', { target: friend });
+          friend.buffs.guoShiBonus = bonus;
+          logFn(0, `【${actor.label}】发动指挥【${tactic.name}】：令自身与【${friend.label}】获得前3回合【先攻】与【必中】(无视规避)，伤害提升 ${(bonus * 100).toFixed(0)}%！`, 'skill', { target: friend });
         } else {
-          logFn(0, `【${actor.label}】发动指挥【${tactic.name}】：获得前3回合【先攻】与【必中】(无视规避)，伤害提升 28%！`, 'skill');
+          logFn(0, `【${actor.label}】发动指挥【${tactic.name}】：获得前3回合【先攻】与【必中】(无视规避)，伤害提升 ${(bonus * 100).toFixed(0)}%！`, 'skill');
         }
       }
-      // 肉身铁壁 (周泰：增伤)
+      // 士别三日 (准备阶段：前3回合规避30%)
+      if (tactic.id === 'tac_shi_bie_san_ri') {
+        actor.buffs.shiBieEvasion = 0.30;
+        actor.buffs.evasionRate = (actor.buffs.evasionRate || 0) + 0.30;
+        logFn(0, `【${actor.label}】研习被动【${tactic.name}】：前3回合韬光养晦专注研读，无法进行普通攻击，但获得 30% 规避几率！`, 'buff');
+      }
+      // 许褚 虎痴 (准备阶段锁定强化)
+      if (tactic.id === 'tac_hu_chi') {
+        actor.buffs.hasHuChi = true;
+        logFn(0, `【${actor.label}】触发被动【${tactic.name}】：虎痴猛力，每回合锁定敌军单体增伤 33%，击杀目标将获得破阵！`, 'skill');
+      }
+      // 董卓 酒池肉林 (自身获得50%倒戈吸血)
+      if (tactic.id === 'tac_jiu_chi_rou_lin') {
+        actor.buffs.vampRate = 0.50;
+        actor.buffs.vampireForce = 0.50;
+        actor.buffs.hasJiuChi = true;
+        logFn(0, `【${actor.label}】触发被动【${tactic.name}】：酒池肉林倒戈吸血 50%，第 5 回合起狂暴爆发！`, 'skill');
+      }
+      // 肉身铁壁 (周泰：增伤 + 友军伤害分摊承受)
       if (tactic.id === 'tac_rou_shen_tie_bi') {
+        const teamBonus = tactic.teamDamageBonus || 0.30;
+        const shareRate = tactic.shareDamageRate || 0.40;
         team.forEach(m => {
-          m.buffs.damageDealtMod = (m.buffs.damageDealtMod || 1.0) + 0.30;
+          if (m !== actor) {
+            m.buffs.damageDealtMod = (m.buffs.damageDealtMod || 1.0) + teamBonus;
+            m.buffs.zhouTaiProtector = actor;
+            m.buffs.zhouTaiShareRate = shareRate;
+          }
         });
-        logFn(0, `【${actor.label}】列阵【${tactic.name}】：江表虎臣舍生忘死，友军造成的伤害提升 30%！`, 'skill');
+        logFn(0, `【${actor.label}】列阵【${tactic.name}】：江表虎臣舍生忘死！友军伤害提升 ${(teamBonus * 100).toFixed(1)}%，周泰将挺身替友军分摊承受 ${(shareRate * 100).toFixed(1)}% 所受伤害！`, 'skill');
       }
       // 火神宁墒 (祝融夫人：免疫灼烧)
       if (tactic.id === 'tac_huo_shen_ning_shang') {
@@ -557,30 +626,32 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
         actor.buffs.tacticalCritRate = (actor.buffs.tacticalCritRate || 0) + 0.28;
         logFn(0, `【${actor.label}】研习被动【${tactic.name}】：获得 28%【奇谋暴击几率】(谋略伤害造成200%暴击)，自带主动战法发动几率提升 12%！`, 'skill');
       }
-      // 🌟 藤甲兵 (兀突骨传承：盾兵专属减伤)
+      // 🌟 藤甲兵 (兀突骨传承：盾兵专属减伤，受统率加成)
       if (tactic.id === 'tac_teng_jia_bing') {
-        const red = tactic.damageReduction || 0.40;
+        const baseRed = tactic.damageReduction || 0.40;
+        const red = Math.min(0.85, baseRed * (1 + Math.max(0, actor.command - 80) * 0.0025));
         team.forEach(m => {
           m.buffs.hasTengJia = true;
           m.buffs.bladeReceivedMod -= red; // 兵刃专属大幅减伤
         });
-        logFn(0, `【${actor.label}】列阵【${tactic.name}】：全军身披油浸藤甲！受到兵刃伤害大幅削减 ${(red * 100).toFixed(0)}%，但遇火攻将受到猛烈灼烧蔓延！`, 'skill');
+        logFn(0, `【${actor.label}】列阵【${tactic.name}】：全军身披油浸藤甲！受到兵刃伤害大幅削减 ${(red * 100).toFixed(1)}%(受统率加成)，但遇火攻将受到猛烈灼烧蔓延！`, 'skill');
       }
       // 🌟 锋矢阵 (典韦传承：主将增伤，副将减伤)
       if (tactic.id === 'tac_feng_shi_zhen') {
         const leader = team.find(m => m.isLeader);
         const subHeroes = team.filter(m => !m.isLeader);
         const bonus = tactic.damageBonus || 0.30;
-        const subRed = tactic.damageReduction || 0.15;
+        const subDealtNerf = tactic.subDamageNerf || 0.15;
+        const subRed = tactic.damageReduction || tactic.teamDamageReduction || 0.25;
         if (leader) {
           leader.buffs.damageDealtMod = (leader.buffs.damageDealtMod || 1.0) + bonus;
           leader.buffs.damageReceivedMod += 0.20;
           logFn(0, `【${actor.label}】施展阵法【${tactic.name}】：主将【${leader.label}】造成的伤害大幅提升 ${(bonus * 100).toFixed(0)}%，但受到伤害增加 20%！`, 'skill', { target: leader });
         }
         subHeroes.forEach(sub => {
-          sub.buffs.damageDealtMod = (sub.buffs.damageDealtMod || 1.0) - subRed;
-          sub.buffs.damageReceivedMod -= 0.25;
-          logFn(0, `【${actor.label}】施展阵法【${tactic.name}】：副将【${sub.label}】受到伤害降低 25%！`, 'skill', { target: sub });
+          sub.buffs.damageDealtMod = (sub.buffs.damageDealtMod || 1.0) - subDealtNerf;
+          sub.buffs.damageReceivedMod -= subRed;
+          logFn(0, `【${actor.label}】施展阵法【${tactic.name}】：副将【${sub.label}】造成伤害降低 ${(subDealtNerf * 100).toFixed(0)}%，受到伤害降低 ${(subRed * 100).toFixed(0)}%！`, 'skill', { target: sub });
         });
       }
       // 🌟 兴云布雨 (于吉自带：准备阶段预备水攻玄术)
@@ -626,40 +697,83 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
     // 🌟 限时战法与属性削弱到期结算与状态恢复
     [playerHeroes, enemyHeroes].forEach(team => {
       team.forEach(hero => {
-        // 1. 郭嘉【十胜十败】：前2回合洞察与减伤50%，第3回合开始失效恢复
+        // 1. 郭嘉【十胜十败】：前2回合洞察与减伤，第3回合开始失效恢复
         if (hero.buffs.shiShengActive && round > 2) {
           hero.buffs.insight = false;
-          hero.buffs.damageReceivedMod = (hero.buffs.damageReceivedMod || 1.0) + 0.50;
+          const restoredVal = hero.buffs.shiShengVal || 0.50;
+          hero.buffs.damageReceivedMod = (hero.buffs.damageReceivedMod || 1.0) + restoredVal;
           hero.buffs.shiShengActive = false;
           log(round, `⌛【${hero.label}】身上【十胜十败】洞察与减伤效果持续时间结束，恢复正常防御！`, 'buff', { actor: hero });
         }
-        // 2. 八门金锁阵：前3回合减伤30%，第4回合开始失效恢复
+        // 2. 八门金锁阵：前3回合减伤，第4回合开始失效恢复
         if (hero.buffs.baMenActive && round > 3) {
-          hero.buffs.damageDealtMod = (hero.buffs.damageDealtMod || 1.0) + (hero.buffs.baMenVal || 0.30);
+          const restoredVal = hero.buffs.baMenVal || 0.30;
+          hero.buffs.damageDealtMod = (hero.buffs.damageDealtMod || 1.0) + restoredVal;
           hero.buffs.baMenActive = false;
           log(round, `⌛【${hero.label}】身上【八门金锁】压制效果结束，伤害恢复正常！`, 'buff', { actor: hero });
         }
-        // 3. 御敌屏障：前4回合减伤25%，第5回合开始失效恢复
+        // 3. 御敌屏障：前4回合减伤，第5回合开始失效恢复
         if (hero.buffs.yuDiActive && round > 4) {
-          hero.buffs.damageReceivedMod = (hero.buffs.damageReceivedMod || 1.0) + (hero.buffs.yuDiVal || 0.25);
+          const restoredVal = hero.buffs.yuDiVal || 0.25;
+          hero.buffs.damageReceivedMod = (hero.buffs.damageReceivedMod || 1.0) + restoredVal;
           hero.buffs.yuDiActive = false;
           log(round, `⌛【${hero.label}】身上【御敌屏障】减伤屏障到期消散！`, 'buff', { actor: hero });
         }
-        // 4. 凌统【国士之风】：前3回合先攻、必中与增伤28%，第4回合失效恢复
+        // 4. 凌统【国士之风】：前3回合先攻、必中与增伤，第4回合失效恢复
         if (hero.buffs.guoShiActive && round > 3) {
-          hero.buffs.damageDealtMod = Math.max(0.1, (hero.buffs.damageDealtMod || 1.0) - 0.28);
+          const bonus = hero.buffs.guoShiBonus || 0.28;
+          hero.buffs.damageDealtMod = Math.max(0.1, (hero.buffs.damageDealtMod || 1.0) - bonus);
           hero.buffs.firstStrike = false;
           hero.buffs.trueStrike = false;
           hero.buffs.guoShiActive = false;
-          log(round, `⌛【${hero.label}】身上【国士之风】先攻与增伤增益结束！`, 'buff', { actor: hero });
+          log(round, `⌛【${hero.label}】身上【国士之风】先攻、必中与增伤增益结束！`, 'buff', { actor: hero });
         }
-        // 5. 折冲御侮 / 弯弓饮羽等属性削弱限时恢复 (持续2回合)
+        // 5. 左慈【金丹秘术】：前2回合规避，第3回合开始失效；第3~5回合触发全军休整
+        if (hero.buffs.jinDanEvasion && round > 2) {
+          hero.buffs.evasionRate = Math.max(0, (hero.buffs.evasionRate || 0) - hero.buffs.jinDanEvasion);
+          hero.buffs.jinDanEvasion = null;
+          log(round, `⌛【${hero.label}】身上【金丹规避】时效已过消散！`, 'buff', { actor: hero });
+        }
+        if (round >= 3 && round <= 5 && hero.currentSoldiers > 0) {
+          const zuoCi = team.find(h => h.currentSoldiers > 0 && h.tactics.some(t => t.id === 'tac_jin_dan_mi_shu'));
+          if (zuoCi) {
+            const heal = Math.round(zuoCi.intel * 0.58 * Math.sqrt(zuoCi.currentSoldiers / 100));
+            const actualHeal = Math.min(hero.maxSoldiers - hero.currentSoldiers, heal);
+            if (actualHeal > 0) {
+              hero.currentSoldiers += actualHeal;
+              recordHeroHeal(zuoCi, actualHeal, 'tac_jin_dan_mi_shu');
+              log(round, `🌿【${zuoCi.label}】金丹秘术休整生息，治愈【${hero.label}】恢复 ${actualHeal} 兵力！(余兵:${hero.currentSoldiers})`, 'heal', { actor: zuoCi, target: hero });
+            }
+          }
+        }
+        // 6. 守而必固：嘲讽敌方主将前4回合有效，第5回合恢复
+        if (hero.buffs.tauntTarget && round > (hero.buffs.tauntExpireRound || 4)) {
+          hero.buffs.tauntTarget = null;
+          log(round, `⌛【${hero.label}】摆脱了【守而必固】的嘲讽挑衅，恢复自由锁敌！`, 'buff', { actor: hero });
+        }
+        // 7. 士别三日：前3回合规避30%，第4回合规避消散
+        if (hero.buffs.shiBieEvasion && round > 3) {
+          hero.buffs.evasionRate = Math.max(0, (hero.buffs.evasionRate || 0) - hero.buffs.shiBieEvasion);
+          hero.buffs.shiBieEvasion = null;
+        }
+        // 8. 折冲御侮 / 弯弓饮羽等属性削弱限时恢复 (持续2回合)
         if (hero.buffs.statRestorations && hero.buffs.statRestorations.length > 0) {
           hero.buffs.statRestorations = hero.buffs.statRestorations.filter(item => {
             if (round >= item.roundExpire) {
               if (item.command) hero.command += item.command;
               if (item.intel) hero.intel += item.intel;
               log(round, `🛡️【${hero.label}】从【${item.name}】的削弱中恢复，重整防线！`, 'buff', { actor: hero });
+              return false; // 已恢复，从列表中移除
+            }
+            return true;
+          });
+        }
+        // 9. 料事如神等限时降伤到期恢复 (持续2回合)
+        if (hero.buffs.liaoShiDebuffs && hero.buffs.liaoShiDebuffs.length > 0) {
+          hero.buffs.liaoShiDebuffs = hero.buffs.liaoShiDebuffs.filter(item => {
+            if (round >= item.expireRound) {
+              hero.buffs.damageDealtMod = (hero.buffs.damageDealtMod || 1.0) + item.val;
+              log(round, `⌛【${hero.label}】身上【料事如神】降伤压制到期失效，伤害输出恢复正常！`, 'buff', { actor: hero });
               return false; // 已恢复，从列表中移除
             }
             return true;
@@ -830,6 +944,127 @@ export function simulateBattle(playerTroop, enemyTroop, options = {}) {
             log(round, `⚡ 义胆雄心偶数回合！【${actor.label}】神机轰炸【${target.label}】造成 ${actualDmg} 点谋略伤害，并削弱其 64 点智力！(余兵:${target.currentSoldiers})`, 'action', { actor, target });
           }
         }
+        if (checkLeaderDeath(round)) break battleLoop;
+      }
+
+      // 🌟 刘备 仁德载世 (每回合恢复我军群体2人兵力，25%概率使敌军单体陷入虚弱1回合)
+      const renDeTac = actor.tactics.find(t => t.id === 'tac_ren_de_zai_shi');
+      if (renDeTac && actor.currentSoldiers > 0) {
+        const livingMates = team.filter(h => h.currentSoldiers > 0);
+        const targets = getRandomElements(livingMates, 2);
+        const healRate = renDeTac.healRate || 1.28;
+        targets.forEach(mate => {
+          const heal = Math.round((actor.intel * healRate + 20) * Math.sqrt(actor.currentSoldiers / 100));
+          const actualHeal = Math.min(mate.maxSoldiers - mate.currentSoldiers, heal);
+          if (actualHeal > 0) {
+            mate.currentSoldiers += actualHeal;
+            recordHeroHeal(actor, actualHeal, renDeTac.id);
+            log(round, `🌿 仁德载世昭烈仁心！【${actor.label}】为【${mate.label}】疗愈恢复 ${actualHeal} 兵力！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
+          }
+        });
+        // 25% 概率使敌军单体陷入虚弱
+        if (livingOpps.length > 0 && Math.random() < 0.25) {
+          const debuffTarget = livingOpps[Math.floor(Math.random() * livingOpps.length)];
+          if (!debuffTarget.buffs.insight) {
+            debuffTarget.buffs.weakness = 1;
+            log(round, `🕊️ 仁德感召！【${debuffTarget.label}】受刘皇叔浩然正气感化，陷入【虚弱】1回合(无法造成伤害)！`, 'debuff', { actor, target: debuffTarget });
+          }
+        }
+      }
+
+      // 🌟 张飞 燕人咆哮 (第2、4回合对敌军全体发动兵刃攻击；若目标处于缴械，额外降低其统率50%持续2回合)
+      const yanRenTac = actor.tactics.find(t => t.id === 'tac_yan_ren_pao_xiao');
+      if (yanRenTac && (round === 2 || round === 4) && actor.currentSoldiers > 0) {
+        const dmgRate = yanRenTac.damageRate || 1.04;
+        log(round, `🐅 燕人咆哮撼天动地！【${actor.label}】当阳桥前雷霆怒吼，对敌军全体发动兵刃轰击！`, 'skill', { actor, tactic: yanRenTac, isSkillCast: true });
+        livingOpps.forEach(opp => {
+          const rawDmg = Math.round(Math.max(20, actor.force * 1.5 - opp.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate);
+          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '燕人咆哮', { damageType: 'blade', tacticId: yanRenTac.id });
+          if (actualDmg > 0) {
+            log(round, `💥 燕人咆哮音浪撕裂！对【${opp.label}】造成 ${actualDmg} 点兵刃伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
+          }
+          if (opp.buffs.disarmed > 0 && opp.currentSoldiers > 0) {
+            const debuffVal = Math.round(opp.command * 0.50);
+            opp.command = Math.max(10, opp.command - debuffVal);
+            if (!opp.buffs.statRestorations) opp.buffs.statRestorations = [];
+            opp.buffs.statRestorations.push({ roundExpire: round + 2, command: debuffVal, intel: 0, name: '燕人咆哮' });
+            log(round, `⚡【${opp.label}】受制于缴械复遭吼击，胆裂心惊，统率暴跌 50%(降低${debuffVal}点，持续2回合)！`, 'debuff', { actor, target: opp });
+          }
+        });
+        if (checkLeaderDeath(round)) break battleLoop;
+      }
+
+      // 🌟 司马懿 鹰视狼顾 (前4回合自身获得攻心吸血并叠加奇谋概率；第5回合起每回合对敌军全体造成强力谋略伤害)
+      const yingShiTac = actor.tactics.find(t => t.id === 'tac_ying_shi_lang_gu');
+      if (yingShiTac && actor.currentSoldiers > 0) {
+        if (round <= 4) {
+          actor.buffs.vampireTactical = 0.20; // 攻心谋略吸血20%
+          actor.buffs.tacticalCritRate = (actor.buffs.tacticalCritRate || 0) + 0.07;
+          log(round, `🦅 鹰视狼顾隐忍蓄力！【${actor.label}】第 ${round} 回合奇谋几率提升 7%(当前:${Math.round((actor.buffs.tacticalCritRate || 0) * 100)}%)，获攻心吸血加持！`, 'buff', { actor });
+        } else {
+          const dmgRate = yingShiTac.damageRate || 1.54;
+          log(round, `🦅 鹰视狼顾谋动天下！【${actor.label}】后期杀招完全解放，对敌军全体发动毁灭性谋略轰炸！`, 'skill', { actor, tactic: yingShiTac, isSkillCast: true });
+          livingOpps.forEach(opp => {
+            const rawDmg = Math.round((actor.intel * 1.55 - opp.intel * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate);
+            const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '鹰视狼顾', { damageType: 'tactical', tacticId: yingShiTac.id });
+            if (actualDmg > 0) {
+              log(round, `⚡ 狼顾轰杀！对【${opp.label}】造成 ${actualDmg} 点狂暴谋略伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
+            }
+          });
+          if (checkLeaderDeath(round)) break battleLoop;
+        }
+      }
+
+      // 🌟 鲁肃 济贫好施 (第2回合移交40%自身属性给我军兵力最低友军；后续回合为其提供42%减伤与持续回血)
+      const jiPinTac = actor.tactics.find(t => t.id === 'tac_ji_pin_hao_shi');
+      if (jiPinTac && actor.currentSoldiers > 0) {
+        if (round === 2 && !actor.buffs.jiPinTransferred) {
+          const otherLivingMates = team.filter(h => h.currentSoldiers > 0 && h !== actor);
+          if (otherLivingMates.length > 0) {
+            otherLivingMates.sort((a, b) => a.currentSoldiers - b.currentSoldiers);
+            const beneficiary = otherLivingMates[0];
+            actor.buffs.jiPinTransferred = true;
+            actor.buffs.jiPinBeneficiary = beneficiary;
+            const fShare = Math.round(actor.force * 0.40);
+            const iShare = Math.round(actor.intel * 0.40);
+            const cShare = Math.round(actor.command * 0.40);
+            const sShare = Math.round(actor.speed * 0.40);
+            actor.force -= fShare;
+            actor.intel -= iShare;
+            actor.command -= cShare;
+            actor.speed -= sShare;
+            beneficiary.force += fShare;
+            beneficiary.intel += iShare;
+            beneficiary.command += cShare;
+            beneficiary.speed += sShare;
+            log(round, `🤝 济贫好施倾囊相赠！【${actor.label}】移交自身 40% 属性予【${beneficiary.label}】(武+${fShare}/智+${iShare}/统+${cShare}/速+${sShare})！`, 'buff', { actor, target: beneficiary });
+          }
+        } else if (round >= 3 && actor.buffs.jiPinBeneficiary && actor.buffs.jiPinBeneficiary.currentSoldiers > 0) {
+          const ben = actor.buffs.jiPinBeneficiary;
+          ben.buffs.damageReduction = Math.max(ben.buffs.damageReduction || 0, 0.42);
+          const heal = Math.round(actor.intel * (jiPinTac.healRate || 1.0) * Math.sqrt(actor.currentSoldiers / 100));
+          const actualHeal = Math.min(ben.maxSoldiers - ben.currentSoldiers, heal);
+          if (actualHeal > 0) {
+            ben.currentSoldiers += actualHeal;
+            recordHeroHeal(actor, actualHeal, jiPinTac.id);
+            log(round, `🌿 济贫好施仁厚润物！【${actor.label}】为受助友军【${ben.label}】回复 ${actualHeal} 兵力并赋予 42% 巨额减伤！(余兵:${ben.currentSoldiers})`, 'heal', { actor, target: ben });
+          }
+        }
+      }
+
+      // 🌟 董卓 酒池肉林 (第5回合起每回合对敌我全体除自身外造成毁灭性兵刃轰击 120%)
+      const jiuChiTac = actor.tactics.find(t => t.id === 'tac_jiu_chi_rou_lin');
+      if (jiuChiTac && round >= 5 && actor.currentSoldiers > 0) {
+        const dmgRate = jiuChiTac.damageRate || 1.20;
+        log(round, `🥩 酒池肉林狂暴嗜杀！【${actor.label}】魔威暴走，对全场敌我单位发动无差别兵刃轰击！`, 'skill', { actor, tactic: jiuChiTac, isSkillCast: true });
+        const allTargets = [...team, ...oppTeam].filter(h => h.currentSoldiers > 0 && h !== actor);
+        allTargets.forEach(tgt => {
+          const rawDmg = Math.round((actor.force * 1.5 - tgt.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * dmgRate);
+          const actualDmg = applyDamageToTarget(round, actor, tgt, rawDmg, log, '酒池肉林', { damageType: 'blade', tacticId: jiuChiTac.id });
+          if (actualDmg > 0) {
+            log(round, `💥 魔王狂碾！对【${tgt.label}】造成 ${actualDmg} 点狂暴兵刃重创！(余兵:${tgt.currentSoldiers})`, 'action', { actor, target: tgt });
+          }
+        });
         if (checkLeaderDeath(round)) break battleLoop;
       }
 
@@ -1227,6 +1462,20 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     }
   }
 
+  // 🌟 许褚【虎痴】锁定目标增伤 33%
+  if (actor.buffs?.huChiTarget && actor.buffs.huChiTarget === target) {
+    effectiveDealtMod *= 1.33;
+    modTags += '【虎痴锁定+33%】';
+  }
+
+  // 🌟 以逸待劳护盾结算 (法正自带：受下2次伤害降低)
+  if (target.buffs?.yiYiCharges > 0) {
+    const yiYiRed = target.buffs.yiYiReduction || 0.40;
+    target.buffs.yiYiCharges--;
+    effectiveReceivedMod = Math.max(0.10, effectiveReceivedMod * (1.0 - yiYiRed));
+    modTags += `【以逸待劳减伤-${Math.round(yiYiRed * 100)}%(剩${target.buffs.yiYiCharges}次)】`;
+  }
+
   // 士气不足惩罚标签
   if (actorMoraleMod < 0.98) {
     const moraleNerfPct = Math.round((1.0 - actorMoraleMod) * 100);
@@ -1257,6 +1506,21 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
     tengJiaBurnIgnited
   };
 
+  // 🌟 周泰【肉身铁壁】伤害分摊机制 (友军受创时周泰挺身替其分摊承受 40% 伤害)
+  if (finalDmg > 0 && target.buffs?.zhouTaiProtector && target.buffs.zhouTaiProtector.currentSoldiers > 0 && target !== target.buffs.zhouTaiProtector) {
+    const zhouTai = target.buffs.zhouTaiProtector;
+    const shareRate = target.buffs.zhouTaiShareRate || 0.40;
+    const sharedDmg = Math.min(zhouTai.currentSoldiers, Math.max(1, Math.round(finalDmg * shareRate)));
+    finalDmg = Math.max(0, finalDmg - sharedDmg);
+    zhouTai.currentSoldiers = Math.max(0, zhouTai.currentSoldiers - sharedDmg);
+    zhouTai.stats.damageTaken += sharedDmg;
+    log(round, `🛡️【${zhouTai.label}】肉身铁壁舍生护主！挺身替【${target.label}】分摊承受了 ${sharedDmg} 点伤害！(周泰余兵:${zhouTai.currentSoldiers})`, 'buff', { actor: zhouTai, target });
+    if (zhouTai.currentSoldiers <= 0) {
+      log(round, `💀【${zhouTai.label}】为掩护友军战至力竭阵亡！肉身铁壁护阵瓦解！`, 'death', { actor: zhouTai });
+      target.buffs.zhouTaiProtector = null;
+    }
+  }
+
   // 貂蝉【闭月】伤害分担机制 (受击时将一定比例伤害转移给敌军替身目标承受)
   if (finalDmg > 0 && target.buffs.shareDamageTarget && target.buffs.shareDamageTarget.currentSoldiers > 0 && target.buffs.shareDamageRate > 0) {
     const proxy = target.buffs.shareDamageTarget;
@@ -1271,6 +1535,34 @@ function applyDamageToTarget(round, actor, target, rawDmg, log, damageDesc = '',
   target.currentSoldiers = Math.max(0, target.currentSoldiers - finalDmg);
   actor.stats.damageDealt += finalDmg;
   target.stats.damageTaken += finalDmg;
+
+  // 倒戈吸血结算 (兵刃吸血：董卓酒池肉林等)
+  if (actor.buffs?.vampireForce && damageType === 'blade' && finalDmg > 0 && actor.currentSoldiers > 0) {
+    const vHeal = Math.min(actor.maxSoldiers - actor.currentSoldiers, Math.round(finalDmg * actor.buffs.vampireForce));
+    if (vHeal > 0) {
+      actor.currentSoldiers += vHeal;
+      recordHeroHeal(actor, vHeal, 'vampire');
+      log(round, `🩸【${actor.label}】倒戈嗜血！兵刃斩杀同时吸取气血，恢复 ${vHeal} 兵力！(余兵:${actor.currentSoldiers})`, 'heal', { actor });
+    }
+  }
+
+  // 攻心吸血结算 (谋略吸血：司马懿鹰视狼顾等)
+  if (actor.buffs?.vampireTactical && damageType === 'tactical' && finalDmg > 0 && actor.currentSoldiers > 0) {
+    const vHeal = Math.min(actor.maxSoldiers - actor.currentSoldiers, Math.round(finalDmg * actor.buffs.vampireTactical));
+    if (vHeal > 0) {
+      actor.currentSoldiers += vHeal;
+      recordHeroHeal(actor, vHeal, 'vampire');
+      log(round, `🩸【${actor.label}】攻心夺魄！谋略重创同时汲取灵气，恢复 ${vHeal} 兵力！(余兵:${actor.currentSoldiers})`, 'heal', { actor });
+    }
+  }
+
+  // 许褚【虎痴】斩杀破阵觉醒
+  if (target.currentSoldiers <= 0 && actor.buffs?.huChiTarget === target && actor.tactics.some(t => t.id === 'tac_hu_chi')) {
+    if (!actor.buffs.trueStrike) {
+      actor.buffs.trueStrike = true;
+      log(round, `🐯【${actor.label}】虎痴神威！成功击溃锁定目标【${target.label}】，觉醒【破阵】(无视敌军统率与智力)！`, 'buff', { actor, target });
+    }
+  }
 
   // 战法明细统计：精准归集杀敌伤害至具体战法或普通攻击
   let tId = (options && typeof options === 'object') ? options.tacticId : null;
@@ -1312,6 +1604,13 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
   const livingOpps = oppTeam.filter(h => h.currentSoldiers > 0);
   if (livingOpps.length === 0) return;
 
+  // 🌟 士别三日：前3回合闭门研读，无法进行普通攻击
+  const shiBieTac = actor.tactics.find(t => t.id === 'tac_shi_bie_san_ri');
+  if (shiBieTac && round <= 3) {
+    log(round, `📖【${actor.label}】士别三日闭门潜心研读兵法，前3回合无法进行普通攻击！`, 'status', { actor });
+    return;
+  }
+
   // 目标选取：若处于【混乱】状态，有 50% 概率敌我不分将攻击转向友军存活单位！
   let target;
   const livingTeammates = team.filter(h => h.currentSoldiers > 0 && h !== actor);
@@ -1319,13 +1618,36 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     target = livingTeammates[Math.floor(Math.random() * livingTeammates.length)];
     log(round, `🌀【${actor.label}】心神迷乱陷入【混乱】，敌我不分，反手攻向友军【${target.label}】！`, 'status', { actor, target });
   } else {
-    // 正常选取敌军目标：若有锁主将概率则打主将，否则随机打击
-    target = livingOpps[Math.floor(Math.random() * livingOpps.length)];
-    const hasLockLeader = actor.tactics.some(t => t.id === 'tac_xian_zhen_tu_xi');
-    if (hasLockLeader && Math.random() < 0.68) {
-      const oppLeader = oppTeam.find(h => h.isLeader && h.currentSoldiers > 0);
-      if (oppLeader) target = oppLeader;
+    // 🌟 许褚【虎痴】锁定单体判定
+    const huChiTac = actor.tactics.find(t => t.id === 'tac_hu_chi');
+    if (huChiTac) {
+      if (!actor.buffs.huChiTarget || actor.buffs.huChiTarget.currentSoldiers <= 0) {
+        const freshLiving = livingOpps.filter(h => h.currentSoldiers > 0);
+        if (freshLiving.length > 0) {
+          actor.buffs.huChiTarget = freshLiving[Math.floor(Math.random() * freshLiving.length)];
+          log(round, `🐯【${actor.label}】触发【虎痴】！虎视眈眈死死锁定敌军【${actor.buffs.huChiTarget.label}】，伤害提升 33%！`, 'buff', { actor, target: actor.buffs.huChiTarget });
+        }
+      }
+      if (actor.buffs.huChiTarget && actor.buffs.huChiTarget.currentSoldiers > 0) {
+        target = actor.buffs.huChiTarget;
+      }
     }
+
+    if (!target) {
+      // 正常选取敌军目标：若有锁主将概率则打主将，否则随机打击
+      target = livingOpps[Math.floor(Math.random() * livingOpps.length)];
+      const hasLockLeader = actor.tactics.some(t => t.id === 'tac_xian_zhen_tu_xi');
+      if (hasLockLeader && Math.random() < 0.68) {
+        const oppLeader = oppTeam.find(h => h.isLeader && h.currentSoldiers > 0);
+        if (oppLeader) target = oppLeader;
+      }
+    }
+  }
+
+  // 🌟 程昱/程普传承【守而必固】：主将受嘲讽强制普攻嘲讽者
+  if (actor.buffs.tauntTarget && actor.buffs.tauntTarget.currentSoldiers > 0 && round <= (actor.buffs.tauntExpireRound || 4)) {
+    target = actor.buffs.tauntTarget;
+    log(round, `🛡️【${actor.label}】受到【守而必固】嘲讽牵制，身不由己强制攻击【${target.label}】！`, 'status', { actor, target });
   }
 
   // 典韦 古之恶来：替主将承担普攻
@@ -1410,8 +1732,8 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     }
   }
 
-  // 受到伤害后的急救判定 (青囊相助：只要受创方队伍中有存活的华佗，全队皆有50%几率急救治愈)
-  if (actualDmg > 0 && target.currentSoldiers > 0) {
+  // 受到伤害后的急救判定 (青囊相助：战斗前4回合，只要受创方队伍中有存活的华佗，全队皆有50%几率急救治愈)
+  if (round <= 4 && actualDmg > 0 && target.currentSoldiers > 0) {
     const defenderTeam = actor.isPlayer ? oppTeam : team;
     const qingNangDoc = defenderTeam.find(h => h.currentSoldiers > 0 && h.tactics.some(t => t.id === 'tac_qing_nang_xiang_zhu'));
     if (qingNangDoc && Math.random() < 0.5) {
@@ -1422,7 +1744,7 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
     }
   }
 
-  // 反击与受击判定 (夏侯惇刚烈不屈、绝地反击受创蓄力、梦中弑臣反击)
+  // 反击与受击判定 (夏侯惇刚烈不屈、绝地反击受创蓄力、梦中弑臣反击、典韦古之恶来反击)
   if (hitResult.wasHit && target.currentSoldiers > 0) {
     // 绝地反击：每次受到兵刃伤害提高武力(最多叠加10次)
     const jueDiTac = target.tactics.find(t => t.id === 'tac_jue_di_fan_ji');
@@ -1445,6 +1767,18 @@ function performNormalAttack(round, actor, team, oppTeam, log, moraleMod, pArmAd
       const retResult = applyDamageToTarget(round, target, actor, retDmg, log, '梦中反击', { damageType: 'blade', tacticId: mengZhong.id });
       if (retResult.damage > 0) {
         log(round, `🗡️【${target.label}】梦中弑臣！暴怒反戈一击，对【${actor.label}】造成 ${retResult.damage} 点兵刃反击伤害！(余兵:${actor.currentSoldiers})`, 'skill', { actor: target, target: actor, isSkillCast: true });
+      }
+    }
+
+    // 🌟 典韦 古之恶来：受到普通攻击反击 130%
+    const guZhiTac = target.tactics.find(t => t.id === 'tac_gu_zhi_e_lai');
+    if (guZhiTac && target.currentSoldiers > 0) {
+      if (target.tacticStats && target.tacticStats[guZhiTac.id]) target.tacticStats[guZhiTac.id].casts++;
+      const retRate = guZhiTac.damageRate || 1.30;
+      const retDmg = Math.round(target.force * 1.5 * Math.sqrt(target.currentSoldiers / 100) * retRate);
+      const retResult = applyDamageToTarget(round, target, actor, retDmg, log, '古之恶来', { damageType: 'blade', tacticId: guZhiTac.id });
+      if (retResult.damage > 0) {
+        log(round, `🪓【${target.label}】古之恶来金戟怒扫！狂暴反戈一击轰向【${actor.label}】造成 ${retResult.damage} 点兵刃伤害！(余兵:${actor.currentSoldiers})`, 'skill', { actor: target, target: actor, isSkillCast: true });
       }
     }
 
@@ -1633,7 +1967,42 @@ function executeActiveTactics(round, actor, team, livingOpps, log, moraleMod, pA
 
   const armAdv = actor.isPlayer ? pArmAdv : eArmAdv;
 
+  // 🌟 周瑜【神火计】联动辅助函数 (成功发动主动战法后，80%几率对敌全体造成68%谋略伤害并施加灼烧)
+  const triggerShenHuoJi = () => {
+    if (actor.tactics.some(t => t.id === 'tac_shen_huo_ji') && actor.currentSoldiers > 0) {
+      if (Math.random() < 0.80) {
+        log(round, `🔥【${actor.label}】神火计触发！借东风引燃赤壁烈火，漫天火海席卷敌阵！`, 'skill', { actor, isSkillCast: true });
+        livingOpps.filter(opp => opp.currentSoldiers > 0).forEach(opp => {
+          const rawDmg = Math.round((actor.intel * 1.4 - opp.intel * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * 0.68);
+          const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '神火计', { damageType: 'tactical', isFire: true, tacticId: 'tac_shen_huo_ji' });
+          opp.buffs.burn = 1;
+          opp.buffs.burnDmg = Math.round(actor.intel * 0.50);
+          opp.buffs.burnSourceActor = actor;
+          if (actualDmg > 0) {
+            log(round, `🔥 赤壁烈焰焚天！对【${opp.label}】造成 ${actualDmg} 点谋略灼烧伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
+          }
+        });
+      }
+    }
+  };
+
+  // 🌟 诸葛亮【神机妙算】反制辅助函数 (敌军试图发动主动战法时，35%几率打断失效并反噬150%伤害)
+  const checkZhuGeCounter = (tac) => {
+    const zhuGe = livingOpps.find(h => h.currentSoldiers > 0 && h.tactics.some(t => t.id === 'tac_shen_ji_miao_suan') && h.buffs.silenced === 0 && h.buffs.stunned === 0);
+    if (zhuGe && Math.random() * 100 < 35) {
+      log(round, `⚡【${zhuGe.label}】神机妙算识破天机！羽扇微摇，令【${actor.label}】的战法【${tac.name}】化为乌有，并引发天雷反噬！`, 'skill', { actor: zhuGe, target: actor, isSkillCast: true });
+      const counterDmg = Math.round((zhuGe.intel * 1.6 - actor.intel * 0.5) * Math.sqrt(zhuGe.currentSoldiers / 100) * 1.50);
+      const actualCounter = applyDamageToTarget(round, zhuGe, actor, counterDmg, log, '神机妙算', { damageType: 'tactical', tacticId: 'tac_shen_ji_miao_suan' });
+      if (actualCounter > 0) {
+        log(round, `⚡ 神机天雷怒劈！对【${actor.label}】造成 ${actualCounter} 点强力谋略反噬伤害！(余兵:${actor.currentSoldiers})`, 'action', { actor: zhuGe, target: actor });
+      }
+      return true; // 打断成功
+    }
+    return false;
+  };
+
   actor.tactics.filter(t => t.type === 'active').forEach(tac => {
+    if (actor.currentSoldiers <= 0) return;
     const lvlTag = tac.level ? `Lv.${tac.level} ` : '';
     // 发动率加成 (白眉 +12%，白马义从 +10%，袁术符命自立 +25%，太平道法自带主动 +12%)
     let rateBonus = 0;
@@ -1641,31 +2010,47 @@ function executeActiveTactics(round, actor, team, livingOpps, log, moraleMod, pA
     if (team.some(h => h.tactics.some(t => t.id === 'tac_bai_ma_yi_cong'))) rateBonus += 10;
     if (actor.tactics.some(t => t.id === 'tac_fu_ming_zi_li') && round <= 2) rateBonus += 25;
     if (actor.tactics.some(t => t.id === 'tac_tai_ping_dao_fa') && tac.id === actor.tactics[0]?.id) rateBonus += 12;
-    const finalRate = Math.min(100, (tac.rate || 35) + rateBonus);
+
+    // 🌟 诸葛亮传承【舌战群儒】：敌军若有存活者携带，降低发动者10%发动率，并使我军全体下回合主动几率+5%
+    const sheZhanEnemy = livingOpps.find(h => h.currentSoldiers > 0 && h.tactics.some(t => t.id === 'tac_she_zhan_qun_ru'));
+    if (sheZhanEnemy) {
+      rateBonus -= 10;
+      livingOpps.forEach(opp => opp.buffs.sheZhanActiveRound = round);
+    }
+    if (actor.buffs.sheZhanActiveRound === round) {
+      rateBonus += 5;
+    }
+
+    const finalRate = Math.min(100, Math.max(5, (tac.rate || 35) + rateBonus));
 
     // 蓄力准备判定 (如威震华夏、所向披靡)
     if (tac.requiresPrep) {
       if (actor.buffs.isPreparingActive === tac.id) {
         actor.buffs.isPreparingActive = null;
+        if (checkZhuGeCounter(tac)) return;
         actor.stats.tacticsCast++;
         if (actor.tacticStats && actor.tacticStats[tac.id]) {
           actor.tacticStats[tac.id].casts++;
         }
         log(round, `🔥【${actor.label}】蓄力完成！撼世战法【${lvlTag}${tac.name}】磅礴释放！`, 'skill', { actor, tactic: tac, isSkillCast: true });
         castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, armAdv);
+        triggerShenHuoJi();
         return;
       } else {
         if (Math.random() * 100 < finalRate) {
           // 魏延 奇兵间道：有 75% 几率直接跳过准备回合瞬间爆发！
           if (actor.buffs.skipPrepChance && Math.random() < actor.buffs.skipPrepChance) {
+            if (checkZhuGeCounter(tac)) return;
             actor.stats.tacticsCast++;
             if (actor.tacticStats && actor.tacticStats[tac.id]) {
               actor.tacticStats[tac.id].casts++;
             }
             log(round, `⚡ 奇兵间道神谋瞬发！【${actor.label}】跳过蓄力，绝技【${lvlTag}${tac.name}】刹那间呼啸释放！`, 'skill', { actor, tactic: tac, isSkillCast: true });
             castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, armAdv);
+            triggerShenHuoJi();
             return;
           }
+          if (checkZhuGeCounter(tac)) return;
           actor.buffs.isPreparingActive = tac.id;
           log(round, `⌛【${actor.label}】沉声立定，开始蓄势准备绝技【${lvlTag}${tac.name}】！(下回合释放)`, 'prep', { actor, tactic: tac });
           return;
@@ -1673,12 +2058,14 @@ function executeActiveTactics(round, actor, team, livingOpps, log, moraleMod, pA
       }
     } else {
       if (Math.random() * 100 < finalRate) {
+        if (checkZhuGeCounter(tac)) return;
         actor.stats.tacticsCast++;
         if (actor.tacticStats && actor.tacticStats[tac.id]) {
           actor.tacticStats[tac.id].casts++;
         }
         log(round, `✨【${actor.label}】大喝一声，发动主动战法【${lvlTag}${tac.name}】！`, 'skill', { actor, tactic: tac, isSkillCast: true });
         castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, armAdv);
+        triggerShenHuoJi();
       }
     }
   });
@@ -1811,7 +2198,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 卧薪尝胆 (孙权官方传承)
   else if (tac.id === 'tac_wo_xin_chang_dan') {
-    const targets = livingOpps.slice(0, 2);
+    const targets = getRandomElements(livingOpps, 2);
     // 根据自身连击、先攻、洞察等Buff层数提高震慑几率
     let buffCount = 0;
     if (actor.buffs.continuousAttack) buffCount++;
@@ -1833,7 +2220,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 倾国倾城 (貂蝉官方传承)
   else if (tac.id === 'tac_qing_guo_qing_cheng') {
-    const targets = livingOpps.slice(0, 2);
+    const targets = getRandomElements(livingOpps, 2);
     targets.forEach(opp => {
       opp.buffs.silenced = 1;
       log(round, `🌹 倾国倾城红颜祸水！【${opp.label}】心神迷乱，陷入计穷无法施展战法！`, 'debuff', { actor, target: opp });
@@ -1852,12 +2239,17 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 以逸待劳 (法正自带)
   else if (tac.id === 'tac_yi_yi_dai_lao') {
-    team.slice(0, 2).forEach(mate => {
-      const heal = Math.round(actor.intel * 1.58 * Math.sqrt(actor.currentSoldiers / 100));
+    const livingMates = team.filter(h => h.currentSoldiers > 0);
+    const targets = getRandomElements(livingMates, 2);
+    const baseRed = tac.damageReduction || 0.40;
+    const redVal = Math.min(0.75, baseRed * (1 + Math.max(0, actor.intel - 80) * 0.003));
+    targets.forEach(mate => {
+      const heal = Math.round(actor.intel * (tac.healRate || 1.58) * Math.sqrt(actor.currentSoldiers / 100));
       mate.currentSoldiers = Math.min(mate.maxSoldiers, mate.currentSoldiers + heal);
-      mate.buffs.damageReceivedMod -= 0.40;
+      mate.buffs.yiYiCharges = 2; // 下2次受创有效
+      mate.buffs.yiYiReduction = redVal;
       recordHeroHeal(actor, heal, tac.id);
-      log(round, `📜 以逸待劳神机安澜！为【${mate.label}】回复 ${heal} 兵力并附加 40% 强效减伤！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
+      log(round, `📜 以逸待劳神机安澜！为【${mate.label}】回复 ${heal} 兵力，并赋予下 2 次受创减伤 ${(redVal * 100).toFixed(1)}% 护盾！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
     });
   }
   // 铁索连环 (庞统自带)
@@ -1910,7 +2302,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 累世立名 (袁绍自带)
   else if (tac.id === 'tac_lei_shi_li_ming') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       const rawDmg = Math.round(((actor.force + actor.intel) * 0.9 - (opp.command + opp.intel) * 0.4) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.26) * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '累世立名');
       if (actualDmg > 0) {
@@ -1932,7 +2324,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 沉沙决水 (法正/郭嘉官方传承)
   else if (tac.id === 'tac_chen_sha_jue_shui') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.45 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.26) * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '沉沙决水', { damageType: 'tactical' });
       opp.buffs.tacticalReceivedMod += 0.25;
@@ -1946,7 +2338,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   // 破阵摧坚 (孙策/庞统官方传承)
   else if (tac.id === 'tac_po_zhen_cui_jian') {
     const debuffVal = tac.statDebuff || 80;
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       opp.command = Math.max(10, opp.command - debuffVal);
       opp.intel = Math.max(10, opp.intel - debuffVal);
       const rawDmg = Math.round((actor.force * 1.6 - opp.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.58) * armAdv);
@@ -1960,14 +2352,15 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 杯蛇鬼车 (左慈官方传承)
   else if (tac.id === 'tac_bei_she_gui_che') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.5 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.53) * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '杯蛇鬼车', { damageType: 'tactical' });
       if (actualDmg > 0) {
         log(round, `🐍 杯蛇鬼车幽冥幻法！对【${opp.label}】造成 ${actualDmg} 点奇门谋略伤害！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       }
     });
-    team.slice(0, 2).forEach(mate => {
+    const livingMates = team.filter(h => h.currentSoldiers > 0);
+    getRandomElements(livingMates, 2).forEach(mate => {
       const healRate = tac.healRate || 1.02;
       const heal = Math.round(actor.intel * healRate * Math.sqrt(actor.currentSoldiers / 100));
       mate.currentSoldiers = Math.min(mate.maxSoldiers, mate.currentSoldiers + heal);
@@ -1977,10 +2370,12 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 黄天泰平 (张角官方传承)
   else if (tac.id === 'tac_huang_tian_tai_ping') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       opp.buffs.silenced = 2;
       log(round, `🕊️ 黄天泰平咒印封禁！【${opp.label}】陷入计穷 2 回合，无法释放主动战法！`, 'debuff', { actor, target: opp });
     });
+    actor.buffs.confused = 1;
+    log(round, `💫【${actor.label}】施展黄天泰平消耗神识，自身陷入【混乱】1回合！`, 'status', { actor });
   }
   // 一力拒守 (典韦官方传承)
   else if (tac.id === 'tac_yi_li_ju_shou') {
@@ -2104,22 +2499,26 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
       log(round, `🏰 坐守孤城安抚伤卒！治愈【${mate.label}】恢复 ${heal} 兵力！(余兵:${mate.currentSoldiers})`, 'heal', { actor, target: mate });
     });
   }
-  // 料事如神 (群体2人谋略伤害 + 减伤)
+  // 料事如神 (群体2人谋略伤害 + 2回合减伤)
   else if (tac.id === 'tac_liao_shi_ru_shen') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    const targets = getRandomElements(livingOpps, 2);
+    const baseRed = tac.damageReduction || 0.16;
+    targets.forEach(opp => {
       const rawDmg = Math.round((actor.intel * 1.4 - opp.intel * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.06) * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '料事如神', { damageType: 'tactical' });
-      opp.buffs.damageDealtMod -= 0.16;
+      opp.buffs.damageDealtMod = Math.max(0.1, (opp.buffs.damageDealtMod || 1.0) - baseRed);
+      if (!opp.buffs.liaoShiDebuffs) opp.buffs.liaoShiDebuffs = [];
+      opp.buffs.liaoShiDebuffs.push({ expireRound: round + 2, val: baseRed });
       if (actualDmg > 0) {
-        log(round, `📜 料事如神奇策制敌！对【${opp.label}】造成 ${actualDmg} 点谋略伤害，并使其伤害降低 16%！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
+        log(round, `📜 料事如神奇策制敌！对【${opp.label}】造成 ${actualDmg} 点谋略伤害，并使其造成的伤害降低 ${(baseRed * 100).toFixed(1)}%(持续2回合)！(余兵:${opp.currentSoldiers})`, 'action', { actor, target: opp });
       } else {
-        log(round, `📜 料事如神奇策制敌令【${opp.label}】造成的伤害降低 16%！`, 'debuff', { actor, target: opp });
+        log(round, `📜 料事如神奇策制敌令【${opp.label}】造成的伤害降低 ${(baseRed * 100).toFixed(1)}%(持续2回合)！`, 'debuff', { actor, target: opp });
       }
     });
   }
   // 机略纵横 (群体2人灼烧与中毒)
   else if (tac.id === 'tac_ji_lue_zong_heng') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       opp.buffs.burn = 2;
       opp.buffs.burnDmg = Math.round(actor.intel * 0.58);
       opp.buffs.burnSourceActor = actor;
@@ -2134,7 +2533,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 暴敛四方 (群体2人兵刃攻击，若震慑则禁疗)
   else if (tac.id === 'tac_bao_lian_si_fang') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.45 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.02) * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '暴敛四方', { damageType: 'blade' });
       if (actualDmg > 0) {
@@ -2148,7 +2547,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 天降覆雨 (群体2人兵刃+灼烧)
   else if (tac.id === 'tac_tian_jiang_fu_yu') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.45 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * (tac.damageRate || 1.10) * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '天降覆雨', { damageType: 'blade' });
       opp.buffs.burn = 1;
@@ -2161,7 +2560,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 挫志怒袭 (群体2人虚弱)
   else if (tac.id === 'tac_cuo_zhi_nu_xi') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       if (!opp.buffs.insight) {
         opp.buffs.weakness = 1;
         log(round, `⚡ 挫志怒袭威吓三军！【${opp.label}】陷入【虚弱】1回合(造成的伤害全部为0)！`, 'debuff', { actor, target: opp });
@@ -2194,7 +2593,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   }
   // 处兹不惑 (徐庶自带：群体2人灼烧、中毒、溃逃连续判定)
   else if (tac.id === 'tac_chu_zi_bu_huo') {
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       opp.buffs.burn = 2;
       opp.buffs.burnDmg = Math.round(actor.intel * 1.15);
       opp.buffs.burnSourceActor = actor;
@@ -2204,7 +2603,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   // 将门虎女 (关银屏自带：群体2人兵刃打击并施加虎嗔与震慑)
   else if (tac.id === 'tac_jiang_men_hu_nv') {
     const rate = tac.damageRate || 1.28;
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.5 - opp.command * 0.6) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '将门虎女', { damageType: 'blade' });
       if (actualDmg > 0) {
@@ -2219,7 +2618,7 @@ function castActiveEffect(round, actor, tac, team, livingOpps, log, moraleMod, a
   // 临战先登 (乐进自带：100%发动高额兵刃，随后虚弱1回合)
   else if (tac.id === 'tac_lin_zhan_xian_deng') {
     const rate = tac.damageRate || 1.35;
-    livingOpps.slice(0, 2).forEach(opp => {
+    getRandomElements(livingOpps, 2).forEach(opp => {
       const rawDmg = Math.round((actor.force * 1.6 - opp.command * 0.5) * Math.sqrt(actor.currentSoldiers / 100) * rate * armAdv);
       const actualDmg = applyDamageToTarget(round, actor, opp, rawDmg, log, '临战先登', { damageType: 'blade' });
       if (actualDmg > 0) {

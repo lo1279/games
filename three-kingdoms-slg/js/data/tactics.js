@@ -231,6 +231,7 @@ export const TACTICS_DATA = [
     quality: 'S',
     damageType: 'heal',
     healRate: 1.58,
+    damageReduction: 0.40,
     desc: '治疗我军群体(2人)兵力(治疗率158%，受智力影响)，并使目标受到下2次伤害降低40%！'
   },
   {
@@ -253,6 +254,8 @@ export const TACTICS_DATA = [
     target: 'leader',
     quality: 'S',
     damageType: 'buff',
+    damageReduction: 0.50,
+    firstRounds: 2,
     desc: '战斗前2回合，使我军主将获得【洞察】状态(免疫所有控制)，且受到的所有伤害大幅降低50%！'
   },
   {
@@ -326,6 +329,8 @@ export const TACTICS_DATA = [
     target: 'friendly_lowest',
     quality: 'S',
     damageType: 'buff',
+    damageReduction: 0.42,
+    healRate: 1.0,
     desc: '第2回合将自身40%属性移交给我军兵力最低的友军；并在后续回合为其提供巨额减伤(42%)与持续回血！'
   },
   {
@@ -479,6 +484,8 @@ export const TACTICS_DATA = [
     target: 'friendly_all',
     quality: 'S',
     damageType: 'buff',
+    shareDamageRate: 0.40,
+    teamDamageBonus: 0.30,
     desc: '【周泰自带】替我军全体承担40%所受伤害；只要周泰兵力高于30%，使全队造成的伤害提升30%！'
   },
   {
@@ -943,6 +950,7 @@ export const TACTICS_DATA = [
     quality: 'A',
     damageType: 'tactical',
     damageRate: 1.06,
+    damageReduction: 0.16,
     desc: '对敌军群体(2人)造成谋略伤害(伤害率106%，受智力影响)，并使其造成的伤害降低16%持续2回合。'
   },
   {
@@ -1165,6 +1173,358 @@ export const TACTICS_DATA = [
     damageType: 'debuff',
     requiresPrep: true,
     desc: '【貂蝉专属传承】准备1回合，使敌军群体2人陷入混乱(敌我不分相互攻击)持续2回合；自身为女性时必定混乱2人！'
+  },
+
+  // ================= 2026 年度巅峰扩充：官方核心流派战法 =================
+  // --- 突击战法大核 ---
+  {
+    id: 'tac_dang_feng_cui_jue',
+    name: '当锋摧决',
+    type: 'assault',
+    rate: 35,
+    target: 'attack_target',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 1.82,
+    desc: '【三战第一神技·颜良传承】普通攻击后，对目标造成一次谋略攻击(伤害率182%)，并对其施加【伪报】状态(禁用目标所有指挥战法与被动战法)持续1回合！'
+  },
+  {
+    id: 'tac_bai_qi_jie_ying',
+    name: '百骑劫营',
+    type: 'assault',
+    rate: 40,
+    target: 'attack_target',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 1.52,
+    desc: '【甘宁专属传承】普通攻击后，对目标造成一次猛烈兵刃攻击(伤害率152%)；自身为主将时，有50%几率对敌军主将追加一次斩首兵刃打击(伤害率118%)！'
+  },
+  {
+    id: 'tac_gui_shen_ting_wei',
+    name: '鬼神霆威',
+    type: 'assault',
+    rate: 35,
+    target: 'attack_target',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 2.04,
+    desc: '【吕布专属传承】普通攻击后，对目标造成一次狂暴兵刃斩击(伤害率204%)；若目标兵力低于50%，额外提高伤害率(最高可达306%)，绝命斩杀！'
+  },
+  {
+    id: 'tac_ke_di_zhi_sheng',
+    name: '克敌制胜',
+    type: 'assault',
+    rate: 40,
+    target: 'attack_target',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 1.80,
+    desc: '【程普传承】普通攻击后，对目标造成一次谋略攻击(伤害率180%)；若目标处于溃逃、水攻或中毒状态，有70%几率使其陷入【虚弱】1回合！'
+  },
+
+  // --- 特殊兵种进阶 ---
+  {
+    id: 'tac_hu_bao_qi',
+    name: '虎豹骑',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    armReq: 'cavalry',
+    damageType: 'buff',
+    statBuff: 40,
+    assaultRateBonus: 10,
+    desc: '【曹纯专属传承·骑兵进阶】将骑兵进阶为虎豹骑。战斗前3回合，使我军全体突击战法发动几率提高10%，且武力提高40点！突击骑核心发动机。'
+  },
+  {
+    id: 'tac_xi_liang_tie_qi',
+    name: '西凉铁骑',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    armReq: 'cavalry',
+    damageType: 'buff',
+    critRateBonus: 0.25,
+    desc: '【马腾专属传承·骑兵进阶】将骑兵进阶为西凉铁骑。战斗前3回合，使我军全体获得25%【会心暴击率】(兵刃伤害造成150%~200%暴击)！核弹爆发必备。'
+  },
+  {
+    id: 'tac_jin_fan_jun',
+    name: '锦帆军',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    armReq: 'bow',
+    damageType: 'mixed',
+    desc: '【甘宁专属进阶·弓兵进阶】将弓兵进阶为锦帆贼。全军普通攻击命中时有40%几率对目标施加溃逃伤害(伤害率64%持续2回合)；若目标已溃逃，则造成兵刃斩杀并恢复自身兵力！'
+  },
+  {
+    id: 'tac_xian_zhen_ying',
+    name: '陷阵营',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    armReq: 'shield',
+    damageType: 'heal',
+    statBuff: 30,
+    desc: '【高顺专属自带·盾兵进阶】将盾兵进阶为陷阵营。使我军全体统率与武力提高30点；战斗前3回合受到伤害时有35%几率获得急救恢复兵力(治疗率60%)！'
+  },
+  {
+    id: 'tac_bai_er_bing',
+    name: '白毦兵',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    armReq: 'spear',
+    damageType: 'tactical',
+    desc: '【陈到专属自带·枪兵进阶】将枪兵进阶为白毦兵。我军全体普通攻击后，有40%几率对目标追加一次猛烈谋略攻击(伤害率110%，受智力影响)！蜀智法枪核心。'
+  },
+
+  // --- 灵魂阵法大核 ---
+  {
+    id: 'tac_san_shi_zhen',
+    name: '三势阵',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【跨阵营组队灵魂·阵法】我军三名武将阵营各不相同时生效：战斗前5回合，使我军主将自带主动战法发动几率提高16%；每回合行动前，使损失兵力较多的副将受到的伤害降低30%，另一副将造成的伤害提高25%！'
+  },
+
+  // --- 新增名将专属自带战法 ---
+  {
+    id: 'tac_gong_shen',
+    name: '工神',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    damageBonus: 0.30,
+    desc: '【黄月英自带】战斗前3回合，使我军全体获得【先攻】状态(优先出手)，且造成的所有伤害提升30%；第4回合起造成的伤害降低15%，持续全场。快攻核弹核心！'
+  },
+  {
+    id: 'tac_bu_lao_chang_qiang',
+    name: '不老长枪',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【严颜自带】战斗中受到伤害时，有35%几率使敌军群体(2人)陷入【计穷】1回合，并使我军主将获得【洞察】(免受所有控制)持续2回合！'
+  },
+  {
+    id: 'tac_chi_mu_hu_wen',
+    name: '鸱目虎吻',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'physical',
+    desc: '【马云禄自带】自身普通攻击造成的伤害随目标已损失兵力百分比提高(最高提高100%)；第5回合起普通攻击必定锁定敌军兵力最低的单体，残血收割之王！'
+  },
+  {
+    id: 'tac_jin_cheng_tang_chi',
+    name: '金城汤池',
+    type: 'passive',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'mixed',
+    desc: '【郝昭自带】战斗中无法进行普通攻击；第1、3、5、7回合恢复我军群体(2人)兵力(治疗率98%)；第2、4、6、8回合对敌军全体施加无视防御的烈火灼烧真实谋略伤害(伤害率102%)！'
+  },
+  {
+    id: 'tac_zhen_e_fang_ju',
+    name: '镇扼防拒',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【满宠自带】每回合有50%几率使我军副将替全体友军承担所有普通攻击(援护状态)；且该副将受到伤害时有50%几率驱散攻击者全部增益状态并为我军恢复兵力！'
+  },
+  {
+    id: 'tac_chang_qu_zhi_ru',
+    name: '长驱直入',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【徐晃自带】自身每次造成兵刃伤害后，使自身造成的兵刃伤害提升15%，最高叠加5层(累计提升75%兵刃伤害)！越战越强的物理重炮。'
+  },
+  {
+    id: 'tac_ji_jian_xian_shi',
+    name: '机鉴先识',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【荀彧自带】王佐之才！战斗前4回合使我军全体获得【警戒】状态(受到的伤害降低50%)，每人最多生效4次；且受击时有40%几率对攻击者造成强力谋略反噬伤害！'
+  },
+  {
+    id: 'tac_jiang_dong_meng_hu',
+    name: '江东猛虎',
+    type: 'active',
+    rate: 50,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 1.26,
+    desc: '【孙坚自带】对敌军群体(2人)造成强力兵刃打击(伤害率126%)，并强行嘲讽目标使其普通攻击自身，持续2回合！'
+  },
+  {
+    id: 'tac_xiao_sheng_wei_wo',
+    name: '校胜帷幄',
+    type: 'passive',
+    rate: 100,
+    target: 'friendly_leader',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【陆抗自带】战斗中使我军主将奇谋几率提高20%，奇谋暴击伤害提高35%；且陆抗自身替主将分担30%所受到的伤害！都督核心挂件。'
+  },
+  {
+    id: 'tac_ku_rou_ji',
+    name: '苦肉计',
+    type: 'active',
+    rate: 55,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'debuff',
+    desc: '【黄盖自带】消耗自身10%当前兵力，使敌军单体陷入【混乱】与【烈火灼烧】状态(每回合造成78%谋略伤害)，持续2回合！'
+  },
+  {
+    id: 'tac_guo_se_tian_xiang',
+    name: '国色天香',
+    type: 'passive',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'heal',
+    healRate: 1.08,
+    desc: '【大乔自带】受到伤害时，有50%几率随机治愈一名友军(治疗率108%，受智力影响)，并使该友军受到的下一次伤害降低30%！'
+  },
+  {
+    id: 'tac_jian_tong_zhen_jun',
+    name: '监统震军',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【沮授自带】我军友军对敌军施加负面状态(震慑/缴械/计穷/虚弱/混乱/灼烧/水攻/中毒等)时，有65%几率使其持续时间额外延长1回合！群弓控场核心。'
+  },
+  {
+    id: 'tac_deng_feng_xian_zhen',
+    name: '登锋陷阵',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 2.08,
+    statDebuff: 65,
+    desc: '【文丑自带】对敌军单体造成猛烈兵刃重击(伤害率208%)，使其统率大幅削减65点持续2回合，并使自身获得1次【抵御】！'
+  },
+  {
+    id: 'tac_nan_man_qu_kui',
+    name: '南蛮渠魁',
+    type: 'command',
+    rate: 100,
+    target: 'enemy_all',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 1.06,
+    desc: '【孟获自带】每回合行动时有28%基础几率对敌军全体发动兵刃猛攻(伤害率106%)；自身每次受到兵刃或谋略伤害，发动几率提高8%，触发后重置！'
+  },
+
+  // --- 顶级泛用传承战法 ---
+  {
+    id: 'tac_cao_chuan_jie_jian',
+    name: '草船借箭',
+    type: 'active',
+    rate: 65,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'heal',
+    cleanse: true,
+    desc: '【三战第一解控神技·周瑜传承】为我军群体(2~3人)清除所有负面状态与控制，并施加【急救】状态(持续2回合，受到伤害时有70%几率按该次伤害量的35%恢复兵力)！'
+  },
+  {
+    id: 'tac_fu_ji_jun_min',
+    name: '抚辑军民',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_2',
+    quality: 'S',
+    damageType: 'buff',
+    damageReduction: 0.40,
+    healRate: 1.26,
+    desc: '【刘备/鲁肃专属传承】战斗前3回合，使我军群体(2人)受到的所有兵刃与谋略伤害降低40%(受统率加成)；第4回合为该目标恢复巨量兵力(治疗率126%)！'
+  },
+  {
+    id: 'tac_wen_wu_shuang_quan',
+    name: '文武双全',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    statBuff: 30,
+    desc: '【钟会/邓艾传承】战斗中每次造成兵刃伤害提高自身武力30点(最多叠加5层)，每次造成谋略伤害提高自身智力30点(最多叠加5层)！最高可叠150点双属性。'
+  },
+  {
+    id: 'tac_shi_zheng_xian_fu',
+    name: '士争先赴',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 1.20,
+    activeDamageBonus: 0.20,
+    desc: '【乐进/张辽传承】提高自身自带主动战法造成的伤害20%；且每次发动自带主动战法前，有50%几率对敌军全体造成一次狂暴兵刃轰击(伤害率120%)！'
+  },
+  {
+    id: 'tac_yan_zhu_feng_fei',
+    name: '焰逐风飞',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 2.26,
+    tacticalDebuff: 0.20,
+    desc: '【陆抗传承】对敌军单体造成毁灭性谋略打击(伤害率226%)，使其陷入【震慑】(无法行动)1回合，并使其受到的谋略伤害提升20%持续2回合！'
+  },
+  {
+    id: 'tac_jue_qi_ji_dao',
+    name: '绝其汲道',
+    type: 'active',
+    rate: 45,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'physical',
+    requiresPrep: true,
+    damageRate: 1.62,
+    cannotHeal: true,
+    desc: '【魏延传承】准备1回合，对敌军群体(2~3人)发动猛烈兵刃劈击(伤害率162%)，并使其陷入【禁疗】状态(无法恢复兵力)持续2回合！'
+  },
+  {
+    id: 'tac_ying_cheng_zi_shou',
+    name: '婴城自守',
+    type: 'active',
+    rate: 50,
+    target: 'friendly_2',
+    quality: 'S',
+    damageType: 'heal',
+    healRate: 1.80,
+    desc: '【审配/曹仁传承】恢复我军群体(2人)兵力(治疗率180%，受智力加成)，并为其施加持续1回合的休整状态(每回合恢复兵力62%)！'
   }
 ];
 
