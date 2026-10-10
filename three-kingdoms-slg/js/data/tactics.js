@@ -1525,6 +1525,237 @@ export const TACTICS_DATA = [
     damageType: 'heal',
     healRate: 1.80,
     desc: '【审配/曹仁传承】恢复我军群体(2人)兵力(治疗率180%，受智力加成)，并为其施加持续1回合的休整状态(每回合恢复兵力62%)！'
+  },
+
+  // --- 🌸 巾帼女将专属及传承战法 ---
+  {
+    id: 'tac_hu_jia_shi_ba_pai',
+    name: '胡笳十八拍',
+    type: 'active',
+    rate: 50,
+    target: 'friendly_2',
+    quality: 'S',
+    damageType: 'heal',
+    healRate: 1.08,
+    teamDamageBonus: 0.26,
+    teamDamageReduction: 0.26,
+    desc: '【蔡文姬自带】为我军群体(2人)恢复兵力(治疗率108%，受智力加成)；并独立判定分别有50%几率使其造成伤害提升26%，受到的伤害降低26%(受智力加成)，持续2回合！'
+  },
+  {
+    id: 'tac_shi_zi_fen_xun',
+    name: '狮子奋迅',
+    type: 'active',
+    rate: 35,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 2.28,
+    activeRateBonus: 15,
+    desc: '【吕玲绮自带】对敌军单体造成猛烈兵刃轰击(伤害率228%)，使其受到兵刃伤害提高15%持续2回合；并使自身自带及所有主动战法发动几率提高15%持续2回合！'
+  },
+  {
+    id: 'tac_gu_pan_sheng_zi',
+    name: '顾盼生姿',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'debuff',
+    statDebuff: 35,
+    desc: '【邹氏自带】战斗中偷取敌军属性最高单体35点智力与统率(受自身智力加成)加持自身；且敌军男性武将行动前有45%几率陷入【虚弱】(无法造成伤害)1回合！'
+  },
+  {
+    id: 'tac_luo_shen',
+    name: '洛神',
+    type: 'active',
+    rate: 50,
+    target: 'self',
+    quality: 'S',
+    damageType: 'heal',
+    healRate: 1.20,
+    desc: '【甄姬自带】恢复自身兵力(治疗率120%，受智力加成)，并使敌军随机单体陷入【混乱】(敌我不分相互攻击)持续1回合！'
+  },
+  {
+    id: 'tac_mei_huo',
+    name: '魅惑',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'debuff',
+    desc: '【甄姬传承·神级反制】自身受到普通攻击时，有45%几率使攻击者陷入【混乱】、【计穷】、【缴械】或【虚弱】中的一种，持续1回合！'
+  },
+  {
+    id: 'tac_chen_si',
+    name: '潜谋沉思',
+    type: 'active',
+    rate: 40,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 1.48,
+    desc: '【张春华自带】对敌军群体(2人)造成谋略伤害(伤害率148%)，并使其统率与智力大幅降低30%持续2回合！'
+  },
+  {
+    id: 'tac_chui_xin_wan_wu',
+    name: '垂心万物',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_single',
+    quality: 'S',
+    damageType: 'buff',
+    healRate: 1.28,
+    damageBonus: 0.20,
+    desc: '【王元姬自带】奇数回合为我军损兵最多单体恢复兵力(治疗率128%，受智力加成)；偶数回合令我军武力最高单体获得【连击】(进行两次普攻)并增伤20%！'
+  },
+  {
+    id: 'tac_tian_xiang',
+    name: '天香',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【小乔自带】受到伤害或控制状态时，有40%几率将该次受到伤害的50%以及控制状态直接转移给敌军兵力最低的武将！'
+  },
+  {
+    id: 'tac_an_fu_jun_xin',
+    name: '安抚军心',
+    type: 'active',
+    rate: 45,
+    target: 'friendly_2',
+    quality: 'S',
+    damageType: 'heal',
+    healRate: 1.36,
+    cleanse: true,
+    desc: '【步练师自带】驱散我军群体(2人)身上的所有控制与负面状态，并恢复兵力(治疗率136%)，施加持续2回合的受创急救！'
+  },
+  {
+    id: 'tac_shen_de_ren_xin',
+    name: '甚得人心',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    desc: '【张星彩自带】受到兵刃伤害时反弹30%伤害给攻击者；并有35%几率使我军全体获得1次【抵御】(完全免疫1次伤害)！'
+  },
+
+  // --- 🛡️ 各阵营核心辅助与名将战法 ---
+  {
+    id: 'tac_jie_zhong_jin_zhi',
+    name: '竭忠尽智',
+    type: 'active',
+    rate: 40,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'debuff',
+    statDebuff: 50,
+    desc: '【田丰自带】削弱敌军单体统率与智力各50点持续2回合，并有60%几率使其陷入【混乱】与【虚弱】持续1回合！'
+  },
+  {
+    id: 'tac_zhen_du',
+    name: '鸩毒',
+    type: 'active',
+    rate: 45,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'tactical',
+    damageRate: 1.60,
+    desc: '【李儒自带】降低敌军单体30%统率(受智力加成)持续2回合，并使其陷入剧毒【叛逃】状态(无视防御谋略伤害160%)持续2回合！'
+  },
+  {
+    id: 'tac_chi_jie_zi_shou',
+    name: '持节自守',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    selfDamageReduction: 0.15,
+    damageBonus: 0.40,
+    desc: '【于禁自带】使自身受到伤害降低15%，且造成的兵刃伤害大幅提升40%！'
+  },
+  {
+    id: 'tac_jing_lian_ce_shu',
+    name: '精练策数',
+    type: 'active',
+    rate: 45,
+    target: 'enemy_all',
+    quality: 'S',
+    damageType: 'tactical',
+    requiresPrep: true,
+    damageRate: 2.10,
+    disarmRate: 100,
+    desc: '【钟会自带】准备1回合，对敌军全体造成强力谋略重击(伤害率210%)，并使敌军2人陷入【缴械】(无法普攻)持续2回合！'
+  },
+  {
+    id: 'tac_shi_er_qi_ce',
+    name: '十二奇策',
+    type: 'active',
+    rate: 45,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    activeRateBonus: 6,
+    cleanse: true,
+    desc: '【荀攸自带】驱散敌军全体所有增益状态；并使我军全体自带及所有主动战法发动几率提升6%(受智力加成)持续1回合！'
+  },
+  {
+    id: 'tac_dao_pi_qian_jun',
+    name: '刀劈千军',
+    type: 'active',
+    rate: 40,
+    target: 'enemy_single',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 2.20,
+    desc: '【关兴自带】对敌军单体造成猛烈劈击(伤害率220%)并获得30%【倒戈】(造成兵刃伤害时吸血)持续2回合；若张苞在场，额外为张苞分担受到的伤害！'
+  },
+  {
+    id: 'tac_qiang_zhen_ba_fang',
+    name: '枪震八方',
+    type: 'active',
+    rate: 40,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'physical',
+    damageRate: 2.00,
+    desc: '【张苞自带】对敌军群体(2人)造成狂暴枪击(伤害率200%)，并使自身与关兴获得2次【抵御】(免疫伤害)！'
+  },
+  {
+    id: 'tac_ao_ni_chong_tian',
+    name: '傲睨冲天',
+    type: 'command',
+    rate: 100,
+    target: 'friendly_all',
+    quality: 'S',
+    damageType: 'buff',
+    healRate: 0.88,
+    desc: '【诸葛恪自带·东吴神辅】战斗前3回合，友军受到伤害时有60%几率获得1次【抵御】；抵御生效抵消伤害时，立即恢复我军全体兵力(治疗率88%，受智力加成)！'
+  },
+  {
+    id: 'tac_wei_mou_mi_kang',
+    name: '威谋靡亢',
+    type: 'active',
+    rate: 40,
+    target: 'enemy_2',
+    quality: 'S',
+    damageType: 'debuff',
+    requiresPrep: true,
+    damageRate: 1.58,
+    desc: '【沮授/魏延传承·顶级控场】准备1回合，使敌军群体(2人)陷入【虚弱】持续2回合；若目标已处于虚弱，则直接转化为真实伤害【叛逃】(每回合造成158%真实伤害)持续2回合！'
+  },
+  {
+    id: 'tac_cheng_sheng_chang_qu',
+    name: '乘胜长驱',
+    type: 'passive',
+    rate: 100,
+    target: 'self',
+    quality: 'S',
+    damageType: 'buff',
+    damageBonus: 0.11,
+    desc: '【于禁/陆抗传承】战斗中每回合行动前使自身造成的伤害提升11%，可持续叠加至战斗结束(最高叠加8层提升88%)！'
   }
 ];
 
@@ -1727,6 +1958,9 @@ export const HERO_INHERIT_MAP = {
   '严颜': 'tac_bu_lao_chang_qiang',
   '陈到': 'tac_bai_er_bing',
   '马云禄': 'tac_chi_mu_hu_wen',
+  '张星彩': 'tac_shen_de_ren_xin',
+  '关兴': 'tac_dao_pi_qian_jun',
+  '张苞': 'tac_qiang_zhen_ba_fang',
 
   // 魏国
   '曹操': 'tac_meng_zhong_shi_chen',
@@ -1750,6 +1984,12 @@ export const HERO_INHERIT_MAP = {
   '满宠': 'tac_zhen_e_fang_ju',
   '徐晃': 'tac_chang_qu_zhi_ru',
   '荀彧': 'tac_ji_jian_xian_shi',
+  '甄姬': 'tac_mei_huo',
+  '张春华': 'tac_chen_si',
+  '王元姬': 'tac_chui_xin_wan_wu',
+  '于禁': 'tac_cheng_sheng_chang_qu',
+  '钟会': 'tac_jing_lian_ce_shu',
+  '荀攸': 'tac_shi_er_qi_ce',
 
   // 吴国
   '周瑜': 'tac_feng_zhu_huo_shi',
@@ -1773,6 +2013,9 @@ export const HERO_INHERIT_MAP = {
   '陆抗': 'tac_yan_zhu_feng_fei',
   '黄盖': 'tac_ku_rou_ji',
   '大乔': 'tac_guo_se_tian_xiang',
+  '小乔': 'tac_tian_xiang',
+  '步练师': 'tac_an_fu_jun_xin',
+  '诸葛恪': 'tac_ao_ni_chong_tian',
 
   // 群雄
   '吕布': 'tac_yi_qi_dang_qian',
@@ -1795,7 +2038,13 @@ export const HERO_INHERIT_MAP = {
   '沮授': 'tac_jian_tong_zhen_jun',
   '高顺': 'tac_xian_zhen_ying',
   '文丑': 'tac_deng_feng_xian_zhen',
-  '孟获': 'tac_nan_man_qu_kui'
+  '孟获': 'tac_nan_man_qu_kui',
+  '蔡文姬': 'tac_hu_jia_shi_ba_pai',
+  '吕玲绮': 'tac_shi_zi_fen_xun',
+  '邹氏': 'tac_gu_pan_sheng_zi',
+  '兀突骨': 'tac_teng_jia_bing',
+  '田丰': 'tac_jie_zhong_jin_zhi',
+  '李儒': 'tac_zhen_du'
 };
 
 export function getHeroInheritTacticId(hero) {

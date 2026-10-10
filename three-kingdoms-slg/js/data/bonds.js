@@ -52,7 +52,7 @@ export const BONDS_DATA = [
     id: 'bond_wu_mou',
     name: '曹魏五谋臣',
     requiredCount: 3,
-    heroNames: ['司马懿', '贾诩', '郭嘉', '程昱'],
+    heroNames: ['司马懿', '荀彧', '荀攸', '贾诩', '郭嘉', '程昱'],
     desc: '使我军全体智力提升 12 点，谋略奇谋暴击几率提升 4.5%，且战斗前 2 回合获得先攻！',
     statBonus: { intel: 12 },
     effect: {
@@ -64,18 +64,18 @@ export const BONDS_DATA = [
     id: 'bond_wu_zi',
     name: '五子良将',
     requiredCount: 3,
-    heroNames: ['张辽', '张郃', '乐进'],
-    desc: '使我军全体武力、速度提升 14 点，强化突击与连携输出！',
-    statBonus: { force: 14, speed: 14 },
+    heroNames: ['张辽', '徐晃', '张郃', '乐进', '于禁'],
+    desc: '五子良将大圆满！使我军全体武力、速度提升 15 点，会心暴击率提升 4%！',
+    statBonus: { force: 15, speed: 15 },
     effect: {
-      speedBonus: 14
+      critRateBonus: 0.04
     }
   },
   {
     id: 'bond_hu_chen',
     name: '江表虎臣',
     requiredCount: 3,
-    heroNames: ['太史慈', '甘宁', '周泰', '凌统'],
+    heroNames: ['太史慈', '甘宁', '周泰', '凌统', '程普', '黄盖', '韩当'],
     desc: '使我军全体统率提升 20 点，自身暴击会心几率提升 5%！',
     statBonus: { command: 20 },
     effect: {
@@ -86,7 +86,7 @@ export const BONDS_DATA = [
     id: 'bond_du_du',
     name: '四大都督',
     requiredCount: 3,
-    heroNames: ['周瑜', '陆逊', '吕蒙', '鲁肃'],
+    heroNames: ['周瑜', '陆逊', '吕蒙', '鲁肃', '陆抗'],
     desc: '使我军全体速度提升 16 点，主动战法造成的谋略伤害提升 6%！',
     statBonus: { speed: 16 },
     effect: {
@@ -116,6 +116,68 @@ export const BONDS_DATA = [
       leaderSplash: true,
       leaderFirstStrike: true
     }
+  },
+  {
+    id: 'bond_nan_man',
+    name: '南蛮之乱',
+    requiredCount: 3,
+    heroNames: ['孟获', '祝融夫人', '兀突骨'],
+    desc: '使我军全体武力提升 20 点，受到兵刃伤害降低 8%！野性难驯！',
+    statBonus: { force: 20 },
+    effect: {
+      bladeDmgReduction: 0.08
+    }
+  },
+  {
+    id: 'bond_he_bei',
+    name: '河北庭柱',
+    requiredCount: 3,
+    heroNames: ['颜良', '文丑', '张郃'],
+    desc: '使我军全体武力、统率各提升 14 点，河北猛将撼阵！',
+    statBonus: { force: 14, command: 14 },
+    effect: {}
+  },
+  {
+    id: 'bond_jiang_dong',
+    name: '江东之英',
+    requiredCount: 3,
+    heroNames: ['孙坚', '孙策', '孙权'],
+    desc: '父子同心！使我军全体武力与统率各提升 15 点，强化攻防韧性！',
+    statBonus: { force: 15, command: 15 },
+    effect: {}
+  },
+  {
+    id: 'bond_guo_se_tian_xiang',
+    name: '国色天香',
+    requiredCount: 3,
+    heroNames: ['大乔', '小乔', '貂蝉', '甄姬'],
+    desc: '绝代佳人！使我军全体速度提升 15 点，受到的所有伤害降低 6%！',
+    statBonus: { speed: 15 },
+    effect: {
+      damageReduction: 0.06
+    }
+  },
+  {
+    id: 'bond_luan_shi_hong_yan',
+    name: '乱世红颜',
+    requiredCount: 3,
+    heroNames: ['蔡文姬', '张春华', '王元姬', '吕玲绮'],
+    desc: '红颜傲骨！使我军全体统率提升 16 点，受到男性武将的伤害降低 10%！',
+    statBonus: { command: 16 },
+    effect: {
+      maleDmgReduction: 0.10
+    }
+  },
+  {
+    id: 'bond_shuang_xiong_po_zhen',
+    name: '双雄破阵',
+    requiredCount: 2,
+    heroNames: ['关兴', '张苞'],
+    desc: '二代名将义气凌云！关兴张苞同时上阵时，武力提升 15 点，战斗前 2 回合获得 2 次【抵御】！',
+    statBonus: { force: 15 },
+    effect: {
+      prepShield: { count: 2, duration: 2 }
+    }
   }
 ];
 
@@ -125,7 +187,7 @@ export const BONDS_DATA = [
  * @returns {Array<Object>} 激活的缘分列表
  */
 export function checkActiveBonds(heroNames) {
-  if (!heroNames || heroNames.length < 3) return [];
+  if (!heroNames || heroNames.length < 2) return [];
   const activeBonds = [];
 
   BONDS_DATA.forEach(bond => {
