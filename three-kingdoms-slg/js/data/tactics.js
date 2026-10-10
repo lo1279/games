@@ -1723,6 +1723,10 @@ export const HERO_INHERIT_MAP = {
   '姜维': 'tac_ba_men_jin_suo',
   '徐庶': 'tac_chen_sha_jue_shui',
   '关银屏': 'tac_heng_sao_qian_jun',
+  '黄月英': 'tac_gong_shen',
+  '严颜': 'tac_bu_lao_chang_qiang',
+  '陈到': 'tac_bai_er_bing',
+  '马云禄': 'tac_chi_mu_hu_wen',
 
   // 魏国
   '曹操': 'tac_meng_zhong_shi_chen',
@@ -1742,6 +1746,10 @@ export const HERO_INHERIT_MAP = {
   '张郃': 'tac_da_ji_shi',
   '曹仁': 'tac_ba_men_jin_suo',
   '夏侯渊': 'tac_wan_jian_qi_fa',
+  '郝昭': 'tac_jin_cheng_tang_chi',
+  '满宠': 'tac_zhen_e_fang_ju',
+  '徐晃': 'tac_chang_qu_zhi_ru',
+  '荀彧': 'tac_ji_jian_xian_shi',
 
   // 吴国
   '周瑜': 'tac_feng_zhu_huo_shi',
@@ -1761,6 +1769,10 @@ export const HERO_INHERIT_MAP = {
   '孙尚香': 'tac_jie_meng',
   '凌统': 'tac_yong_zhe_de_qian',
   '程普': 'tac_shou_er_bi_gu',
+  '孙坚': 'tac_jiang_dong_meng_hu',
+  '陆抗': 'tac_yan_zhu_feng_fei',
+  '黄盖': 'tac_ku_rou_ji',
+  '大乔': 'tac_guo_se_tian_xiang',
 
   // 群雄
   '吕布': 'tac_yi_qi_dang_qian',
@@ -1779,7 +1791,11 @@ export const HERO_INHERIT_MAP = {
   '贾诩': 'tac_wei_zhen_hua_xia',
   '袁术': 'tac_po_zhen_cui_jian',
   '祝融夫人': 'tac_bing_lin_cheng_xia',
-  '公孙瓒': 'tac_bai_ma_yi_cong'
+  '公孙瓒': 'tac_bai_ma_yi_cong',
+  '沮授': 'tac_jian_tong_zhen_jun',
+  '高顺': 'tac_xian_zhen_ying',
+  '文丑': 'tac_deng_feng_xian_zhen',
+  '孟获': 'tac_nan_man_qu_kui'
 };
 
 export function getHeroInheritTacticId(hero) {
