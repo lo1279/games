@@ -1,7 +1,8 @@
 # 星云电竞 · 游戏大厅（微信小程序版）
 
-原生微信小程序实现的游戏聚合大厅。本目录同时保留了原有 Web 版大厅（`index.html`），
-两套并存互不影响：Web 版继续双击 `index.html` / `launch_hall.bat` 使用，小程序版用开发者工具导入本目录。
+原生微信小程序实现的游戏聚合大厅。小程序源码位于 `miniprogram/` 子目录（`app.json` / `project.config.json` 都在这一层），
+仓库根目录同时保留了原有 Web 版大厅（`index.html`），两套并存互不影响：Web 版继续双击 `index.html` / `launch_hall.bat` 使用，
+小程序版导入 `miniprogram/` 目录，或直接在 WorkBuddy 内发布（见下方「🚀 发布小程序」）。
 
 ---
 
@@ -17,23 +18,72 @@
 
 ---
 
-## 🚀 导入运行
+## 🚀 导入运行（本地开发者工具）
 
 1. 下载并安装 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
 2. 选择 **导入项目**
-   - **目录**：`D:\ai项目\games`
-   - **AppID**：`wxc4a594dbf45190a1`（已在 `project.config.json` 配置）
+   - **目录**：`D:\ai项目\games\miniprogram` ← 注意是 `miniprogram` 子目录，不是仓库根目录
+   - **AppID**：`wxc4a594dbf45190a1`（已在 `miniprogram/project.config.json` 配置）
 3. 点击 **编译** 即可在模拟器中体验；**预览** 生成二维码在手机微信中打开
 
-> `project.config.json` 的 `packOptions.ignore` 已排除全部 Web 游戏源码目录，
-> 打包时不会把几十 MB 的 React 构建产物带进去。
+> 根目录 `D:\ai项目\games` 是 Web 版大厅 + 各游戏源码仓库，**不是**小程序工程根目录，
+> 在开发者工具里直接导根目录会提示找不到 `app.json`。
+
+---
+
+## 🚀 发布小程序（WorkBuddy 托管发布）
+
+WorkBuddy 支持微信小程序**托管发布**：代码上传、体验版生成、正式版提审都在 WorkBuddy 内完成，
+**不需要安装微信开发者工具，也不需要去微信公众平台操作**。前提是 PC 端 ≥ 5.6.1。
+
+### 前置：小程序产物卡片
+
+小程序必须**在 WorkBuddy 内以「小程序」形态生成/注册**，对话中会出现「微信小程序」产物卡片。
+点卡片 → 右侧预览区查看 → **预览区右上角「分享」** 按钮 → 进入发布流程。
+
+> ⚠️ 本项目 `miniprogram/` 是手写的原生工程，AppID 已固定为 `wxc4a594dbf45190a1`（个人主体）。
+> 若在 WorkBuddy 内发布，建议先让WorkBuddy 以「微信小程序」形态重新生成/接管该工程，
+> 产出卡片出现后再走分享流程。
+
+### 发布流程（三选一）
+
+| 方式 | 前提 | 可发布版本 | 有效期 |
+| :--- | :--- | :--- | :--- |
+| **创建试用版小程序** | 无需注册微信小程序账号 | 试用版 | 14 天，最多 15 人体验 |
+| **绑定已有小程序账号** | 已有 AppID（本项目即是） | 体验版、正式版 | 无固定期限 |
+
+**绑定已有小程序账号（本项目适用）**
+1. 分享面板 → 「绑定已有小程序账号」
+2. 用**小程序管理员**微信扫码，选择账号并授权
+3. 回 WorkBuddy 勾选版本 → 点「发布」→ 获得小程序码
+
+**创建试用版（快速验证）**
+1. 分享面板 → 「创建试用版小程序」
+2. 微信扫码关注 WorkBuddy 服务号 → 点「创建试用小程序」→ 授权
+3. 收到成功通知 → 回 WorkBuddy 点「发布」
+
+> 试用版一个微信号最多 5 个，**不能直接转正式版**；要长期运营必须绑定自己的账号。
+
+### 正式版发布前必查三项
+
+分享面板 → 「小程序设置」：
+- **小程序备案** — 境内小程序不备案，微信可能限制新用户或暂停服务
+- **用户隐私保护指引** — 填信息类型、收集目的、变动通知方式、联系手机号邮箱；**填不完整会审核失败**
+- **UGC 信息安全声明** — 类目含社区/论坛/笔记/问答时才需要
+
+> 每个微信小程序每周可提交 3 次正式版审核。
+
+### 发布后管理
+
+**设置 > 数据管理 > 应用** 页签：查看发布状态、管理云服务、下载小程序码、跳回任务。
+只有正式版能「下线」；改代码后需在分享面板点「更新」，正式版更新要重新过审。
 
 ---
 
 ## 📁 小程序工程结构
 
 ```text
-D:\ai项目\games\
+D:\ai项目\games\miniprogram\
 ├── app.js                      # 小程序入口，初始化本地存储结构与系统信息
 ├── app.json                    # 页面路由与窗口配置
 ├── app.wxss                    # 全局样式与设计令牌
@@ -63,7 +113,7 @@ D:\ai项目\games\
 │   └── minesweeper.js          # 扫雷核心算法（与视图解耦）
 │
 └── tools/
-    └── smoke-test.js           # 逻辑冒烟测试（node tools/smoke-test.js）
+    └── smoke-test.js           # 逻辑冒烟测试（node miniprogram/tools/smoke-test.js）
 ```
 
 ---
@@ -114,6 +164,7 @@ D:\ai项目\games\
 ## 🧪 逻辑自测
 
 ```bash
+cd D:\ai项目\games\miniprogram
 node tools/smoke-test.js
 ```
 
@@ -128,11 +179,27 @@ WXML 标签配平，共 56 项断言。
 2. 在 `pages/games/` 下新建目录，编写四件套（`.js` / `.json` / `.wxml` / `.wxss`）
 3. 在 `app.json` 的 `pages` 数组中注册路由
 4. 把元数据的 `playable` 改为 `true`，并填写 `route`
-5. 在 `project.config.json` 的 `packOptions.ignore` 中移除该Web 源码目录的排除项
+5. 若该游戏有对应的 Web 源码目录，确认它不会被误打进小程序包
+   （小程序根目录即 `miniprogram/`，Web 源码在仓库根目录之外，默认不会被打包）
 
 ---
 
 ## 🔗 与 Web 版的关系
 
-Web 版大厅（`index.html` + `css/hall.css` + `js/hall.js`）**保持原样可用**，
+Web 版大厅（根目录 `index.html` + `css/hall.css` + `js/hall.js`）**保持原样可用**，
 仍可通过双击 `index.html` 或 `launch_hall.bat` 启动，两套共享同一批游戏源码，互不干扰。
+
+小程序工程已独立收敛到 `miniprogram/` 子目录，与 Web 源码物理隔离，
+因此小程序打包体积仅约 120 KB，不会带入任何 Web 构建产物。
+
+> 仓库根目录登记过一个 WorkBuddy 网页应用「三国SLG战棋」（`wbapp_e4AAf18vVSyi8IVkeuxBLN`），
+> 与本小程序无关；根目录的 `.wbapp_*.genie` 标记文件属于它，不要据此判断小程序发布状态。
+> 实测该应用 `appType` 已被永久写为 `web`，无法再改造成小程序应用。
+
+## 🆘 备用方案：微信开发者工具（托管发布走不通时）
+
+本机若未安装开发者工具：[下载地址](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
+→ 导入项目，目录选 `D:\ai项目\games\miniprogram`，AppID 用 `wxc4a594dbf45190a1`
+→ 工具内「上传」→ [mp.weixin.qq.com](https://mp.weixin.qq.com/) 提交审核 → 发布。
+
+> 托管发布（WorkBuddy 内）与开发者工具上传是两条独立通道，任选其一即可。

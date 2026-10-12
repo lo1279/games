@@ -14,6 +14,17 @@ coverage/
 #纯生成物，不入库；需要发布时本地跑一次脚本重建即可
 web-hall/
 
+# WorkBuddy 工作数据（全部不入库）
+# .workbuddy/memory/   每日工作日志与跨会话决策链
+# .workbuddy/reports/  调研报告、台账、分析结论等与项目代码无关的产出
+# 这些是过程记录，不是项目资产；保留在本地，不污染仓库
+.workbuddy/
+
+# WorkBuddy 应用标记（发布工具自动生成，属于工具元数据而非项目代码）
+# 文件本身保留在本地，删掉会导致应用管理失效；只是不入库
+.wbapp_*.genie
+.wbapp_*.privacy.json
+
 # Misc
 .DS_Store
 *.pem

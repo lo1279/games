@@ -552,17 +552,22 @@ class MarioGame {
         enemy.update(this.tileMap, this.cameraX);
       }
 
-      if (!enemy.isDead && !this.mario.isDead && this.checkCollision(this.mario, enemy)) {
+      // 敌人存活且未处于被踩扁等无害状态时才进行碰撞判定
+      if (!enemy.isDead && !enemy.isFlat && !this.mario.isDead && this.checkCollision(this.mario, enemy)) {
         const marioBottom = this.mario.y + this.mario.height;
         const enemyTop = enemy.y;
+        // 判定踩踏：马里奥下落中，且脚底位于怪物顶部附近
         const isStomp = this.mario.vy > 0 && marioBottom <= enemyTop + 10;
 
         if (isStomp) {
           window.marioAudio.playStomp();
+          // 将马里奥脚底修正到怪物头顶，防止包围盒穿透引起连带判定
+          this.mario.y = enemyTop - this.mario.height;
           this.mario.vy = CONFIG.PHYSICS.BOUNCE_IMPULSE;
           enemy.stomp();
           this.addScore(100, enemy.x, enemy.y);
         } else {
+          // 侧面撞击到静止的龟壳时，将其踢出；移动中的龟壳或普通怪物则造成伤害
           if (enemy instanceof Koopa && enemy.state === 'shell') {
             window.marioAudio.playKick();
             const dir = this.mario.x < enemy.x ? 1 : -1;
