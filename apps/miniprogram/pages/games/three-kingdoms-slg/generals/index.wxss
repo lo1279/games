@@ -1,0 +1,36 @@
+/* pages/games/three-kingdoms-slg/generals/index.wxss */
+.gen-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 10rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:14rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; flex:1; }
+.gen-count { font-size:22rpx; color:#cdbb8a; }
+
+.search-bar { padding:6rpx 22rpx 10rpx; }
+.search-input { background:#1a140d; border:1rpx solid #3a2e1c; border-radius:30rpx; height:64rpx; padding:0 24rpx; color:#e8d9b5; font-size:26rpx; }
+.ph { color:#7a6c4a; }
+
+.filter-row { white-space:nowrap; padding:4rpx 18rpx; }
+.chip { display:inline-block; font-size:24rpx; color:#cdbb8a; background:#1a140d; border:1rpx solid #3a2e1c; border-radius:24rpx; padding:8rpx 22rpx; margin-right:12rpx; }
+.chip.on { background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; font-weight:700; }
+
+.gen-grid-scroll { flex:1; padding:12rpx 16rpx 30rpx; }
+.gen-grid { display:flex; flex-wrap:wrap; }
+.g-cell { width:25%; box-sizing:border-box; padding:8rpx; display:flex; flex-direction:column; align-items:center; }
+.g-img { width:120rpx; height:120rpx; border-radius:14rpx; background:#241c10; }
+.g-img.emoji { display:flex; align-items:center; justify-content:center; font-size:64rpx; }
+.g-name { font-size:22rpx; color:#e8d9b5; margin-top:6rpx; text-align:center; }
+.g-star { font-size:18rpx; color:#e0b85a; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+.modal-box { width:84%; background:#16110b; border:1rpx solid #4a3a1e; border-radius:18rpx; padding:24rpx; }
+.detail-head { display:flex; align-items:center; }
+.d-img { width:120rpx; height:120rpx; border-radius:14rpx; background:#241c10; margin-right:18rpx; flex-shrink:0; }
+.d-img.emoji { display:flex; align-items:center; justify-content:center; font-size:64rpx; }
+.d-name { font-size:32rpx; color:#f2e2b0; font-weight:700; }
+.d-star { color:#e0b85a; font-size:22rpx; }
+.d-camp { font-size:22rpx; color:#caa85a; margin-top:4rpx; }
+.d-stats { display:flex; justify-content:space-around; margin:18rpx 0; }
+.d-stat { font-size:24rpx; color:#b6a47a; }
+.d-stat text { color:#f0d28a; font-weight:700; font-size:28rpx; }
+.d-desc { font-size:23rpx; color:#cdbd92; line-height:1.5; }
+.modal-close { margin-top:18rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; font-size:26rpx; }

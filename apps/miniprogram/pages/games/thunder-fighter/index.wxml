@@ -1,0 +1,54 @@
+<!-- pages/games/thunder-fighter/index.wxml -->
+<view class="game-container">
+  <!-- 游戏主画布 -->
+  <canvas 
+    type="2d" 
+    id="gameCanvas" 
+    class="game-canvas"
+    bindtouchstart="onTouchStart"
+    bindtouchmove="onTouchMove"
+    bindtouchend="onTouchEnd"
+    bindtouchcancel="onTouchEnd"
+  ></canvas>
+
+  <!-- 顶部 HUD 仪表盘 -->
+  <view class="hud-top">
+    <view class="hud-item score-box">
+      <text class="hud-label">得分</text>
+      <text class="hud-val">{{score}}</text>
+    </view>
+    <view class="hud-item health-box">
+      <text class="hud-label">生命</text>
+      <view class="hp-bar-bg">
+        <view class="hp-bar-fill" style="width: {{hpPercent}}%"></view>
+      </view>
+    </view>
+    <view class="hud-item pause-box" bindtap="togglePause">
+      <text class="hud-btn">{{isPaused ? '▶' : '⏸'}}</text>
+    </view>
+  </view>
+
+  <!-- 底部触控快捷面板 -->
+  <view class="hud-bottom">
+    <view class="bomb-btn {{bombReady ? 'bomb-active' : 'bomb-disabled'}}" bindtap="triggerBomb">
+      <text class="bomb-icon">💥</text>
+      <text class="bomb-text">暴走过载 ({{bombCount}})</text>
+    </view>
+  </view>
+
+  <!-- 结算与暂停弹窗 -->
+  <view class="modal-mask" wx:if="{{gameState === 'gameover' || isPaused}}">
+    <view class="modal-card">
+      <view class="modal-title">{{gameState === 'gameover' ? '战机被摧毁' : '战斗暂停'}}</view>
+      <view class="modal-body" wx:if="{{gameState === 'gameover'}}">
+        <view class="modal-score">最终得分：<text class="highlight">{{score}}</text></view>
+        <view class="modal-score">历史最高：<text class="highlight">{{highScore}}</text></view>
+      </view>
+      <view class="modal-actions">
+        <button class="action-btn btn-primary" bindtap="restartGame" wx:if="{{gameState === 'gameover'}}">重新出击</button>
+        <button class="action-btn btn-primary" bindtap="togglePause" wx:if="{{gameState === 'playing' && isPaused}}">继续战斗</button>
+        <button class="action-btn btn-secondary" bindtap="goBack">返回大厅</button>
+      </view>
+    </view>
+  </view>
+</view>

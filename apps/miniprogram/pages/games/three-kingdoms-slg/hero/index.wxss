@@ -1,0 +1,22 @@
+/* pages/games/three-kingdoms-slg/hero/index.wxss */
+.hero-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 10rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:14rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; flex:1; }
+.copper { font-size:24rpx; color:#e0b85a; }
+.hero-hint { font-size:21rpx; color:#9c8a63; padding:0 28rpx 12rpx; }
+
+.hero-scroll { flex:1; padding:0 20rpx 40rpx; }
+.hero-card { display:flex; align-items:center; background:#16110b; border:1rpx solid #332818; border-radius:14rpx; padding:14rpx; margin-bottom:12rpx; }
+.hero-img { width:96rpx; height:96rpx; border-radius:12rpx; background:#241c10; flex-shrink:0; }
+.hero-img.emoji { display:flex; align-items:center; justify-content:center; font-size:54rpx; }
+.hero-info { flex:1; padding:0 14rpx; }
+.hero-name { font-size:28rpx; font-weight:700; color:#f2e2b0; }
+.hero-star { color:#e0b85a; font-size:20rpx; }
+.hero-red { color:#d18a8a; font-size:20rpx; }
+.hero-stats { font-size:21rpx; color:#b6a47a; margin:4rpx 0 8rpx; }
+.hero-acts { display:flex; gap:12rpx; }
+.h-act { font-size:22rpx; padding:8rpx 18rpx; border-radius:10rpx; }
+.h-act.promote { background:#caa85a; color:#1a140a; }
+.h-act.inherit { background:#6a8ad1; color:#fff; }
+.h-act.sell { background:#2a2316; color:#caa85a; border:1rpx solid #4a3a1e; }

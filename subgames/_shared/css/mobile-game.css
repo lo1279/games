@@ -1,0 +1,119 @@
+/* ============================================================================
+ * mobile-game.css — 手机端游戏通用适配层
+ * 由各游戏 index.html 在「自身样式之后」引入，用于覆盖适配手机。
+ * 作用：
+ *   1) 游戏画布自适应屏幕（保持比例、不溢出）
+ *   2) 禁止误触导致的页面滚动 / 双击缩放
+ *   3) 触屏虚拟手柄的样式（配合 js/mobile-controls.js 使用）
+ * 仅在游戏自身的 iframe 文档内生效，不影响大厅。
+ * ========================================================================== */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;          /* 禁止橡皮筋滚动 */
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;          /* 去掉 300ms 延迟，但允许滚动 */
+}
+
+/* 游戏画布自适应：保持比例铺满可用区域，绝不溢出 */
+canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  image-rendering: pixelated;         /* 像素游戏放大更锐利 */
+  image-rendering: crisp-edges;
+  touch-action: none;                 /* 游戏内禁止滚动/缩放 */
+}
+
+/* 常见游戏根容器铺满视口并居中内容 */
+#game, #app, #root, .game-root, .stage, .container,
+.app, .game-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================================
+ * 触屏虚拟手柄（由 js/mobile-controls.js 动态生成 DOM）
+ * 仅按钮本身可点，其余区域 pointer-events:none 穿透到游戏
+ * ========================================================================== */
+.mc-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+  touch-action: none;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* 方向键：3x3 十字布局 */
+.mc-dpad {
+  position: relative;
+  width: 156px;
+  height: 156px;
+  pointer-events: auto;
+}
+.mc-dpad .mc-btn { position: absolute; margin: 0; }
+.mc-dpad .mc-up    { top: 0;    left: 48px; }
+.mc-dpad .mc-down  { bottom: 0; left: 48px; }
+.mc-dpad .mc-left  { top: 48px; left: 0; }
+.mc-dpad .mc-right { top: 48px; right: 0; }
+
+/* 动作按钮区 */
+.mc-actions {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.mc-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  touch-action: none;
+  transition: transform 0.05s ease, background 0.05s ease;
+  -webkit-user-select: none;
+}
+.mc-btn:active {
+  background: rgba(255, 255, 255, 0.34);
+  transform: scale(0.92);
+}
+.mc-btn.mc-text { font-size: 16px; }
+
+/* 竖屏时手柄略小，避免遮挡过多画面 */
+@media (max-height: 560px) {
+  .mc-dpad { width: 132px; height: 132px; }
+  .mc-dpad .mc-up    { left: 36px; }
+  .mc-dpad .mc-down  { left: 36px; }
+  .mc-btn { width: 52px; height: 52px; font-size: 18px; }
+}

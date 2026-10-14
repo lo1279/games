@@ -1,0 +1,194 @@
+/* ============================================================================
+ * pages/games/three-kingdoms-slg/tokens.wxss
+ * 设计令牌层 —— 1:1 搬运自 Web 版 css/style.css 的 :root（124 项）
+ *
+ * 迁移说明：
+ *  - 原值原样保留，不改数值，保证「配色/间距/圆角/阴影」与 Web 一致。
+ *  - WXSS 支持 CSS 自定义属性 + var()，故整体可直接复用。
+ *  - 单位换算：Web 是 px（桌面基准），小程序用 rpx。
+ *    本项目按 375px 设计宽度折算，1px = 2rpx。数值×2，视觉比例不变。
+ *  - 引用方式：在页面 wxss 顶部用样式导入语句引入（写法见 index.wxss 顶部）。
+ * ========================================================================== */
+
+page {
+  /* ===== 基础底色 / 描边 / 文字 ===== */
+  --bg-dark: #0f1115;
+  --bg-card: #181b20;
+  --bg-card-hover: #22262d;
+  --border-gold: #c59b27;
+  --border-dark: #374151;
+  --text-gold: #fbbf24;
+  --text-light: #f3f4f6;
+  --text-muted: #9ca3af;
+
+  /* ===== 阵营主色 ===== */
+  --camp-shu: #10b981;
+  --camp-wei: #3b82f6;
+  --camp-wu: #ef4444;
+  --camp-qun: #a855f7;
+
+  /* ===== 布局尺寸（px→rpx ×2）===== */
+  --header-height: 120rpx;
+  --bottom-nav-height: 128rpx;
+
+  /* ===== 圆角 4 档 ===== */
+  --r-xs: 8rpx;
+  --r-sm: 12rpx;
+  --r-md: 16rpx;
+  --r-lg: 24rpx;
+  --r-pill: 999rpx;
+  --r-circle: 50%;
+
+  /* ===== 层级 ===== */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-hud: 200;
+  --z-nav: 300;
+  --z-overlay: 350;
+  --z-modal: 400;
+  --z-showcase: 450;
+  --z-toast: 500;
+
+  /* ===== 动效时长 ===== */
+  --t-fast: 0.12s;
+  --t-mid: 0.2s;
+  --t-slow: 0.32s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ===== 语义色：按钮状态 ===== */
+  --btn-primary-from: #d97706;
+  --btn-primary-to: #b45309;
+  --btn-danger-from: #dc2626;
+  --btn-danger-to: #991b1b;
+  --btn-ghost-bg: rgba(255, 255, 255, 0.05);
+  --btn-ghost-bg-hover: rgba(255, 255, 255, 0.1);
+  --btn-ghost-border: rgba(255, 255, 255, 0.16);
+  --btn-ghost-border-hover: rgba(255, 255, 255, 0.28);
+  --btn-on-bg: rgba(245, 158, 11, 0.16);
+  --btn-on-border: rgba(245, 158, 11, 0.55);
+  --btn-on-text: #fcd34d;
+  --focus-ring: #fde047;
+
+  /* ===== 字体族 =====
+     WXSS 无「宋体栈」可靠命中（小程序 WebView 内核对本地字体枚举受限），
+     此处保留 sans 主栈；标题衬线降级由 --font-serif 尽力而为。 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif: "Songti SC", "SimSun", "Noto Serif SC", "STZhongsong", serif;
+  --fw-title: 700;
+  --ls-title: 0.02em;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  /* ===== 字号刻度（px→rpx ×2）===== */
+  --fs-micro: 20rpx;
+  --fs-xs: 22rpx;
+  --fs-sm: 24rpx;
+  --fs-md: 26rpx;
+  --fs-base: 28rpx;
+  --fs-lg: 32rpx;
+  --fs-xl: 36rpx;
+  --fs-2xl: 44rpx;
+  --fs-3xl: 56rpx;
+
+  /* ===== 行高 ===== */
+  --lh-tight: 1.25;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.7;
+
+  /* ===== 字重 ===== */
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+  --fw-black: 900;
+
+  /* ===== 间距刻度（px→rpx ×2）===== */
+  --sp-1: 4rpx;
+  --sp-2: 8rpx;
+  --sp-3: 16rpx;
+  --sp-4: 24rpx;
+  --sp-5: 32rpx;
+  --sp-6: 40rpx;
+  --sp-7: 48rpx;
+  --sp-8: 64rpx;
+
+  /* ===== 边框 ===== */
+  --bw: 2rpx;
+  --bw-thin: 1rpx;
+
+  /* ===== 阴影 4 档 + 2 强调 ===== */
+  --sh-xs: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+  --sh-sm: 0 8rpx 24rpx rgba(0, 0, 0, 0.4);
+  --sh-md: 0 16rpx 48rpx rgba(0, 0, 0, 0.5);
+  --sh-lg: 0 32rpx 96rpx rgba(0, 0, 0, 0.68);
+  --sh-gold: 0 8rpx 28rpx rgba(251, 191, 36, 0.22);
+  --sh-danger: 0 8rpx 28rpx rgba(239, 68, 68, 0.28);
+
+  /* ===== 表面与描边语义色 ===== */
+  --bg-raised: #22262d;
+  --bg-sunken: #0c0e12;
+  --bg-overlay: rgba(0, 0, 0, 0.75);
+  --line-subtle: #2d3340;
+  --line-strong: #475569;
+
+  /* ===== 文字语义色 ===== */
+  --text-body: #e5e7eb;
+  --text-subtle: #d1d5db;
+  --text-hint: #6b7280;
+
+  /* ===== 阵营色三件套 ===== */
+  --camp-shu-bg: rgba(16, 185, 129, 0.15);
+  --camp-shu-border: #059669;
+  --camp-shu-text: #6ee7b7;
+  --camp-wei-bg: rgba(59, 130, 246, 0.15);
+  --camp-wei-border: #2563eb;
+  --camp-wei-text: #93c5fd;
+  --camp-wu-bg: rgba(239, 68, 68, 0.15);
+  --camp-wu-border: #dc2626;
+  --camp-wu-text: #fca5a5;
+  --camp-qun-bg: rgba(168, 85, 247, 0.15);
+  --camp-qun-border: #9333ea;
+  --camp-qun-text: #d8b4fe;
+
+  /* ===== 状态语义色三件套 ===== */
+  --ok-bg: rgba(16, 185, 129, 0.12);
+  --ok-border: #059669;
+  --ok-text: #6ee7b7;
+  --warn-bg: rgba(245, 158, 11, 0.12);
+  --warn-border: #d97706;
+  --warn-text: #fcd34d;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: #dc2626;
+  --danger-text: #fca5a5;
+  --info-bg: rgba(56, 189, 248, 0.12);
+  --info-border: #0284c7;
+  --info-text: #7dd3fc;
+
+  /* ===== 四大资源色 ===== */
+  --res-wood: #86efac;
+  --res-iron: #cbd5e1;
+  --res-stone: #fdba74;
+  --res-grain: #fde047;
+
+  /* ===== 古风木纹 / 青铜 / 鎏金 / 朱红色板 ===== */
+  --wood-900: #15100a;
+  --wood-800: #1f160d;
+  --wood-700: #2a1e12;
+  --bronze: #9a7748;
+  --bronze-light: #c2a063;
+  --gold-bright: #ecc873;
+  --cinnabar: #a8302a;
+  --cinnabar-bright: #cf4636;
+  /* 朱红渐变暗端（Web .game-title 用 #6e211c 写死，此处令牌化） */
+  --cinnabar-deep: #6e211c;
+
+  /* ===== 资源徽章文字色（Web .res-badge 写死值，令牌化）===== */
+  --badge-text: #e7d9bd;        /* 徽章标签文字 */
+  --badge-text-dim: #cbb894;    /* 标签次级文字 */
+  --badge-val: #f0e3c8;         /* 徽章数值 */
+  --badge-gold-val: #fde047;    /* 金铢数值 */
+
+  /* ===== 顶部工具栏按钮色（源自小程序原版 .sync-btn/.reset-btn 写死值）===== */
+  --sync-accent: #60a5fa;       /* 云同步字色（比 --info-text 更亮的蓝） */
+  --danger-accent: #f87171;     /* 重置字色 */
+}

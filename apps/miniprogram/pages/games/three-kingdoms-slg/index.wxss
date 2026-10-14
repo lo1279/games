@@ -1,0 +1,913 @@
+/* pages/games/three-kingdoms-slg/index.wxss */
+/* 设计令牌层（127 项，1:1 搬运自 Web css/style.css 的 :root） */
+@import "./tokens.wxss";
+
+page {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-dark);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  user-select: none;
+}
+
+.slg-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+/* ===== 顶部资源 HUD（对齐 Web .slg-header + .res-badge）=====
+   复刻要点：木纹渐变底 + 青铜描边 + 鎏金字色，徽章用 tabular-nums 对齐数字 */
+.res-hud {
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border-bottom: var(--bw) solid rgba(226, 200, 115, 0.32);
+  box-shadow: 0 8rpx 36rpx rgba(0, 0, 0, 0.6);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  flex-shrink: 0;
+  z-index: var(--z-hud);
+}
+
+.brand-area {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  font-size: var(--fs-2xl);
+  line-height: 1;
+}
+
+.brand-text { flex-shrink: 0; }
+
+/* 标题牌：朱红渐变底 + 双描边 + 鎏金字，对齐 Web .game-title */
+.brand-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--ls-title);
+  color: var(--gold-bright);
+  padding: var(--sp-1) var(--sp-4);
+  border: var(--bw) solid var(--bronze-light);
+  border-radius: var(--r-xs);
+  background: linear-gradient(180deg, var(--cinnabar) 0%, var(--cinnabar-deep) 100%);
+  box-shadow: inset 0 0 0 var(--bw) rgba(226, 200, 115, 0.42), var(--sh-xs);
+  white-space: nowrap;
+}
+
+.brand-sub {
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+  letter-spacing: 0.2rpx;
+}
+
+.hud-scroll {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  white-space: nowrap;
+  height: 52rpx;
+}
+
+/* ===== 资源徽章（对齐 Web .res-badge）=====
+   木纹渐变底 + 青铜描边；数字用 tabular-nums 避免跳动 */
+.res-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  background: linear-gradient(180deg, rgba(42, 30, 18, 0.92), rgba(21, 16, 10, 0.92));
+  border: var(--bw) solid var(--bronze);
+  padding: var(--sp-1) var(--sp-4);
+  border-radius: var(--r-sm);
+  margin-right: var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--badge-text);
+  white-space: nowrap;
+  box-shadow: inset 0 var(--bw-thin) 0 rgba(255, 255, 255, 0.06);
+  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease;
+}
+
+.res-lbl {
+  color: var(--badge-text-dim);
+}
+
+.res-num {
+  font-weight: var(--fw-bold);
+  color: var(--badge-val);
+  font-variant-numeric: tabular-nums;
+}
+
+.res-pill.gold {
+  border-color: rgba(226, 200, 115, 0.55);
+  background: rgba(217, 119, 6, 0.14);
+}
+
+.res-pill.gold .res-num {
+  color: var(--badge-gold-val);
+}
+
+.res-tag {
+  background: var(--btn-primary-from);
+  color: var(--text-light);
+  font-size: var(--fs-micro);
+  padding: 0 var(--sp-1);
+  border-radius: var(--r-xs);
+  margin-left: var(--sp-1);
+}
+
+/* 铜币：Web 用 camp-shu 绿框 + 绿字 */
+.res-pill.copper {
+  border-color: var(--camp-shu-border);
+  background: var(--camp-shu-bg);
+}
+
+.res-pill.copper .res-num {
+  color: var(--ok-text);
+}
+
+.hud-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}
+
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-4);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  border: var(--bw) solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
+  color: var(--text-subtle);
+  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease;
+}
+
+.sync-btn {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+  color: var(--sync-accent);
+}
+
+.reset-btn {
+  border-color: var(--danger-border);
+  color: var(--danger-accent);
+}
+
+.tool-icon {
+  margin-right: 4rpx;
+}
+
+/* 原版五大核心系统导航栏 */
+/* ===== 底部主导航（对齐 Web .bottom-nav + .nav-tab-btn）=====
+   Web 是「底部固定 7 个 Tab」，此处结构保持一致；
+   木纹渐变底 + 鎏金细描边 + 上投影，激活项金色高亮 */
+.main-tabs {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  min-height: var(--bottom-nav-height);
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border-top: var(--bw) solid rgba(226, 200, 115, 0.32);
+  box-shadow: 0 -8rpx 36rpx rgba(0, 0, 0, 0.6);
+  z-index: var(--z-nav);
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.subsys-nav {
+  white-space: nowrap;
+  background: var(--bg-dark);
+  border-bottom: var(--bw) solid var(--line-subtle);
+  padding: var(--sp-3) var(--sp-4);
+}
+.subsys-item {
+  display: inline-block;
+  font-size: var(--fs-md);
+  color: var(--text-subtle);
+  background: var(--btn-ghost-bg);
+  border: var(--bw) solid var(--btn-ghost-border);
+  border-radius: var(--r-pill);
+  padding: var(--sp-2) var(--sp-5);
+  margin-right: var(--sp-3);
+  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) 0;
+  color: var(--text-muted);
+  position: relative;
+  transition: color var(--t-mid) ease, background-color var(--t-mid) ease;
+}
+
+.tab-emoji {
+  font-size: var(--fs-xl);
+  line-height: 1;
+}
+
+.tab-name {
+  font-size: var(--fs-sm);
+}
+
+.tab-btn.active {
+  color: var(--text-gold);
+  background: rgba(251, 191, 36, 0.1);
+  font-weight: var(--fw-bold);
+}
+
+/* 激活态底部金色指示条：WXSS 支持 ::after 双冒号（官方 button 去边框亦用此法） */
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 4rpx;
+  background: var(--text-gold);
+  border-radius: var(--r-xs);
+}
+
+/* ===== 武将图鉴卡片（对齐 Web .general-card，含鎏金角饰）===== */
+.gen-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+/* ⚠️ 命名必须与「招募库存卡」区分：库存卡也用 .gen-card（见 .generals-deck 段）。
+   两者布局相反（本块竖排网格卡 / 库存卡横排列表卡），同名会互相覆盖，故独立命名。 */
+.gen-tile {
+  width: 160rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-2);
+  position: relative;
+  overflow: hidden;
+  border: 3rpx solid var(--line-subtle);
+  border-radius: var(--r-md);
+  /* 木纹底 + 鎏金内描边，复刻 Web .general-card */
+  background:
+    repeating-linear-gradient(91deg, rgba(255, 255, 255, 0.02) 0 2rpx, transparent 2rpx 7rpx),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  box-shadow: inset 0 0 0 var(--bw) rgba(197, 155, 39, 0.28), var(--sh-sm);
+}
+
+/* 左上鎏金 L 形角饰（WXSS 支持 ::before） */
+.gen-tile::before {
+  content: '';
+  position: absolute;
+  top: 10rpx;
+  left: 10rpx;
+  width: 24rpx;
+  height: 24rpx;
+  border-top: 4rpx solid var(--gold-bright);
+  border-left: 4rpx solid var(--gold-bright);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.gen-tile-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: var(--r-circle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-2xl);
+  color: #ffffff;
+}
+
+.gen-tile-name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-light);
+}
+
+.gen-tile-meta {
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+}
+
+/* 主视窗滚动区 */
+.main-viewport {
+  flex: 1;
+  overflow-y: scroll;
+}
+
+.page-sec {
+  padding: 20rpx;
+  box-sizing: border-box;
+}
+
+.sec-banner {
+  background: linear-gradient(135deg, #24160e, #180e08);
+  border: 1px solid #422a1b;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.sec-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.sec-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #f59e0b;
+}
+
+.sec-desc {
+  font-size: 22rpx;
+  color: #9e8d7d;
+  line-height: 32rpx;
+}
+
+.action-sm-btn {
+  font-size: 20rpx;
+  background: #059669;
+  color: #ffffff;
+  border-radius: 20rpx;
+  padding: 4rpx 14rpx;
+  border: none;
+  margin: 0;
+}
+
+/* 1. 领地网格 */
+.lands-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.land-card {
+  background: #1b120c;
+  border: 2rpx solid #3d2a1d;
+  border-radius: 14rpx;
+  padding: 18rpx;
+}
+
+.land-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.land-icon {
+  font-size: 36rpx;
+}
+
+.land-title-box {
+  flex: 1;
+}
+
+.land-name {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.land-lv {
+  font-size: 20rpx;
+  color: #f59e0b;
+  display: block;
+}
+
+.land-info {
+  font-size: 22rpx;
+  color: #8c7b6c;
+  margin-bottom: 12rpx;
+}
+
+.land-btn {
+  background: #d97706;
+  color: #ffffff;
+  font-size: 24rpx;
+  border-radius: 24rpx;
+  border: none;
+}
+
+/* 2. 建筑列表 */
+.buildings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.build-card {
+  display: flex;
+  align-items: center;
+  background: #1b120c;
+  border: 1px solid #3d2a1d;
+  border-radius: 14rpx;
+  padding: 16rpx;
+}
+
+.build-icon {
+  font-size: 44rpx;
+  margin-right: 16rpx;
+}
+
+.build-info {
+  flex: 1;
+}
+
+.build-name-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4rpx;
+}
+
+.build-name {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.build-lv {
+  font-size: 22rpx;
+  color: #f59e0b;
+}
+
+.build-desc {
+  font-size: 20rpx;
+  color: #8c7b6c;
+}
+
+.build-effect {
+  font-size: 20rpx;
+  color: #10b981;
+  margin-top: 4rpx;
+}
+
+.build-cost {
+  font-size: 18rpx;
+  color: #f59e0b;
+  margin-top: 4rpx;
+}
+
+.upgrade-btn {
+  background: #d97706;
+  color: #ffffff;
+  font-size: 22rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 20rpx;
+  border: none;
+  margin-left: 12rpx;
+}
+
+.btn-disabled {
+  background: #33261d;
+  color: #665243;
+}
+
+/* 3. 战役列表 */
+.campaigns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.campaign-card {
+  background: #1b120c;
+  border: 1px solid #3d2a1d;
+  border-radius: 14rpx;
+  padding: 20rpx;
+}
+
+.camp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.camp-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.camp-star {
+  font-size: 20rpx;
+  color: #f59e0b;
+}
+
+.camp-desc {
+  font-size: 22rpx;
+  color: #8c7b6c;
+  margin-bottom: 12rpx;
+}
+
+.camp-enemy {
+  font-size: 20rpx;
+  color: #c4b5a5;
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.camp-attack-btn {
+  background: linear-gradient(90deg, #d97706, #b45309);
+  color: #ffffff;
+  font-size: 26rpx;
+  border-radius: 26rpx;
+  border: none;
+}
+
+/* 4. 招募面板 */
+.gacha-board {
+  background: linear-gradient(135deg, #2a1810, #180e08);
+  border: 1px solid #523420;
+  border-radius: 18rpx;
+  padding: 24rpx;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.gacha-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #f59e0b;
+  margin-bottom: 6rpx;
+}
+
+.gacha-sub {
+  font-size: 20rpx;
+  color: #9c8b7c;
+  margin-bottom: 10rpx;
+}
+
+.pity-counter {
+  font-size: 22rpx;
+  color: #e5ded6;
+  margin-bottom: 18rpx;
+}
+
+.pity-num {
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+.gacha-btn-group {
+  display: flex;
+  gap: 16rpx;
+}
+
+.g-btn {
+  flex: 1;
+  font-size: 24rpx;
+  border-radius: 26rpx;
+}
+
+.btn-single {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+}
+
+.btn-five {
+  background: linear-gradient(90deg, #d97706, #b45309);
+  color: #ffffff;
+  border: none;
+}
+
+.generals-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.gen-card {
+  display: flex;
+  align-items: center;
+  background: #1b120c;
+  border: 1px solid #3d2a1d;
+  border-radius: 12rpx;
+  padding: 14rpx;
+}
+
+.gen-avatar-circle {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 32rpx;
+  margin-right: 14rpx;
+}
+
+.gen-body {
+  flex: 1;
+}
+
+.gen-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.gen-name {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.gen-star {
+  font-size: 20rpx;
+  color: #f59e0b;
+}
+
+.gen-stats {
+  font-size: 20rpx;
+  color: #8c7b6c;
+  margin-top: 2rpx;
+}
+
+.gen-arm {
+  font-size: 18rpx;
+  color: #a39281;
+}
+
+/* 5. 军团编制 */
+.troop-nav {
+  display: flex;
+  background: #1b120c;
+  border: 1px solid #3d2a1d;
+  border-radius: 12rpx;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+}
+
+.troop-nav-item {
+  flex: 1;
+  text-align: center;
+  font-size: 20rpx;
+  padding: 12rpx 0;
+  color: #8c7b6c;
+}
+
+.troop-nav-item.active {
+  background: #d97706;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.current-troop-card {
+  background: #1b120c;
+  border: 1px solid #4a3424;
+  border-radius: 16rpx;
+  padding: 20rpx;
+}
+
+.troop-ctrl-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.troop-arm-selector {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.ctrl-lbl {
+  font-size: 22rpx;
+  color: #9c8b7c;
+}
+
+.picker-val {
+  font-size: 22rpx;
+  color: #f59e0b;
+  font-weight: bold;
+  background: #281b13;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.fill-soldiers-btn {
+  background: #059669;
+  color: #ffffff;
+  font-size: 20rpx;
+  border-radius: 20rpx;
+  border: none;
+  margin: 0;
+}
+
+.hero-slots-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.slot-box {
+  display: flex;
+  align-items: center;
+  background: #241810;
+  border: 1px solid #3d2a1d;
+  border-radius: 12rpx;
+  padding: 14rpx;
+  position: relative;
+}
+
+.main-hero-slot {
+  border-color: #d97706;
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.slot-role-tag {
+  position: absolute;
+  top: 8rpx;
+  right: 12rpx;
+  font-size: 18rpx;
+  color: #d97706;
+}
+
+.slot-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 36rpx;
+  margin-right: 14rpx;
+}
+
+.slot-hero-name {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.slot-hero-soldier {
+  font-size: 20rpx;
+  color: #8c7b6c;
+  margin-top: 4rpx;
+}
+
+/* 模态弹窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  width: 85%;
+  background: #1b120c;
+  border: 2rpx solid #d97706;
+  border-radius: 18rpx;
+  padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-head {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #f59e0b;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.recharge-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.rec-btn {
+  background: #281b13;
+  border: 1px solid #4a3424;
+  color: #f59e0b;
+  font-size: 24rpx;
+  border-radius: 16rpx;
+}
+
+.battle-log-box {
+  max-height: 80vh;
+}
+
+.gold-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 215, 120, 0.85), rgba(255, 180, 60, 0.35) 40%, transparent 70%);
+  animation: goldflash 900ms ease-out forwards;
+}
+@keyframes goldflash {
+  0% { opacity: 0; transform: scale(0.6); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+
+.battle-scroll {
+  max-height: 55vh;
+  background: #120b08;
+  padding: 12rpx;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.b-log-row {
+  font-size: 20rpx;
+  line-height: 32rpx;
+  color: #d1c7bc;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.hero-select-box {
+  max-height: 75vh;
+}
+
+.hero-select-scroll {
+  max-height: 55vh;
+  margin-bottom: 16rpx;
+}
+
+.hero-select-item {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 0;
+  border-bottom: 1px solid #281b13;
+}
+
+.h-sel-avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 28rpx;
+  margin-right: 12rpx;
+}
+
+.h-sel-info {
+  flex: 1;
+}
+
+.h-sel-name {
+  font-size: 24rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.h-sel-meta {
+  font-size: 18rpx;
+  color: #8c7b6c;
+}
+
+.h-sel-btn {
+  font-size: 20rpx;
+  background: #d97706;
+  color: #ffffff;
+  padding: 6rpx 16rpx;
+  border-radius: 16rpx;
+  border: none;
+  margin: 0;
+}
+
+.modal-close {
+  background: #33261d;
+  color: #e5ded6;
+  font-size: 24rpx;
+  border-radius: 20rpx;
+  border: none;
+}

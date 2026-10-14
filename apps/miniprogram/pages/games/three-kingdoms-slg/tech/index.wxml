@@ -1,0 +1,55 @@
+<!-- pages/games/three-kingdoms-slg/tech/index.wxml -->
+<view class="tech-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">🏛️ 太学府·科技树</view>
+  </view>
+
+  <!-- 累计加成总览 -->
+  <view class="buffs-bar">
+    <view class="buff-item">已研 <text class="buff-num">{{buffs.researched}}/{{buffs.total}}</text></view>
+    <view class="buff-item">满级 <text class="buff-num">{{buffs.maxed}}</text></view>
+    <view class="buff-item">武+{{buffs.force}}</view>
+    <view class="buff-item">智+{{buffs.intel}}</view>
+    <view class="buff-item">统+{{buffs.command}}</view>
+    <view class="buff-item">速+{{buffs.speed}}</view>
+    <view class="buff-item">君王殿 Lv.{{palaceLevel}}</view>
+  </view>
+
+  <scroll-view class="tech-scroll" scroll-y>
+    <block wx:for="{{districts}}" wx:key="id" wx:for-item="dist">
+      <view class="dist-block">
+        <view class="dist-head">
+          <text class="dist-icon">{{dist.icon}}</text>
+          <view class="dist-info">
+            <text class="dist-name">{{dist.name}}</text>
+            <text class="dist-desc">{{dist.desc}}</text>
+          </view>
+        </view>
+
+        <view class="tech-list">
+          <block wx:for="{{dist.techs}}" wx:key="id" wx:for-item="t">
+            <view class="tech-card status-{{t.status}}">
+              <view class="tech-ic">{{t.icon}}</view>
+              <view class="tech-body">
+                <view class="tech-name-row">
+                  <text class="tech-name">{{t.name}}</text>
+                  <text class="tech-lv">Lv.{{t.level}}/{{t.maxLevel}}</text>
+                </view>
+                <view class="tech-sub">{{t.sub}}</view>
+                <view class="tech-desc">{{t.desc}}</view>
+                <view class="tech-effect">{{t.effect}}</view>
+                <view wx:if="{{t.status === 'locked'}}" class="tech-lock">🔒 需君王殿 Lv.{{t.palaceReq}} 解锁</view>
+                <view wx:elif="{{t.status !== 'max'}}" class="tech-cost">消耗: {{t.costText}}</view>
+              </view>
+              <button wx:if="{{t.status === 'ready'}}" class="tech-btn" bindtap="researchTech" data-id="{{t.id}}">研发</button>
+              <button wx:elif="{{t.status === 'lack'}}" class="tech-btn disabled" disabled>资源不足</button>
+              <button wx:elif="{{t.status === 'max'}}" class="tech-btn maxed" disabled>满级</button>
+              <button wx:else class="tech-btn disabled" disabled>未解锁</button>
+            </view>
+          </block>
+        </view>
+      </view>
+    </block>
+  </scroll-view>
+</view>

@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "三国志·鼎立战略版",
+  "navigationBarBackgroundColor": "#140e0b",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#140e0b",
+  "enablePullDownRefresh": false,
+  "usingComponents": {}
+}

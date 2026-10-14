@@ -1,0 +1,35 @@
+<!-- pages/games/three-kingdoms-slg/account/index.wxml -->
+<view class="acc-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">☁️ 云端账号</view>
+  </view>
+
+  <view class="mode-banner {{cloudAvailable ? 'online' : 'local'}}">{{modeLabel}}</view>
+
+  <block wx:if="{{signedIn}}">
+    <view class="profile-card">
+      <view class="p-name">{{profile.nickname || '主公'}}</view>
+      <view class="p-meta">段位 {{profile.tier}} · 积分 {{profile.points || 0}} · 战力 {{profile.power || 0}}</view>
+      <view class="p-record">战绩 {{profile.wins || 0}} 胜 / {{profile.losses || 0}} 负</view>
+    </view>
+    <button class="acc-btn" bindtap="syncNow">立即同步存档</button>
+    <button class="acc-btn danger" bindtap="logout">退出登录</button>
+  </block>
+
+  <block wx:else>
+    <view class="login-tip">登录后可跨设备同步存档，并参与排位赛天梯。</view>
+    <button class="acc-btn primary" bindtap="openLogin">登录 / 注册</button>
+  </block>
+
+  <!-- 云端登录弹窗 -->
+  <view class="modal-overlay" wx:if="{{showLogin}}">
+    <view class="modal-box">
+      <view class="modal-head">云端登录</view>
+      <input class="login-input" placeholder="邮箱" value="{{email}}" bindinput="onEmail" />
+      <input class="login-input" placeholder="密码" password value="{{password}}" bindinput="onPassword" />
+      <button class="acc-btn primary" bindtap="doCloudLogin">登录 / 注册(新邮箱)</button>
+      <button class="modal-close" bindtap="closeLogin">取消</button>
+    </view>
+  </view>
+</view>

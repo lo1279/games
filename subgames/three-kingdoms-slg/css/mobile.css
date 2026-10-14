@@ -1,0 +1,64 @@
+/* ============================================================================
+ * three-kingdoms-slg / css/mobile.css — 窄屏适配覆盖
+ * 该工程布局本已偏移动友好（body 100vh 纵向 flex、底部导航固定、
+ * grid 自动单列、弹窗 94% 宽）。本文件只修几处固定宽溢出 + 收紧间距。
+ * 仅在 max-width:768px 生效，不影响桌面。
+ * ========================================================================== */
+@media (max-width: 768px) {
+  html, body {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* 个别固定宽容器在超窄屏可能溢出，统一限宽 */
+  .gacha-banner,
+  .general-card {
+    max-width: 100%;
+  }
+
+  /* 弹窗在手机上贴边并让出顶部状态栏 / 底部手势条 */
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  .modal-mask {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  /* 页面内边距收紧，给内容更多空间 */
+  .slg-tab-page { padding: 12px 12px 84px; }   /* 底部 84px 让出底部导航 */
+  .page-head { padding: 12px; }
+  .map-container { padding: 0 4px; }
+
+  /* HUD 资源条：标题与资源分行，资源条横向滚动（结构已支持） */
+  .res-hud {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .res-items { justify-content: flex-start; }
+
+  /* 抽卡/武将列表等横排区域允许横向滚动而非溢出 */
+  .gacha-result-row,
+  .general-list {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  /* 细微字号收紧，避免文字换行过碎 */
+  .page-title { font-size: 18px; }
+  .res-badge { font-size: 12px; padding: 3px 8px; }
+}
+
+/* 极窄屏（≤380px）进一步收缩 */
+@media (max-width: 380px) {
+  .bottom-nav .nav-tab-btn { padding: 6px 10px; font-size: 11px; }
+  .slg-tab-page { padding: 10px 8px 80px; }
+}

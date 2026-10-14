@@ -1,0 +1,207 @@
+/* pages/games/tetris/index.wxss - 霓虹赛博风（与大厅暗黑主题一致）*/
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0a0b12;
+  box-sizing: border-box;
+  padding: 12rpx 12rpx env(safe-area-inset-bottom);
+}
+
+/* ===== 顶栏 ===== */
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 12rpx;
+  padding: 8rpx 4rpx;
+}
+
+.preview-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid rgba(236, 72, 153, 0.25);
+  border-radius: 16rpx;
+  padding: 8rpx 10rpx;
+  min-width: 150rpx;
+}
+
+.preview-label {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-bottom: 6rpx;
+  letter-spacing: 2rpx;
+}
+
+.preview-canvas {
+  width: 120rpx;
+  height: 120rpx;
+}
+
+.score-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6rpx;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid rgba(236, 72, 153, 0.25);
+  border-radius: 16rpx;
+  padding: 8rpx 18rpx;
+}
+
+.score-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.score-label {
+  font-size: 22rpx;
+  color: #94a3b8;
+}
+
+.score-val {
+  font-size: 48rpx;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 12rpx rgba(236, 72, 153, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-mini-row {
+  display: flex;
+  gap: 12rpx;
+}
+
+.mini-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+
+.mini-item.wide {
+  justify-content: flex-start;
+}
+
+.mini-label {
+  font-size: 20rpx;
+  color: #64748b;
+}
+
+.mini-val {
+  font-size: 28rpx;
+  color: #e2e8f0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== 主棋盘 ===== */
+.board-area {
+  flex: 1;
+  height: 0;            /* 关键：让 flex 子项高度可正确计算，避免顶穿 */
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  margin: 10rpx 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.10), transparent 60%),
+    #06070d;
+  border: 1rpx solid rgba(236, 72, 153, 0.25);
+  border-radius: 18rpx;
+}
+
+.board-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ===== 遮罩 ===== */
+.overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 7, 13, 0.82);
+  backdrop-filter: blur(4px);
+}
+
+.overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18rpx;
+  padding: 40rpx 48rpx;
+}
+
+.overlay-title {
+  font-size: 44rpx;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 16rpx rgba(236, 72, 153, 0.9);
+}
+
+.overlay-sub {
+  font-size: 24rpx;
+  color: #94a3b8;
+}
+
+.overlay-btn {
+  margin-top: 10rpx;
+  padding: 20rpx 56rpx;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 700;
+  border-radius: 40rpx;
+  box-shadow: 0 6rpx 24rpx rgba(236, 72, 153, 0.45);
+}
+
+.overlay-btn-active {
+  opacity: 0.82;
+  transform: scale(0.96);
+}
+
+/* ===== 虚拟手柄（4 列网格）===== */
+.controls {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12rpx;
+  padding: 6rpx 2rpx 0;
+}
+
+.ctrl-btn {
+  height: 92rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1rpx solid rgba(148, 163, 184, 0.25);
+  border-radius: 16rpx;
+  user-select: none;
+}
+
+.ctrl-active {
+  background: rgba(236, 72, 153, 0.22);
+  border-color: rgba(236, 72, 153, 0.55);
+  transform: scale(0.96);
+}
+
+.ctrl-drop {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+}

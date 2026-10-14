@@ -1,0 +1,25 @@
+<!-- pages/games/three-kingdoms-slg/hero/index.wxml -->
+<view class="hero-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">🔼 武将养成</view>
+    <text class="copper">🪙 {{copper}}</text>
+  </view>
+  <view class="hero-hint">升星强化四维 · 传承战法入库 · 出售换铜币</view>
+
+  <scroll-view class="hero-scroll" scroll-y>
+    <view class="hero-card" wx:for="{{heroes}}" wx:key="id" wx:for-item="h" wx:for-index="hi">
+      <image wx:if="{{h.portrait && !h.failed}}" class="hero-img" src="{{h.portrait}}" mode="aspectFill" binderror="onImgErr" data-idx="{{hi}}" />
+      <view wx:else class="hero-img emoji">{{h.avatar}}</view>
+      <view class="hero-info">
+        <view class="hero-name">{{h.name}} <text class="hero-star">{{h.star}}⭐</text> <text class="hero-red">{{h.redStars || 0}}/{{h.maxRed}}红</text></view>
+        <view class="hero-stats">武{{h.force}} 智{{h.intel}} 统{{h.command}} 速{{h.speed}}</view>
+        <view class="hero-acts">
+          <text class="h-act promote" bindtap="promoteHero" data-id="{{h.id}}">升星</text>
+          <text class="h-act inherit" bindtap="inheritHero" data-id="{{h.id}}">传承</text>
+          <text class="h-act sell" bindtap="sellHero" data-id="{{h.id}}">出售</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

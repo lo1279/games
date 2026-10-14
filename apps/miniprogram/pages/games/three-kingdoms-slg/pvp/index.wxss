@@ -1,0 +1,29 @@
+/* pages/games/three-kingdoms-slg/pvp/index.wxss */
+.pvp-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 12rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:16rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; }
+.mode-banner { margin:8rpx 28rpx; padding:12rpx; border-radius:12rpx; text-align:center; font-size:24rpx; }
+.mode-banner.online { background:#16331f; color:#7fd18a; border:1rpx solid #2e5a3a; }
+.mode-banner.local { background:#332616; color:#e0b85a; border:1rpx solid #5a4a22; }
+
+.pvp-actions { display:flex; gap:14rpx; padding:14rpx 28rpx; }
+.pvp-btn { flex:1; font-size:26rpx; background:#2a2316; color:#caa85a; border:1rpx solid #4a3a1e; border-radius:14rpx; height:80rpx; line-height:80rpx; }
+.pvp-btn.primary { background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; }
+.pvp-btn.on { background:#3a2e16; color:#e0c060; }
+
+.my-rank { text-align:center; font-size:22rpx; color:#cdbb8a; padding:6rpx 0 10rpx; }
+.board-title { font-size:26rpx; color:#f0dca0; padding:10rpx 28rpx; font-weight:700; }
+.board-scroll { flex:1; padding:0 20rpx 40rpx; }
+.board-row { display:flex; align-items:center; background:#16110b; border:1rpx solid #332818; border-radius:10rpx; padding:16rpx; margin-bottom:10rpx; }
+.br-rank { width:50rpx; font-size:26rpx; color:#e0b85a; font-weight:700; }
+.br-name { flex:1; font-size:26rpx; color:#f2e2b0; }
+.br-tier { font-size:22rpx; color:#8fb8d1; margin-right:16rpx; }
+.br-pts { font-size:24rpx; color:#caa85a; width:90rpx; text-align:right; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+.modal-box { width:86%; max-height:78vh; background:#16110b; border:1rpx solid #4a3a1e; border-radius:18rpx; padding:24rpx; display:flex; flex-direction:column; }
+.modal-head { font-size:28rpx; font-weight:700; color:#f0dca0; text-align:center; margin-bottom:12rpx; }
+.battle-scroll { flex:1; max-height:52vh; }
+.b-log-row { font-size:21rpx; color:#cdbd92; line-height:1.5; padding:4rpx 0; border-bottom:1rpx solid #241c10; }
+.modal-close { margin-top:14rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; font-size:26rpx; }

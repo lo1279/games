@@ -1,0 +1,69 @@
+<!-- pages/games/tank-battle/index.wxml
+  经典坦克大战 · 小程序原生版（移动端布局）
+  顶部：得分 | 剩余命 | 关卡 | 剩余敌军
+  中部：战场 Canvas（含开始/暂停/胜利/结束遮罩）
+  底部：左侧方向盘（上/左/下/右）+ 右侧开火/暂停/重开
+-->
+<view class="container">
+
+  <!-- 顶部 HUD -->
+  <view class="topbar">
+    <view class="hud-item">
+      <text class="hud-label">得分</text>
+      <text class="hud-val">{{score}}</text>
+    </view>
+    <view class="hud-item">
+      <text class="hud-label">命</text>
+      <text class="hud-val">{{lives}}</text>
+    </view>
+    <view class="hud-item">
+      <text class="hud-label">关卡</text>
+      <text class="hud-val">{{stage}}</text>
+    </view>
+    <view class="hud-item">
+      <text class="hud-label">敌军</text>
+      <text class="hud-val">{{enemiesLeft}}</text>
+    </view>
+  </view>
+
+  <!-- 战场 -->
+  <view class="board-area">
+    <canvas
+      type="2d"
+      id="boardCanvas"
+      class="board-canvas"
+    ></canvas>
+
+    <view class="overlay" wx:if="{{showOverlay}}">
+      <view class="overlay-card">
+        <text class="overlay-title">{{overlayTitle}}</text>
+        <text class="overlay-sub">{{overlaySub}}</text>
+        <view class="overlay-btn" bindtap="onStart" hover-class="overlay-btn-active">{{overlayBtn}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部控制 -->
+  <view class="controls">
+    <!-- 方向盘 -->
+    <view class="dpad">
+      <view class="dpad-empty"></view>
+      <view class="dpad-btn" bindtouchstart="onDirStart" bindtouchend="onDirEnd" bindtouchcancel="onDirEnd" data-dir="up" hover-class="dpad-active">▲</view>
+      <view class="dpad-empty"></view>
+
+      <view class="dpad-btn" bindtouchstart="onDirStart" bindtouchend="onDirEnd" bindtouchcancel="onDirEnd" data-dir="left" hover-class="dpad-active">◀</view>
+      <view class="dpad-btn" bindtouchstart="onDirStart" bindtouchend="onDirEnd" bindtouchcancel="onDirEnd" data-dir="down" hover-class="dpad-active">▼</view>
+      <view class="dpad-btn" bindtouchstart="onDirStart" bindtouchend="onDirEnd" bindtouchcancel="onDirEnd" data-dir="right" hover-class="dpad-active">▶</view>
+    </view>
+
+    <!-- 动作键 -->
+    <view class="actions">
+      <view class="fire-btn" bindtouchstart="onFire" hover-class="fire-active">🔥</view>
+      <view class="act-row">
+        <view class="act-btn" bindtap="onPause" hover-class="act-active">{{isPaused ? '▶' : '⏸'}}</view>
+        <view class="act-btn" bindtap="onRestart" hover-class="act-active">🔄</view>
+      </view>
+    </view>
+  </view>
+
+</view>

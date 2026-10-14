@@ -1,0 +1,40 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/games/minesweeper/index",
+    "pages/games/tetris/index",
+    "pages/games/tank-battle/index",
+    "pages/games/thunder-fighter/index",
+    "pages/games/super-mario/index",
+    "pages/about/index"
+  ],
+  "subPackages": [
+    {
+      "root": "pages/games/three-kingdoms-slg",
+      "pages": [
+        "index",
+        "tech/index",
+        "trials/index",
+        "sandbox/index",
+        "generals/index",
+        "tactics/index",
+        "hero/index",
+        "reports/index",
+        "account/index",
+        "pvp/index"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#0a0c14",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "星云电竞 · 游戏大厅",
+    "backgroundColor": "#0a0c14",
+    "backgroundTextStyle": "dark",
+    "backgroundColorTop": "#0a0c14",
+    "backgroundColorBottom": "#0a0c14"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

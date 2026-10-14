@@ -19,7 +19,7 @@ global.wx = {
   getSystemInfoSync: () => ({ windowWidth: 375, screenHeight: 812, statusBarHeight: 20, safeArea: { bottom: 812 } })
 };
 
-const { GAMES_DATA, CATEGORIES, StorageManager } = require('../utils/games-data.js');
+const { GAMES_DATA, CATEGORIES, StorageManager } = require('../apps/miniprogram/utils/games-data.js');
 
 let pass = 0, fail = 0;
 function assert(cond, msg) {
@@ -31,7 +31,7 @@ console.log('\n=== 1. 数据完整性 ===');
 assert(GAMES_DATA.length === 10, `游戏总数为 10（实际 ${GAMES_DATA.length}）`);
 assert(CATEGORIES.some(c => c.id === 'fav'), '分类包含「我的收藏」');
 const playable = GAMES_DATA.filter(g => g.playable);
-assert(playable.length === 1, `已开放 1 款（实际 ${playable.length}）`);
+assert(playable.length === 6, `已开放 6 款（实际 ${playable.length}）`);
 playable.forEach(g => {
   assert(!!g.route && g.route.startsWith('/'), `可玩游戏「${g.title}」有合法 route`);
 });
@@ -110,9 +110,12 @@ function checkWxml(file) {
   const closes = (src.match(/<\/view>/g) || []).length;
   assert(opens === closes, `${path.basename(path.dirname(file))}/${path.basename(file)} view 标签配平 (${opens}开/${closes}闭)`);
 }
-checkWxml('pages/index/index.wxml');
-checkWxml('pages/about/index.wxml');
-checkWxml('pages/games/minesweeper/index.wxml');
+checkWxml('apps/miniprogram/pages/index/index.wxml');
+checkWxml('apps/miniprogram/pages/about/index.wxml');
+checkWxml('apps/miniprogram/pages/games/minesweeper/index.wxml');
+checkWxml('apps/miniprogram/pages/games/thunder-fighter/index.wxml');
+checkWxml('apps/miniprogram/pages/games/three-kingdoms-slg/index.wxml');
+checkWxml('apps/miniprogram/pages/games/super-mario/index.wxml');
 
 console.log(`\n========== 结果：${pass} 通过 / ${fail} 失败 ==========\n`);
 process.exit(fail > 0 ? 1 : 0);

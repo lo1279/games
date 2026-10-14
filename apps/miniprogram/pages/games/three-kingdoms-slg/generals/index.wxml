@@ -1,0 +1,53 @@
+<!-- pages/games/three-kingdoms-slg/generals/index.wxml -->
+<view class="gen-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">📖 武将图鉴</view>
+    <text class="gen-count">{{list.length}} 将</text>
+  </view>
+
+  <view class="search-bar">
+    <input class="search-input" placeholder="搜索武将名" placeholder-class="ph" value="{{keyword}}" bindinput="onSearch" />
+  </view>
+
+  <scroll-view class="filter-row" scroll-x>
+    <view class="chip {{campIdx === index ? 'on' : ''}}" wx:for="{{camps}}" wx:key="key" wx:for-index="index" bindtap="onCamp" data-idx="{{index}}">{{item.name}}</view>
+  </scroll-view>
+  <scroll-view class="filter-row" scroll-x>
+    <view class="chip {{starIdx === index ? 'on' : ''}}" wx:for="{{stars}}" wx:key="key" wx:for-index="index" bindtap="onStar" data-idx="{{index}}">{{item.name}}</view>
+  </scroll-view>
+
+  <scroll-view class="gen-grid-scroll" scroll-y>
+    <view class="gen-grid">
+      <block wx:for="{{list}}" wx:key="id" wx:for-item="g">
+        <view class="g-cell" bindtap="showDetail" data-id="{{g.id}}">
+          <image wx:if="{{g.portrait && !g.failed}}" class="g-img" src="{{g.portrait}}" mode="aspectFill" binderror="onImgErr" data-idx="{{index}}" />
+          <view wx:else class="g-img emoji">{{g.avatar}}</view>
+          <view class="g-name">{{g.name}}</view>
+          <view class="g-star">{{g.star}}⭐</view>
+        </view>
+      </block>
+    </view>
+  </scroll-view>
+
+  <view class="modal-overlay" wx:if="{{showDetail}}">
+    <view class="modal-box detail-box">
+      <view class="detail-head">
+        <image wx:if="{{detail.portrait && !detail.failed}}" class="d-img" src="{{detail.portrait}}" mode="aspectFill" binderror="onImgErrDetail" />
+        <view wx:else class="d-img emoji">{{detail.avatar}}</view>
+        <view class="d-title">
+          <view class="d-name">{{detail.name}} <text class="d-star">{{detail.star}}⭐</text></view>
+          <view class="d-camp">{{detail.camp}} · {{detail.arm}}兵</view>
+        </view>
+      </view>
+      <view class="d-stats">
+        <view class="d-stat">武 <text>{{detail.force}}</text></view>
+        <view class="d-stat">智 <text>{{detail.intel}}</text></view>
+        <view class="d-stat">统 <text>{{detail.command}}</text></view>
+        <view class="d-stat">速 <text>{{detail.speed}}</text></view>
+      </view>
+      <view class="d-desc">{{detail.desc || detail.story || '名将风范，自有一段传奇。'}}</view>
+      <button class="modal-close" bindtap="closeDetail">关闭</button>
+    </view>
+  </view>
+</view>

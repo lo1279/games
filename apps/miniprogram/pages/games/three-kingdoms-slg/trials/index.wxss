@@ -1,0 +1,29 @@
+/* pages/games/three-kingdoms-slg/trials/index.wxss */
+.trials-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 12rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:16rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; }
+.cur-floor { text-align:center; font-size:26rpx; color:#cdbb8a; padding:6rpx 0 14rpx; }
+.cf-num { color:#f0d28a; font-weight:700; font-size:30rpx; }
+
+.trials-scroll { flex:1; padding:0 20rpx 40rpx; }
+.trial-card { background:#16110b; border:1rpx solid #332818; border-radius:16rpx; padding:18rpx; margin-bottom:14rpx; }
+.trial-card.status-cleared { border-color:#2e4a2e; }
+.trial-card.status-current { border-color:#caa85a; }
+.trial-card.status-locked { opacity:.5; }
+.trial-top { display:flex; justify-content:space-between; align-items:center; }
+.trial-floor { font-size:28rpx; font-weight:700; color:#f2e2b0; }
+.trial-difi { font-size:20rpx; color:#d98a8a; }
+.trial-status { font-size:20rpx; color:#cdbb8a; }
+.trial-title { font-size:26rpx; color:#f0dca0; margin:8rpx 0 4rpx; }
+.trial-meta { font-size:21rpx; color:#b6a47a; }
+.trial-hint { font-size:20rpx; color:#8fb8d1; margin:6rpx 0 12rpx; line-height:1.35; }
+.trial-btn { font-size:24rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; height:64rpx; line-height:64rpx; }
+.trial-btn.disabled { background:#2a2316; color:#7a6c4a; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+.modal-box { width:86%; max-height:76vh; background:#16110b; border:1rpx solid #4a3a1e; border-radius:18rpx; padding:24rpx; display:flex; flex-direction:column; }
+.modal-head { font-size:30rpx; font-weight:700; color:#f0dca0; text-align:center; margin-bottom:14rpx; }
+.battle-scroll { flex:1; max-height:52vh; }
+.b-log-row { font-size:21rpx; color:#cdbd92; line-height:1.5; padding:4rpx 0; border-bottom:1rpx solid #241c10; }
+.modal-close { margin-top:16rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; font-size:26rpx; }

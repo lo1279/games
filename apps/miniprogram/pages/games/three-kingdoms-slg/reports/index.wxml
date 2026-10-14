@@ -1,0 +1,36 @@
+<!-- pages/games/three-kingdoms-slg/reports/index.wxml -->
+<view class="rep-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">📜 战报中心</view>
+    <text class="rep-count">{{list.length}}</text>
+  </view>
+
+  <scroll-view class="cat-row" scroll-x>
+    <view wx:for="{{cats}}" wx:key="id" class="cat-chip {{activeCat === item.id ? 'on' : ''}}" bindtap="switchCat" data-id="{{item.id}}">{{item.name}}</view>
+  </scroll-view>
+
+  <scroll-view class="rep-scroll" scroll-y>
+    <view wx:if="{{list.length === 0}}" class="rep-empty">暂无战报，去沙盘/战役/演武/演习中开战吧！</view>
+    <view class="rep-card" wx:for="{{list}}" wx:key="id" wx:for-item="r" bindtap="openDetail" data-id="{{r.id}}">
+      <view class="rep-left">
+        <view class="rep-title">{{r.title}}</view>
+        <view class="rep-time">{{r.time}}</view>
+      </view>
+      <view class="rep-result {{r.isVictory ? 'win' : 'lose'}}">{{r.isVictory ? '胜' : '负'}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="modal-overlay" wx:if="{{showDetail}}">
+    <view class="modal-box battle-log-box">
+      <view class="modal-head">{{detail.isVictory ? '🎉 胜利战报' : '💔 战败战报'}} · {{detail.title}}</view>
+      <view class="rep-summary">{{detail.summary}}</view>
+      <scroll-view class="battle-scroll" scroll-y>
+        <block wx:for="{{detail.logs}}" wx:key="*this">
+          <view class="b-log-row">{{item}}</view>
+        </block>
+      </scroll-view>
+      <button class="modal-close" bindtap="closeDetail">关闭</button>
+    </view>
+  </view>
+</view>

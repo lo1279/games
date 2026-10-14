@@ -1,0 +1,63 @@
+<!-- pages/games/three-kingdoms-slg/sandbox/index.wxml -->
+<view class="sandbox-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">⚔️ 自由对战沙盘</view>
+  </view>
+
+  <view class="sand-intro">编排你的「演习假想敌」，随时与当前出征军团展开自由对战演练。</view>
+
+  <view class="enemy-name-row">
+    <text class="enemy-name">{{enemy.name}}</text>
+    <text class="enemy-arm">兵种 {{enemy.arm}}</text>
+  </view>
+
+  <view class="enemy-heroes">
+    <block wx:for="{{enemyHeroes}}" wx:key="id" wx:for-item="h">
+      <view class="e-hero-card" bindtap="openPicker" data-slot="{{index}}">
+        <image wx:if="{{h.portrait && !h.failed}}" class="e-hero-img" src="{{h.portrait}}" mode="aspectFill" binderror="onImgErr" data-list="enemyHeroes" data-idx="{{index}}" />
+        <view wx:else class="e-hero-img emoji">{{h.avatar}}</view>
+        <view class="e-hero-info">
+          <view class="e-hero-name">{{h.name}} <text class="e-hero-star">{{h.star}}⭐</text></view>
+          <view class="e-hero-meta">Lv.{{h.level}} · 兵力 {{h.currentSoldiers}}</view>
+        </view>
+        <text class="e-hero-edit">更换 ›</text>
+      </view>
+    </block>
+  </view>
+
+  <button class="sand-launch" bindtap="launchSandbox">出战演习</button>
+
+  <!-- 武将选择弹窗 -->
+  <view class="modal-overlay" wx:if="{{showPicker}}">
+    <view class="modal-box picker-box">
+      <view class="modal-head">选择假想敌武将</view>
+      <scroll-view class="picker-scroll" scroll-y>
+        <block wx:for="{{pickerList}}" wx:key="id" wx:for-item="g">
+          <view class="pick-item" bindtap="pickGeneral" data-gid="{{g.id}}">
+            <image wx:if="{{g.portrait && !g.failed}}" class="pick-img" src="{{g.portrait}}" mode="aspectFill" binderror="onImgErr" data-list="pickerList" data-idx="{{index}}" />
+            <view wx:else class="pick-img emoji">{{g.avatar}}</view>
+            <view class="pick-info">
+              <text class="pick-name">{{g.name}} {{g.star}}⭐</text>
+              <text class="pick-meta">{{g.camp}} · 武{{g.force}} 智{{g.intel}} 统{{g.command}}</text>
+            </view>
+          </view>
+        </block>
+      </scroll-view>
+      <button class="modal-close" bindtap="closePicker">取消</button>
+    </view>
+  </view>
+
+  <!-- 战报弹窗 -->
+  <view class="modal-overlay" wx:if="{{showBattleModal}}">
+    <view class="modal-box battle-log-box">
+      <view class="modal-head">{{battleResult.victory ? '🎉 演习大捷' : '💔 演习失利多'}}</view>
+      <scroll-view class="battle-scroll" scroll-y>
+        <block wx:for="{{battleResult.logs}}" wx:key="*this">
+          <view class="b-log-row">{{item}}</view>
+        </block>
+      </scroll-view>
+      <button class="modal-close" bindtap="closeBattleModal">收兵</button>
+    </view>
+  </view>
+</view>

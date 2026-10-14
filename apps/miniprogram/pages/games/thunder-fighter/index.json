@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "雷霆战机",
+  "navigationBarBackgroundColor": "#060913",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#060913",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "usingComponents": {}
+}

@@ -1,0 +1,13 @@
+{
+  "name": "games-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "星云电竞·综合游戏大厅 — 多端 Monorepo（apps/web-hall 网页大厅 + apps/miniprogram 微信小程序 + subgames 子游戏库）",
+  "scripts": {
+    "build": "bash tools/build.sh",
+    "serve": "pwsh apps/web-hall/js/server.ps1",
+    "build:vite": "npm --prefix subgames/life-simulator run build && npm --prefix subgames/mythology-deckbuilder run build && npm --prefix subgames/three-kingdoms-td run build",
+    "dev:vite": "npm --prefix subgames/life-simulator run dev & npm --prefix subgames/mythology-deckbuilder run dev & npm --prefix subgames/three-kingdoms-td run dev",
+    "test": "node tools/smoke-test.js"
+  }
+}

@@ -1,0 +1,25 @@
+/* pages/games/three-kingdoms-slg/account/index.wxss */
+.acc-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 12rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:16rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; }
+
+.mode-banner { margin:10rpx 28rpx; padding:14rpx; border-radius:12rpx; text-align:center; font-size:24rpx; }
+.mode-banner.online { background:#16331f; color:#7fd18a; border:1rpx solid #2e5a3a; }
+.mode-banner.local { background:#332616; color:#e0b85a; border:1rpx solid #5a4a22; }
+
+.login-tip { font-size:23rpx; color:#9c8a63; padding:30rpx 36rpx; line-height:1.5; }
+.acc-btn { margin:14rpx 28rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:14rpx; font-size:28rpx; height:84rpx; line-height:84rpx; }
+.acc-btn.primary { background:linear-gradient(135deg,#caa85a,#9a7a32); }
+.acc-btn.danger { background:#2a2316; color:#d98a8a; border:1rpx solid #5a3a3a; }
+
+.profile-card { margin:16rpx 28rpx; background:#16110b; border:1rpx solid #4a3a1e; border-radius:16rpx; padding:24rpx; }
+.p-name { font-size:34rpx; font-weight:700; color:#f2e2b0; }
+.p-meta { font-size:23rpx; color:#cdbb8a; margin-top:8rpx; }
+.p-record { font-size:22rpx; color:#9c8a63; margin-top:4rpx; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+.modal-box { width:84%; background:#16110b; border:1rpx solid #4a3a1e; border-radius:18rpx; padding:28rpx; }
+.modal-head { font-size:30rpx; font-weight:700; color:#f0dca0; text-align:center; margin-bottom:18rpx; }
+.login-input { background:#1a140d; border:1rpx solid #3a2e1c; border-radius:12rpx; height:76rpx; padding:0 22rpx; color:#e8d9b5; font-size:26rpx; margin-bottom:14rpx; }
+.modal-close { margin-top:14rpx; background:#2a2316; color:#caa85a; border:1rpx solid #4a3a1e; border-radius:12rpx; font-size:26rpx; }

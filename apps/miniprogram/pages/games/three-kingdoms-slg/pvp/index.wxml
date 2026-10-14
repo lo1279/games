@@ -1,0 +1,37 @@
+<!-- pages/games/three-kingdoms-slg/pvp/index.wxml -->
+<view class="pvp-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">🏆 排位赛</view>
+  </view>
+  <view class="mode-banner {{cloudAvailable ? 'online' : 'local'}}">{{modeLabel}}</view>
+
+  <view class="pvp-actions">
+    <button class="pvp-btn {{posted ? 'on' : ''}}" bindtap="togglePost">{{posted ? '撤下出战队伍' : '挂载出战队伍'}}</button>
+    <button class="pvp-btn primary" bindtap="findMatch">寻找对手</button>
+  </view>
+
+  <view wx:if="{{myRank}}" class="my-rank">我的排名：第 {{myRank.rank}} 位 · 积分 {{myRank.points}} · 段位 {{myRank.tier}}</view>
+
+  <view class="board-title">📊 天梯榜</view>
+  <scroll-view class="board-scroll" scroll-y>
+    <view class="board-row" wx:for="{{board}}" wx:key="nickname" wx:for-index="bi">
+      <text class="br-rank">{{bi + 1}}</text>
+      <text class="br-name">{{item.nickname}}</text>
+      <text class="br-tier">{{item.tier}}</text>
+      <text class="br-pts">{{item.points}}</text>
+    </view>
+  </scroll-view>
+
+  <view class="modal-overlay" wx:if="{{showResult}}">
+    <view class="modal-box battle-log-box">
+      <view class="modal-head">{{result.victory ? '🎉 排位胜利' : '💔 排位失利'}} · VS {{result.oppName}}</view>
+      <scroll-view class="battle-scroll" scroll-y>
+        <block wx:for="{{result.logs}}" wx:key="*this">
+          <view class="b-log-row">{{item}}</view>
+        </block>
+      </scroll-view>
+      <button class="modal-close" bindtap="closeResult">收兵</button>
+    </view>
+  </view>
+</view>

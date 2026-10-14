@@ -1,0 +1,130 @@
+<!-- pages/games/minesweeper/index.wxml
+  完全同步 PC 网页版（web-hall/minesweeper）布局与视觉：
+    ① .toolbar       顶部工具栏：左=难度+排行榜，右=音效+主题
+    ② .hud-panel     HUD 仪表盘：剩余雷数 · 笑脸(重开) · 计时（LED 数码管）
+    ③ .board-container 棋盘区：Canvas 绘制，凹陷面板边框
+    ④ .mobile-mode-bar 移动端模式栏：挖掘模式 / 插旗模式 两个按钮（与 PC 网页版一致）
+    ⑤ .footer-tips  底部操作说明
+
+  棋盘渲染说明（Canvas 方案）：
+  此前用 scroll-view + WXML 格子实现，连续三轮出现布局失效
+  （顶穿出屏 / 双向滚动不生效 / 末行被裁切），根因是 scroll-view 在
+  flex 容器中的高度计算与滚动行为在小程序里不可控。
+  现改为 canvas 一次性绘制：canvas 尺寸固定为可视区，棋盘超出部分
+  由 touch 拖动改变偏移量来查看，行为完全由代码控制。
+-->
+<view class="container theme-{{theme}}">
+
+  <!-- ① 顶部工具栏（与 PC 网页版一致：左=难度+排行榜，右=音效+主题） -->
+  <view class="toolbar">
+    <view class="controls-left">
+      <picker bindchange="onDifficultyChange" value="{{diffIndex}}" range="{{diffOptions}}" range-key="label">
+        <view class="btn toolbar-btn">
+          <text class="btn-glyph">🎮</text>
+          <text class="btn-text">{{diffOptions[diffIndex].shortLabel}}</text>
+        </view>
+      </picker>
+      <view class="btn toolbar-btn" bindtap="showRecordsModal">
+        <text class="btn-glyph">🏆</text>
+        <text class="btn-text">排行榜</text>
+      </view>
+    </view>
+
+    <view class="controls-right">
+      <view class="btn toolbar-btn" bindtap="toggleSound">
+        <text class="btn-glyph">{{soundMuted ? '🔇' : '🔊'}}</text>
+        <text class="btn-text">音效</text>
+      </view>
+      <view class="btn toolbar-btn" bindtap="toggleTheme">
+        <text class="btn-glyph">{{theme === 'classic' ? '🎨' : '✨'}}</text>
+        <text class="btn-text">{{theme === 'classic' ? '复古' : '现代'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ② HUD 仪表盘：剩余雷数(左) · 笑脸(中) · 计时(右) -->
+  <view class="hud-panel">
+    <view class="led-display">{{formattedMines}}</view>
+    <view class="smiley-btn" bindtap="resetGame" hover-class="smiley-active">
+      <text class="smiley-icon">{{smileyIcon}}</text>
+    </view>
+    <view class="led-display">{{formattedTime}}</view>
+  </view>
+
+  <!-- ③ 棋盘：Canvas 用 CSS 撑满 .board-container（不内联尺寸，避免与 JS 形成循环依赖），
+       JS 测量 .board-container 得到可视区尺寸，仅用于绘制计算与 dpr 放大。 -->
+  <view class="board-container">
+    <canvas
+      type="2d"
+      id="boardCanvas"
+      class="board-canvas"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove"
+      bindtouchend="onTouchEnd"
+      bindtouchcancel="onTouchEnd"
+    ></canvas>
+  </view>
+
+  <!-- ④ 移动端模式切换栏（与 PC 网页版一致：挖掘 / 插旗 两个按钮） -->
+  <view class="mobile-mode-bar">
+    <view
+      class="mobile-mode-btn reveal-mode {{touchMode === 'REVEAL' ? 'active' : ''}}"
+      bindtap="setTouchMode"
+      data-mode="REVEAL"
+    >
+      <text class="mode-icon">⛏️</text>
+      <text class="mode-title">挖掘模式</text>
+    </view>
+    <view
+      class="mobile-mode-btn flag-mode {{touchMode === 'FLAG' ? 'active' : ''}}"
+      bindtap="setTouchMode"
+      data-mode="FLAG"
+    >
+      <text class="mode-icon">🚩</text>
+      <text class="mode-title">插旗模式</text>
+    </view>
+  </view>
+
+  <!-- ⑤ 底部操作说明 -->
+  <view class="footer-tips">
+    <view class="tip-line"><text class="kbd">点击</text> 翻开方格 ｜ <text class="kbd">长按</text> 插旗 / 取消标记</view>
+    <view class="tip-line" wx:if="{{canPan}}">棋盘较大，按住棋盘拖动可查看其他区域</view>
+    <view class="tip-line" wx:else>点击数字格可快速展开周围格子</view>
+  </view>
+
+  <!-- 弹窗通用遮罩 -->
+  <view class="modal-overlay" wx:if="{{showModal}}">
+    <view class="modal-content" wx:if="{{modalType === 'RECORDS'}}">
+      <view class="modal-title">🏆 最佳通关记录</view>
+      <view class="records-list">
+        <view class="record-item">
+          <text class="record-label">初级 (9×9)</text>
+          <text class="record-val">{{records.beginner ? records.beginner + ' 秒' : '暂无记录'}}</text>
+        </view>
+        <view class="record-item">
+          <text class="record-label">中级 (16×16)</text>
+          <text class="record-val">{{records.intermediate ? records.intermediate + ' 秒' : '暂无记录'}}</text>
+        </view>
+        <view class="record-item">
+          <text class="record-label">高级 (16×30)</text>
+          <text class="record-val">{{records.expert ? records.expert + ' 秒' : '暂无记录'}}</text>
+        </view>
+      </view>
+      <view class="modal-buttons">
+        <view class="btn btn-secondary" bindtap="clearRecords">清空记录</view>
+        <view class="btn btn-primary" bindtap="closeModal">关闭</view>
+      </view>
+    </view>
+
+    <view class="modal-content" wx:if="{{modalType === 'WIN'}}">
+      <view class="modal-title">🎉 挑战成功！</view>
+      <view class="win-detail">
+        <text>通关难度：{{diffOptions[diffIndex].label}}</text>
+        <text class="win-time">耗时：{{gameTime}} 秒</text>
+      </view>
+      <view class="modal-buttons">
+        <view class="btn btn-primary" bindtap="onWinPlayAgain">再来一局</view>
+      </view>
+    </view>
+  </view>
+</view>

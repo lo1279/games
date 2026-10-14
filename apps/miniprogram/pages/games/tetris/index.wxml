@@ -1,0 +1,69 @@
+<!-- pages/games/tetris/index.wxml
+  霓虹俄罗斯方块 · 小程序原生版（移动端布局）
+  顶部：暂存(HOLD) | 分数面板 | 下一个(NEXT)
+  中部：主棋盘（Canvas 绘制，含开始/暂停/结束遮罩）
+  底部：8 键虚拟手柄（左移/旋转/右移/暂停 · 暂存/软降/硬降/重开）
+-->
+<view class="container">
+
+  <!-- 顶栏：HOLD | 分数 | NEXT -->
+  <view class="topbar">
+    <view class="preview-box">
+      <text class="preview-label">暂存</text>
+      <canvas type="2d" id="holdCanvas" class="preview-canvas"></canvas>
+    </view>
+
+    <view class="score-box">
+      <view class="score-main">
+        <text class="score-label">得分</text>
+        <text class="score-val">{{score}}</text>
+      </view>
+      <view class="score-mini-row">
+        <view class="mini-item"><text class="mini-label">等级</text><text class="mini-val">{{level}}</text></view>
+        <view class="mini-item"><text class="mini-label">消行</text><text class="mini-val">{{lines}}</text></view>
+      </view>
+      <view class="mini-item wide"><text class="mini-label">最高</text><text class="mini-val">{{highScore}}</text></view>
+    </view>
+
+    <view class="preview-box">
+      <text class="preview-label">下一个</text>
+      <canvas type="2d" id="nextCanvas" class="preview-canvas"></canvas>
+    </view>
+  </view>
+
+  <!-- 主棋盘 -->
+  <view class="board-area">
+    <canvas
+      type="2d"
+      id="boardCanvas"
+      class="board-canvas"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove"
+      bindtouchend="onTouchEnd"
+      bindtouchcancel="onTouchEnd"
+    ></canvas>
+
+    <!-- 开始 / 暂停 / 结束 遮罩 -->
+    <view class="overlay" wx:if="{{showOverlay}}">
+      <view class="overlay-card">
+        <text class="overlay-title">{{overlayTitle}}</text>
+        <text class="overlay-sub">{{overlaySub}}</text>
+        <view class="overlay-btn" bindtap="onStart" hover-class="overlay-btn-active">{{overlayBtn}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 虚拟手柄（4 列 × 2 行） -->
+  <view class="controls">
+    <view class="ctrl-btn" bindtap="onLeft" hover-class="ctrl-active">◀</view>
+    <view class="ctrl-btn" bindtap="onRotate" hover-class="ctrl-active">↻</view>
+    <view class="ctrl-btn" bindtap="onRight" hover-class="ctrl-active">▶</view>
+    <view class="ctrl-btn" bindtap="togglePause" hover-class="ctrl-active">{{isPaused ? '▶' : '⏸'}}</view>
+
+    <view class="ctrl-btn" bindtap="onHold" hover-class="ctrl-active">暂存</view>
+    <view class="ctrl-btn" bindtap="onSoftDrop" hover-class="ctrl-active">▼</view>
+    <view class="ctrl-btn ctrl-drop" bindtap="onHardDrop" hover-class="ctrl-active">⤓</view>
+    <view class="ctrl-btn" bindtap="onRestart" hover-class="ctrl-active">🔄</view>
+  </view>
+
+</view>

@@ -1,0 +1,77 @@
+<!-- pages/games/three-kingdoms-slg/tactics/index.wxml -->
+<view class="tac-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">🎴 战法系统</view>
+    <text class="copper">🪙 {{copper}}</text>
+  </view>
+
+  <view class="tab-row">
+    <view class="tab {{tab === 'owned' ? 'on' : ''}}" bindtap="switchTab" data-tab="owned">已研习</view>
+    <view class="tab {{tab === 'codex' ? 'on' : ''}}" bindtap="switchTab" data-tab="codex">战法图鉴</view>
+    <view class="tab {{tab === 'event' ? 'on' : ''}}" bindtap="switchTab" data-tab="event">事件战法</view>
+  </view>
+
+  <scroll-view class="tac-scroll" scroll-y>
+    <!-- 已研习 -->
+    <block wx:if="{{tab === 'owned'}}">
+      <view class="tac-card" wx:for="{{ownedList}}" wx:key="id" wx:for-item="t">
+        <view class="tac-q tac-q-{{t.quality}}">{{t.quality}}</view>
+        <view class="tac-body">
+          <view class="tac-name">{{t.name}} <text class="tac-lv">Lv.{{t.level}}</text></view>
+          <view class="tac-desc">{{t.desc}}</view>
+        </view>
+        <view class="tac-actions">
+          <button wx:if="{{t.canUpgrade}}" class="tac-btn" bindtap="upgradeTactic" data-id="{{t.id}}">升级 🪙{{t.nextCost}}</button>
+          <button wx:else class="tac-btn disabled" disabled>{{t.nextCost ? '铜币不足' : '满级'}}</button>
+          <button class="tac-btn equip" bindtap="openEquip" data-id="{{t.id}}">装配</button>
+        </view>
+      </view>
+    </block>
+
+    <!-- 图鉴 -->
+    <block wx:if="{{tab === 'codex'}}">
+      <view class="tac-card {{t.owned ? '' : 'locked'}}" wx:for="{{codexList}}" wx:key="id" wx:for-item="t">
+        <view class="tac-q tac-q-{{t.quality}}">{{t.quality}}</view>
+        <view class="tac-body">
+          <view class="tac-name">{{t.name}} <text class="tac-type">{{t.type}}</text></view>
+          <view class="tac-desc">{{t.owned ? t.desc : '未拥有 · 通过招募/事件获取'}}</view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 事件战法 -->
+    <block wx:if="{{tab === 'event'}}">
+      <view class="tac-card" wx:for="{{eventList}}" wx:key="id" wx:for-item="e">
+        <view class="tac-q evt">{{e.badge}}</view>
+        <view class="tac-body">
+          <view class="tac-name">{{e.title}}</view>
+          <view class="tac-desc">{{e.story}}</view>
+          <view class="tac-req">需求: {{e.reqText}}</view>
+        </view>
+        <button wx:if="{{e.done}}" class="tac-btn disabled" disabled>已兑换</button>
+        <button wx:elif="{{e.canExchange}}" class="tac-btn" bindtap="exchangeEvent" data-id="{{e.id}}">兑换</button>
+        <button wx:else class="tac-btn disabled" disabled>未集齐</button>
+      </view>
+    </block>
+  </scroll-view>
+
+  <!-- 装配选择武将 -->
+  <view class="modal-overlay" wx:if="{{showEquip}}">
+    <view class="modal-box">
+      <view class="modal-head">装配战法到武将</view>
+      <scroll-view class="equip-scroll" scroll-y>
+        <view class="equip-item" wx:for="{{ownedGenerals}}" wx:key="id" wx:for-item="g">
+          <image wx:if="{{g.portrait}}" class="equip-img" src="{{g.portrait}}" mode="aspectFill" />
+          <view wx:else class="equip-img emoji">{{g.avatar}}</view>
+          <view class="equip-name">{{g.name}}</view>
+          <view class="equip-slots">
+            <text class="slot-btn" bindtap="equipTo" data-gid="{{g.id}}" data-slot="1">战法1</text>
+            <text class="slot-btn" bindtap="equipTo" data-gid="{{g.id}}" data-slot="2">战法2</text>
+          </view>
+        </view>
+      </scroll-view>
+      <button class="modal-close" bindtap="closeEquip">取消</button>
+    </view>
+  </view>
+</view>

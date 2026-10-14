@@ -1,0 +1,87 @@
+<!-- pages/games/super-mario/index.wxml -->
+<view class="mario-container">
+  <!-- NES 像素游戏主画布 -->
+  <view class="canvas-wrapper">
+    <canvas 
+      type="2d" 
+      id="marioCanvas" 
+      class="mario-canvas"
+    ></canvas>
+  </view>
+
+  <!-- 顶部 HUD 仪表盘 (复刻原版 NES 排版) -->
+  <view class="nes-hud">
+    <view class="hud-col">
+      <text class="hud-title">MARIO</text>
+      <text class="hud-value">{{scoreStr}}</text>
+    </view>
+    <view class="hud-col">
+      <text class="hud-title">COINS</text>
+      <text class="hud-value">🪙×{{coins}}</text>
+    </view>
+    <view class="hud-col">
+      <text class="hud-title">WORLD</text>
+      <text class="hud-value">{{worldStr}}</text>
+    </view>
+    <view class="hud-col">
+      <text class="hud-title">TIME</text>
+      <text class="hud-value">{{timeLeft}}</text>
+    </view>
+  </view>
+
+  <!-- 底部街机虚拟手柄操控区 -->
+  <view class="gamepad-area">
+    <!-- 左侧十字方向键 -->
+    <view class="dpad-box">
+      <view class="dpad-btn dpad-left" 
+            bindtouchstart="btnLeftDown" 
+            bindtouchend="btnLeftUp" 
+            bindtouchcancel="btnLeftUp">
+        <text class="btn-arrow">◀</text>
+      </view>
+      <view class="dpad-btn dpad-right" 
+            bindtouchstart="btnRightDown" 
+            bindtouchend="btnRightUp" 
+            bindtouchcancel="btnRightUp">
+        <text class="btn-arrow">▶</text>
+      </view>
+      <view class="dpad-btn dpad-down" 
+            bindtouchstart="btnDownDown" 
+            bindtouchend="btnDownUp" 
+            bindtouchcancel="btnDownUp">
+        <text class="btn-arrow">▼</text>
+      </view>
+    </view>
+
+    <!-- 右侧动作按键 (B加速 / A大跳) -->
+    <view class="action-box">
+      <view class="nes-btn btn-b" 
+            bindtouchstart="btnBDown" 
+            bindtouchend="btnBUp" 
+            bindtouchcancel="btnBUp">
+        <text class="btn-label">B</text>
+        <text class="btn-sub">加速</text>
+      </view>
+      <view class="nes-btn btn-a" 
+            bindtouchstart="btnADown" 
+            bindtouchend="btnAUp" 
+            bindtouchcancel="btnAUp">
+        <text class="btn-label">A</text>
+        <text class="btn-sub">跳跃</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 结算与通关弹窗 -->
+  <view class="modal-mask" wx:if="{{gameState === 'gameover' || gameState === 'win'}}">
+    <view class="modal-card">
+      <view class="modal-title">{{gameState === 'win' ? '🎉 通关大捷！' : '💀 游戏结束'}}</view>
+      <view class="modal-desc">{{gameState === 'win' ? '感谢您拯救了蘑菇王国！' : '胜败乃兵家常事，重拾信心再战！'}}</view>
+      <view class="modal-score">最终得分：<text class="score-highlight">{{score}}</text></view>
+      <view class="modal-actions">
+        <button class="action-btn btn-restart" bindtap="restartGame">再来一局</button>
+        <button class="action-btn btn-exit" bindtap="goBack">返回大厅</button>
+      </view>
+    </view>
+  </view>
+</view>

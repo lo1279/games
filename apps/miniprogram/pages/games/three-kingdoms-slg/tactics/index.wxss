@@ -1,0 +1,39 @@
+/* pages/games/three-kingdoms-slg/tactics/index.wxss */
+.tac-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 10rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:14rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; flex:1; }
+.copper { font-size:24rpx; color:#e0b85a; }
+
+.tab-row { display:flex; gap:10rpx; padding:6rpx 22rpx 12rpx; }
+.tab { flex:1; text-align:center; font-size:25rpx; color:#cdbb8a; background:#1a140d; border:1rpx solid #3a2e1c; border-radius:24rpx; padding:10rpx 0; }
+.tab.on { background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; font-weight:700; }
+
+.tac-scroll { flex:1; padding:0 20rpx 40rpx; }
+.tac-card { display:flex; align-items:center; background:#16110b; border:1rpx solid #332818; border-radius:14rpx; padding:14rpx; margin-bottom:12rpx; }
+.tac-card.locked { opacity:.5; }
+.tac-q { width:54rpx; text-align:center; font-size:24rpx; font-weight:700; border-radius:8rpx; color:#1a140a; background:#caa85a; flex-shrink:0; }
+.tac-q-S { background:#e6c34a; } .tac-q-A { background:#d98a5a; } .tac-q-B { background:#7fa8d1; } .tac-q-C { background:#9aa0a6; }
+.tac-q-evt { background:#a06ad1; color:#fff; } .tac-q-evt.evt { background:#a06ad1; color:#fff; }
+.tac-body { flex:1; padding:0 14rpx; }
+.tac-name { font-size:27rpx; font-weight:700; color:#f2e2b0; }
+.tac-lv { color:#e0b85a; font-size:20rpx; }
+.tac-type { font-size:19rpx; color:#8a7a55; }
+.tac-desc { font-size:20rpx; color:#b6a47a; line-height:1.35; margin-top:2rpx; }
+.tac-req { font-size:19rpx; color:#8fb8d1; margin-top:4rpx; }
+.tac-actions { display:flex; flex-direction:column; gap:8rpx; }
+.tac-btn { font-size:20rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:10rpx; padding:0 14rpx; height:52rpx; line-height:52rpx; }
+.tac-btn.equip { background:#2a3a4a; color:#bcd6ea; }
+.tac-btn.disabled { background:#2a2316; color:#7a6c4a; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+.modal-box { width:86%; max-height:76vh; background:#16110b; border:1rpx solid #4a3a1e; border-radius:18rpx; padding:24rpx; display:flex; flex-direction:column; }
+.modal-head { font-size:30rpx; font-weight:700; color:#f0dca0; text-align:center; margin-bottom:14rpx; }
+.equip-scroll { flex:1; max-height:54vh; }
+.equip-item { display:flex; align-items:center; padding:10rpx 6rpx; border-bottom:1rpx solid #241c10; }
+.equip-img { width:64rpx; height:64rpx; border-radius:10rpx; background:#241c10; margin-right:14rpx; flex-shrink:0; }
+.equip-img.emoji { display:flex; align-items:center; justify-content:center; font-size:38rpx; }
+.equip-name { flex:1; font-size:26rpx; color:#f2e2b0; }
+.equip-slots { display:flex; gap:10rpx; }
+.slot-btn { font-size:20rpx; color:#1a140a; background:#caa85a; border-radius:8rpx; padding:8rpx 12rpx; }
+.modal-close { margin-top:14rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; font-size:26rpx; }

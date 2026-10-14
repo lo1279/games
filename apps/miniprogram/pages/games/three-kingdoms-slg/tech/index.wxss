@@ -1,0 +1,35 @@
+/* pages/games/three-kingdoms-slg/tech/index.wxss */
+.tech-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 12rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:16rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; }
+
+.buffs-bar { display:flex; flex-wrap:wrap; gap:10rpx; padding:8rpx 24rpx 16rpx; }
+.buff-item { font-size:22rpx; background:#1c160f; border:1rpx solid #3a2e1c; border-radius:24rpx; padding:6rpx 14rpx; color:#cdbb8a; }
+.buff-num { color:#f0d28a; font-weight:700; }
+
+.tech-scroll { flex:1; padding:0 20rpx 40rpx; }
+.dist-block { margin-top:18rpx; }
+.dist-head { display:flex; align-items:center; padding:14rpx 8rpx; }
+.dist-icon { font-size:44rpx; margin-right:14rpx; }
+.dist-name { font-size:30rpx; font-weight:700; color:#f0dca0; display:block; }
+.dist-desc { font-size:22rpx; color:#9c8a63; }
+
+.tech-list { display:flex; flex-direction:column; gap:14rpx; }
+.tech-card { display:flex; align-items:center; background:#16110b; border:1rpx solid #332818; border-radius:16rpx; padding:16rpx; }
+.tech-card.status-locked { opacity:.55; }
+.tech-card.status-max { border-color:#5a4a22; }
+.tech-ic { font-size:40rpx; width:64rpx; text-align:center; }
+.tech-body { flex:1; padding:0 14rpx; }
+.tech-name-row { display:flex; justify-content:space-between; }
+.tech-name { font-size:28rpx; font-weight:700; color:#f2e2b0; }
+.tech-lv { font-size:22rpx; color:#caa85a; }
+.tech-sub { font-size:20rpx; color:#8a7a55; margin:2rpx 0 4rpx; }
+.tech-desc { font-size:21rpx; color:#b6a47a; line-height:1.35; }
+.tech-effect { font-size:21rpx; color:#7fd18a; margin-top:4rpx; }
+.tech-lock { font-size:20rpx; color:#d98a8a; margin-top:4rpx; }
+.tech-cost { font-size:21rpx; color:#e0b85a; margin-top:4rpx; }
+
+.tech-btn { font-size:24rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; padding:0 22rpx; height:60rpx; line-height:60rpx; }
+.tech-btn.disabled { background:#2a2316; color:#7a6c4a; }
+.tech-btn.maxed { background:#3a2e16; color:#e0c060; }

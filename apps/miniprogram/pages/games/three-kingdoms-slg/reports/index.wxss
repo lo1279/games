@@ -1,0 +1,27 @@
+/* pages/games/three-kingdoms-slg/reports/index.wxss */
+.rep-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 10rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:14rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; flex:1; }
+.rep-count { font-size:24rpx; color:#cdbb8a; }
+
+.cat-row { white-space:nowrap; padding:6rpx 18rpx 12rpx; }
+.cat-chip { display:inline-block; font-size:24rpx; color:#cdbb8a; background:#1a140d; border:1rpx solid #3a2e1c; border-radius:24rpx; padding:8rpx 20rpx; margin-right:12rpx; }
+.cat-chip.on { background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; font-weight:700; }
+
+.rep-scroll { flex:1; padding:0 20rpx 40rpx; }
+.rep-empty { text-align:center; color:#7a6c4a; font-size:24rpx; padding:60rpx 0; }
+.rep-card { display:flex; align-items:center; justify-content:space-between; background:#16110b; border:1rpx solid #332818; border-radius:12rpx; padding:18rpx; margin-bottom:12rpx; }
+.rep-title { font-size:26rpx; color:#f2e2b0; }
+.rep-time { font-size:20rpx; color:#9c8a63; margin-top:4rpx; }
+.rep-result { font-size:30rpx; font-weight:700; width:56rpx; text-align:center; }
+.rep-result.win { color:#7fd18a; }
+.rep-result.lose { color:#d98a8a; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+.modal-box { width:86%; max-height:78vh; background:#16110b; border:1rpx solid #4a3a1e; border-radius:18rpx; padding:24rpx; display:flex; flex-direction:column; }
+.modal-head { font-size:28rpx; font-weight:700; color:#f0dca0; text-align:center; margin-bottom:10rpx; }
+.rep-summary { font-size:23rpx; color:#e0b85a; text-align:center; margin-bottom:10rpx; }
+.battle-scroll { flex:1; max-height:52vh; }
+.b-log-row { font-size:21rpx; color:#cdbd92; line-height:1.5; padding:4rpx 0; border-bottom:1rpx solid #241c10; }
+.modal-close { margin-top:14rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; font-size:26rpx; }

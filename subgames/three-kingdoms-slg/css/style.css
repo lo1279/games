@@ -1,0 +1,7107 @@
+/* 三国志·战略版 (Three Kingdoms SLG) - 核心古风界面与动效样式 */
+
+:root {
+  --bg-dark: #0f1115;
+  --bg-card: #181b20;
+  --bg-card-hover: #22262d;
+  --border-gold: #c59b27;
+  --border-dark: #374151;
+  --text-gold: #fbbf24;
+  --text-light: #f3f4f6;
+  --text-muted: #9ca3af;
+  --camp-shu: #10b981;
+  --camp-wei: #3b82f6;
+  --camp-wu: #ef4444;
+  --camp-qun: #a855f7;
+  --header-height: 60px;
+  --bottom-nav-height: 64px;
+
+  /* ===== 设计令牌：圆角 4 档（收敛原先散落的 8 种取值） ===== */
+  --r-xs: 4px;   /* 徽章、小标签 */
+  --r-sm: 6px;   /* 小按钮、输入框 */
+  --r-md: 8px;   /* 中按钮、卡片 */
+  --r-lg: 12px;  /* 大面板、弹窗 */
+
+  /* ===== 设计令牌：层级（替换裸数字，避免弹窗与 HUD 层级靠巧合） ===== */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-hud: 200;
+  --z-nav: 300;
+  --z-modal: 400;
+  --z-showcase: 450;
+  --z-toast: 500;
+
+  /* ===== 设计令牌：动效时长 ===== */
+  --t-fast: 0.12s;
+  --t-mid: 0.2s;
+
+  /* ===== 设计令牌：语义色（按钮状态统一从这里取） ===== */
+  --btn-primary-from: #d97706;
+  --btn-primary-to: #b45309;
+  --btn-danger-from: #dc2626;
+  --btn-danger-to: #991b1b;
+  --btn-ghost-bg: rgba(255, 255, 255, 0.05);
+  --btn-ghost-bg-hover: rgba(255, 255, 255, 0.1);
+  --btn-ghost-border: rgba(255, 255, 255, 0.16);
+  --btn-ghost-border-hover: rgba(255, 255, 255, 0.28);
+  --btn-on-bg: rgba(245, 158, 11, 0.16);
+  --btn-on-border: rgba(245, 158, 11, 0.55);
+  --btn-on-text: #fcd34d;
+  --focus-ring: #fde047;
+}
+
+/* ============================================================
+   设计令牌 · 第二层（阶段 1 铺设）
+   ------------------------------------------------------------
+   本块是「纯增量」：不修改、不覆盖上面任何既有声明。
+   目的是把后续阶段（骨架统一 / 卡片收敛 / 质感打磨）要用的
+   刻度预先定义好，等真正迁移规则时一处替换即可。
+
+   为什么单独开一个 :root 而不是并入上面的块？
+   ——为了可回滚。既有块是历史资产（含按钮体系契约），
+   动它风险高；本块是纯新增，删掉整块即可完全回到阶段 0。
+
+   刻度设计依据（来自全量审计的真实分布）：
+     字号 23 种 / 圆角 10 种 / 间距 25 种 / 阴影 29 种 / 色值 159 个
+   收敛目标：下面每一档都能覆盖现有高频取值，低频孤值
+   （圆角 1/2/3/5/7/10、字号 8/19/26/38/42）在迁移阶段
+   统一向上取整到最近档位，不保留。
+   ============================================================ */
+:root {
+  /* ---------- 字体族 ----------
+     古风质感的关键缺口：原版《三国志·战略版》标题用宋体，
+     本项目标题全是系统黑体。--font-serif 供阶段 4 切换标题用。 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* 宋体/明朝体栈：按可用性降级，末尾回落到无衬线避免缺字豆腐块。
+     阶段 4 落地说明（实测 Windows 11 字体文件）：
+       - "Songti SC"      macOS 才有，Windows 跳过
+       - "SimSun"         ✅ Windows 实测命中（simsun.ttc）
+       - "Noto Serif SC"  本机未安装，跳过
+       - "STZhongsong"    部分 Windows 繁体版有，本机未命中
+     即 Windows 实际落到 SimSun。SimSun 中文笔画细密、字面偏小，
+     直接用于 18-22px 标题会显得单薄，故标题层统一配 fw-bold + 0.02em
+     字距补偿（见下方「标题衬线层」）。 */
+  --font-serif: "Songti SC", "SimSun", "Noto Serif SC", "Source Han Serif SC",
+    "STZhongsong", "Georgia", "Times New Roman", serif;
+  /* 标题专用：强制中文字重，避免 SimSun 细笔画在深色底上发虚 */
+  --fw-title: 700;
+  /* 标题字距：宋体字面偏小，正字距能让标题显得舒展 */
+  --ls-title: 0.02em;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Courier New", monospace;
+
+  /* ---------- 字号刻度（9 档）----------
+     以 4px 为基准步进，覆盖 23 种野生字号的主要落点。
+     分档职责：
+       micro 10px  纯角标、数字徽章，允许被压到最小
+       xs    11px  次级标注、title 提示
+       sm    12px  说明文字、卡片副文本（当前占比最高的可读下限）
+       md    13px  表格内文本、密集列表
+       base  14px  ** 全站正文基准，迁移阶段的收敛目标 **
+       lg    16px  卡片标题
+       xl    18px  区块标题
+       2xl   22px  页面主标题
+       3xl   28px  弹窗主视觉数字 */
+  --fs-micro: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-base: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fs-3xl: 28px;
+
+  /* ---------- 行高 ----------
+     暗色底 + 中文密排时，行高不足会显著压低可读性。
+     tight 用于数字/大标题，normal 用于正文，relaxed 用于长段说明。 */
+  --lh-tight: 1.25;   /* 大字号单行文本 */
+  --lh-normal: 1.5;   /* 正文默认 */
+  --lh-relaxed: 1.7;  /* 多行说明段落 */
+
+  /* ---------- 字重 ---------- */
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+  --fw-black: 900;    /* 数值强调、星级 */
+
+  /* ---------- 间距刻度（8 档，4px 基准）----------
+     --sp-1/--sp-2 是像素级微调档，仅用于「图标与文字贴合」
+     这类 1~4px 的场景；组件间距一律从 --sp-3 起。 */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 8px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 20px;
+  --sp-7: 24px;
+  --sp-8: 32px;
+
+  /* ---------- 圆角 ----------
+     上方已定义 --r-xs/sm/md/lg（4/6/8/12），此处不重复定义，
+     仅补两档特殊场景：pill 用于胶囊标签，circle 用于头像。
+     迁移规则：野生值 1/2/3/5/7/10 一律向上取整到最近档。 */
+  --r-pill: 999px;
+  --r-circle: 50%;
+
+  /* ---------- 边框 ---------- */
+  --bw: 1px;
+  --bw-thin: 0.5px;   /* 内部细分隔线，比 1px 更轻 */
+
+  /* ---------- 阴影层级（4 档 + 2 强调）----------
+     层级语义：xs 微浮（标签）→ sm 静止卡片 → md 悬浮态
+     → lg 弹窗/浮层。强调档仅用于可点击主目标。 */
+  --sh-xs: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --sh-sm: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --sh-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --sh-lg: 0 16px 48px rgba(0, 0, 0, 0.68);
+  --sh-gold: 0 4px 14px rgba(251, 191, 36, 0.22);   /* 金色强调 */
+  --sh-danger: 0 4px 14px rgba(239, 68, 68, 0.28);  /* 危险/五星闪红 */
+
+  /* ---------- 表面与描边语义色 ----------
+     补齐上方 --bg-dark/--bg-card 缺失的档位，
+     让「卡片 / 卡片悬浮 / 浮层 / 分隔线」有统一取色点。 */
+  --bg-raised: #22262d;      /* 卡片内嵌块、弹窗内分区 */
+  --bg-sunken: #0c0e12;      /* 凹陷区、进度槽、头像底 */
+  --bg-overlay: rgba(0, 0, 0, 0.75);
+  --line-subtle: #2d3340;    /* 卡片内分隔线 */
+  --line-strong: #475569;    /* 强调描边、输入框 */
+
+  /* ---------- 文字语义色 ---------- */
+  --text-body: #e5e7eb;      /* 正文（比 --text-light 略柔，长文不刺眼） */
+  --text-subtle: #d1d5db;    /* 次级正文 */
+  --text-hint: #6b7280;      /* 禁用态、占位符 */
+
+  /* ---------- 阵营色三件套 ----------
+     上方 --camp-* 只给了主色，缺背景/描边/文字三个衍生档。
+     阵营标签统一走「bg + border + text」组合，避免各处手写 rgba。 */
+  --camp-shu-bg: rgba(16, 185, 129, 0.15);
+  --camp-shu-border: #059669;
+  --camp-shu-text: #6ee7b7;
+  --camp-wei-bg: rgba(59, 130, 246, 0.15);
+  --camp-wei-border: #2563eb;
+  --camp-wei-text: #93c5fd;
+  --camp-wu-bg: rgba(239, 68, 68, 0.15);
+  --camp-wu-border: #dc2626;
+  --camp-wu-text: #fca5a5;
+  --camp-qun-bg: rgba(168, 85, 247, 0.15);
+  --camp-qun-border: #9333ea;
+  --camp-qun-text: #d8b4fe;
+
+  /* ---------- 状态语义色三件套 ----------
+     供按钮、提示条、战力分档（great/even/weak/danger）统一取色。 */
+  --ok-bg: rgba(16, 185, 129, 0.12);
+  --ok-border: #059669;
+  --ok-text: #6ee7b7;
+  --warn-bg: rgba(245, 158, 11, 0.12);
+  --warn-border: #d97706;
+  --warn-text: #fcd34d;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: #dc2626;
+  --danger-text: #fca5a5;
+  --info-bg: rgba(56, 189, 248, 0.12);
+  --info-border: #0284c7;
+  --info-text: #7dd3fc;
+
+  /* ---------- 四大资源色 ----------
+     沙盘/内政领地的物产标识色，迁移后替代散落的
+     #86efac / #cbd5e1 / #fdba74 / #fde047 硬编码。 */
+  --res-wood: #86efac;     /* 木 */
+  --res-iron: #cbd5e1;     /* 铁 */
+  --res-stone: #fdba74;    /* 石 */
+  --res-grain: #fde047;    /* 粮 */
+
+  /* ---------- 动效 ----------
+     --t-fast/--t-mid 已在既有块定义，此处仅补 slow 与三档缓动。
+     收敛目标：现有 6 种散落的 cubic-bezier 统一到这三个。 */
+  --t-slow: 0.32s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);      /* 减速收尾，用于入场 */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);    /* 对称，用于往复 */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 回弹，用于强调 */
+
+  /* ---------- 层级补档 ----------
+     既有 z-base/sticky/hud/nav/modal/showcase/toast 已覆盖，
+     此处仅补一个遮罩层，供后续新增浮层使用。 */
+  --z-overlay: 350;
+}
+
+/* ============================================================
+   数字排版：等宽数字
+   ------------------------------------------------------------
+   HUD 资源每秒刷新，若用比例字体会因数字宽度变化左右抖动，
+   这是「廉价感」的典型来源。font-variant-numeric 让所有
+   数字占等宽格位，刷新时只上下变、不左右晃。
+   仅作用于数值元素，不影响中文正文流。
+
+   选择器说明：.val / .value / .num / .cost-badge 是现网
+   真实存在的数值类（分布见下），此处不臆造类名——
+   新增类应在阶段 2 迁移内联样式时同步登记到本规则。
+     .val       index.html 9 处（HUD 资源数值）
+     .value     main.js 9 处
+     .num       main.js 5 处
+     .cost-badge main.js 3 处（Cost / 统御消耗）
+
+   注意：不要把 .power-compare（战力对比整条）加进来——
+   它含中文说明文字，tabular-nums 会让汉字也按等宽排版，
+   反而破坏排版。等宽只应作用于纯数字元素。
+   ============================================================ */
+.val,
+.value,
+.num,
+.cost-badge,
+.res-badge .val {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============================================================
+   按钮基础层
+   全站 71 个 <button>、11 套按钮 class 统一在此声明交互契约，
+   下游 .btn-* 类只需声明外观，不再重复定义 transition / cursor /
+   焦点环 / 禁用态。原先移动端无 :active 反馈、键盘无焦点位、
+   系统 tap 高亮闪灰蓝方块、禁用态看不出禁用——四问题在此一次性收敛。
+   ============================================================ */
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  cursor: pointer;
+  /* 抑制移动端点击时的系统高亮方块（与暗色古风主题冲突） */
+  -webkit-tap-highlight-color: transparent;
+  /* 关闭 300ms 点击延迟，同时避免双击缩放误触 */
+  touch-action: manipulation;
+  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease,
+    color var(--t-mid) ease, box-shadow var(--t-mid) ease,
+    filter var(--t-mid) ease, transform var(--t-fast) ease;
+}
+
+/* 按下反馈：仅在未禁用的按钮上生效。
+   :active 相比 :hover 的优势是移动端点击必定触发，这是手感的关键。 */
+button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* 键盘焦点环：用 :focus-visible 而非 :focus，
+   避免鼠标点击时也冒出描边（那才是真正的视觉噪音）。 */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* 禁用态：全局兜底。此前全站仅 .building-card .upgrade-btn 有此样式，
+   抽卡 / 升级 / 试炼等按钮禁用时与可用态外观完全一致。 */
+button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部资源总览条 (HUD)
+   高度用 min-height + padding 让出 env(safe-area-inset-top)：iOS 刘海/灵动岛
+   机型下 env() 会返回非零值，若写死 height 会把状态栏区域压掉导致内容被遮挡。
+   meta 已声明 viewport-fit=cover，此处安全区才会生效。 */
+.res-hud {
+  min-height: var(--header-height);
+  background: linear-gradient(180deg, var(--wood-800) 0%, var(--wood-900) 100%);
+  border-bottom: 2px solid var(--bronze);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  z-index: var(--z-hud);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+
+.brand-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.game-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--gold-bright);
+  padding: 3px 10px;
+  border: 1px solid var(--bronze-light);
+  border-radius: var(--r-xs);
+  background: linear-gradient(180deg, var(--cinnabar) 0%, #6e211c 100%);
+  box-shadow: inset 0 0 0 1px rgba(226,200,115,0.42), 0 1px 3px rgba(0,0,0,0.5);
+  white-space: nowrap;
+}
+
+.res-items {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.res-items::-webkit-scrollbar {
+  display: none;
+}
+
+.res-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(180deg, rgba(42, 30, 18, 0.92), rgba(21, 16, 10, 0.92));
+  border: 1px solid var(--bronze);
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: #e7d9bd;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.res-badge span.val {
+  font-weight: 700;
+  color: #f0e3c8;
+}
+
+.res-badge.gold { border-color: var(--border-gold); background: rgba(217, 119, 6, 0.18); }
+.res-badge.gold span.val { color: #fde047; }
+.res-badge.orders { border-color: #4f86d6; }
+
+/* 主工作视窗容器 */
+.slg-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+}
+
+.slg-tab-page {
+  position: absolute;
+  inset: 0;
+  display: none;
+  overflow-y: auto;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 50% 16%, rgba(150,108,58,0.20) 0%, rgba(21,16,10,0.96) 72%),
+    repeating-linear-gradient(91deg, rgba(255,236,200,0.020) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(89deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 11px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+}
+
+.slg-tab-page.active {
+  display: block;
+}
+
+/* 底部标签导航栏
+   与 HUD 同理：min-height + 底部 padding 让出 iPhone 手势条区域 */
+.bottom-nav {
+  min-height: var(--bottom-nav-height);
+  background: #11141a;
+  border-top: 1px solid #2a2f3a;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: var(--z-nav);
+  flex-shrink: 0;
+}
+
+.nav-tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: var(--r-md);
+  transition: background-color var(--t-mid) ease, color var(--t-mid) ease,
+    transform var(--t-fast) ease;
+}
+
+.nav-tab-btn .icon {
+  font-size: 18px;
+}
+
+.nav-tab-btn:hover {
+  color: #e5e7eb;
+}
+
+.nav-tab-btn.active {
+  color: var(--text-gold);
+  background: rgba(251, 191, 36, 0.1);
+  font-weight: bold;
+}
+
+/* 🎴/📚 武将模块二级导航选项卡（名将 / 战法） */
+.sub-nav-tab-btn {
+  font-weight: bold;
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: var(--r-sm);
+  background: rgba(26, 20, 12, 0.55);
+  border: 1px solid rgba(154, 119, 72, 0.45);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  outline: none;
+}
+
+.sub-nav-tab-btn:hover {
+  color: #e7d9bd;
+  border-color: var(--bronze-light);
+  background: rgba(42, 30, 18, 0.85);
+}
+
+.sub-nav-tab-btn.active {
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%) !important;
+  border: 1px solid var(--gold-bright) !important;
+  color: #ffe9a8 !important;
+  font-weight: 800 !important;
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.4),
+    0 0 14px rgba(245, 158, 11, 0.35) !important;
+}
+
+/* ⚔️ 征战模块二级分段导航控制器（经典战役 / 演武通天阁 / 假想敌演习沙盒） */
+.battle-subtabs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.85) 0%, rgba(11, 15, 25, 0.92) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.battle-subtabs-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background: rgba(7, 10, 18, 0.82);
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  border-radius: 10px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65);
+}
+
+.battle-subtab-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a99a7d;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: color 0.24s ease, background 0.24s ease, border-color 0.24s ease,
+    box-shadow 0.24s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.battle-subtab-btn .subtab-icon {
+  font-size: 15px;
+  line-height: 1;
+  filter: grayscale(0.35) opacity(0.82);
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), filter 0.24s ease;
+}
+
+.battle-subtab-btn .subtab-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.32);
+  transition: all 0.24s ease;
+}
+
+.battle-subtab-btn:hover:not(.active) {
+  color: #e7d9bd;
+  background: rgba(42, 30, 18, 0.7);
+  border-color: rgba(154, 119, 72, 0.5);
+  transform: translateY(-1px);
+}
+
+.battle-subtab-btn:hover:not(.active) .subtab-icon {
+  filter: grayscale(0) opacity(1);
+  transform: scale(1.08);
+}
+
+/* 选中态底部流光指示横条 */
+.battle-subtab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  right: 18%;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #fde047, #f59e0b, #fde047, transparent);
+  border-radius: 3px 3px 0 0;
+  opacity: 0;
+  transform: scaleX(0.3);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.battle-subtab-btn.active {
+  color: #ffe9a8 !important;
+  font-weight: 800;
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--gold-bright);
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.45),
+    0 4px 14px rgba(245, 158, 11, 0.3);
+}
+
+.battle-subtab-btn.active .subtab-icon {
+  filter: grayscale(0) opacity(1) drop-shadow(0 0 6px rgba(251, 191, 36, 0.65));
+  transform: scale(1.12);
+}
+
+.battle-subtab-btn.active .subtab-badge {
+  background: rgba(254, 243, 199, 0.22);
+  color: #fef08a;
+  border-color: rgba(253, 224, 71, 0.65);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+.battle-subtab-btn.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+  box-shadow: 0 -1px 8px rgba(251, 191, 36, 0.9);
+}
+
+/* 右侧模式特性胶囊标签（支持根据当前激活选项卡智能高亮） */
+.battle-subtabs-hints {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.battle-hint-tag {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  transition: opacity 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  opacity: 0.45;
+  transform: scale(0.97);
+}
+
+.battle-hint-tag.hint-campaigns {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(5, 150, 105, 0.75);
+  color: #6ee7b7;
+}
+
+.battle-hint-tag.hint-trials {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(2, 132, 199, 0.75);
+  color: #38bdf8;
+}
+
+.battle-hint-tag.hint-sandbox {
+  background: rgba(251, 191, 36, 0.14);
+  border: 1px solid rgba(217, 119, 6, 0.75);
+  color: #fbbf24;
+}
+
+.battle-subtabs-header:has(#subTabCampaigns.active) .hint-campaigns,
+.battle-subtabs-header:has(#subTabTrials.active) .hint-trials,
+.battle-subtabs-header:has(#subTabSandbox.active) .hint-sandbox {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.18);
+}
+
+/* 征战子面板切换淡入微动效 */
+#campaignsContainer,
+#trialsContainer,
+#sandboxContainer {
+  animation: battleSubPanelFadeIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes battleSubPanelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 武将多维筛选胶囊按钮样式 */
+.btn-filter-camp, .btn-filter-star {
+  border: 1px solid transparent !important;
+  color: var(--text-muted);
+  border-radius: var(--r-xs) !important;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease,
+    transform var(--t-fast) ease;
+  line-height: 1.2;
+}
+
+.btn-filter-camp:hover, .btn-filter-star:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-filter-camp.active, .btn-filter-star.active {
+  background: linear-gradient(180deg, rgba(58, 42, 24, 0.92), rgba(36, 24, 9, 0.92)) !important;
+  border-color: rgba(226, 200, 115, 0.6) !important;
+  color: #ffe9a8 !important;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.35), 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+/* ================= 沙盘大地图样式 ================= */
+.map-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.map-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.map-grid-wrap {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #090a0d;
+  border: 1px solid #262c37;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* ================= 战棋版四大资源领地模块卡片 ================= */
+.resource-lands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* 阶段 3 收敛：底色/描边/圆角/阴影改取令牌，保留 gap 14px 与 overflow 的辨识度特征 */
+.resource-land-card {
+  background: var(--bg-card);
+  border: var(--bw) solid var(--line-subtle);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  box-shadow: var(--sh-sm);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--t-slow) var(--ease-in-out);
+}
+
+.resource-land-card:hover {
+  transform: translateY(-3px);
+  border-color: #fbbf24;
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.15);
+}
+
+.resource-land-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.resource-land-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.resource-land-icon {
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resource-land-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.resource-land-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.resource-land-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.resource-land-stats-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resource-land-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ================= 1~10级关卡阶梯列表样式 ================= */
+.land-tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.land-tier-item {
+  background: #151821;
+  border: 1px solid #282f3d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.land-tier-item:hover {
+  background: #1a1f2b;
+  border-color: #3b4556;
+}
+
+.land-tier-item.occupied {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, #151821 100%);
+}
+
+.land-tier-item.current-target {
+  border-left: 4px solid #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+/* ============================================================
+   沙盘页 · 战力评估可视化（阶段 1）
+   解决"出征前不知道能不能打"的核心问题：
+   每级土地显示 我方战力 vs 守军战力 的实时对比与倾向分档。
+   ============================================================ */
+
+/* ---------- 顶部 sticky 总览 ---------- */
+/* 10 级列表可达 58vh 滚动，若总览不跟随则滚起来就丢失当前进度信息 */
+.land-overview-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(11, 14, 20, 0.96);
+  backdrop-filter: blur(8px);
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* 我方军团战力概览条 */
+.land-my-power {
+  display: flex;
+  align-items: center;
+  gap: 8px 18px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.land-my-power-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lmp-label {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.lmp-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+/* 战力数字用金色强调，是玩家最关心的单点信息 */
+.lmp-value.highlight {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+}
+
+.land-my-power-item.warn .lmp-label {
+  color: #fbbf24;
+}
+
+.land-my-power-hint {
+  margin-left: auto;
+  font-size: 10px;
+  color: #6b7280;
+  text-align: right;
+}
+
+/* ---------- 单级战力对比条 ---------- */
+.power-compare {
+  /* 底色随档位变化，整行一眼可读 */
+  border-left: 3px solid #4b5563;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  transition: border-color var(--t-mid) ease, background var(--t-mid) ease;
+}
+
+.power-compare.great { border-left-color: #10b981; background: rgba(16, 185, 129, 0.08); }
+.power-compare.even  { border-left-color: #fbbf24; background: rgba(251, 191, 36, 0.08); }
+.power-compare.weak  { border-left-color: #f97316; background: rgba(249, 115, 22, 0.08); }
+.power-compare.danger{ border-left-color: #ef4444; background: rgba(239, 68, 68, 0.09); }
+
+.power-compare.empty {
+  border-left-color: #6b7280;
+}
+
+.power-compare-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.power-compare-head b {
+  color: #e2e8f0;
+  font-size: 11px;
+}
+
+.power-verdict {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* 档位配色：与左边框呼应 */
+.power-compare.great .power-verdict { color: #6ee7b7; }
+.power-compare.even  .power-verdict { color: #fbbf24; }
+.power-compare.weak  .power-verdict { color: #fdba74; }
+.power-compare.danger .power-verdict { color: #fca5a5; }
+
+/* 轨道底色 */
+.power-bar-track {
+  position: relative;
+  height: 6px;
+  margin: 4px 0 3px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+/* 我方战力填充；宽度由 JS 按 比值×100% 计算，上限 130% */
+.power-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.power-compare.great .power-bar-fill { background: linear-gradient(90deg, #059669, #34d399); }
+.power-compare.even  .power-bar-fill { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.power-compare.weak  .power-bar-fill { background: linear-gradient(90deg, #c2410c, #fb923c); }
+.power-compare.danger .power-bar-fill { background: linear-gradient(90deg, #991b1b, #f87171); }
+
+/* 守军基准线：100% 位置，让"我方是否越过基准线"一眼可判 */
+.power-bar-guard {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.power-tip {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.power-compare.great .power-tip { color: #86efac; }
+.power-compare.even  .power-tip { color: #fde68a; }
+.power-compare.weak  .power-tip { color: #fdba74; }
+.power-compare.danger .power-tip { color: #fca5a5; }
+
+/* 风险行：整体压暗，视觉上"劝退" */
+.land-tier-item.risky {
+  opacity: 0.82;
+}
+
+.land-tier-item.risky:hover {
+  opacity: 1;
+}
+
+/* ============================================================
+   斥候军报弹窗
+   ============================================================ */
+.scout-report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scout-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.scout-summary-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+}
+
+.ssr-label { font-size: 10px; color: #9ca3af; }
+.ssr-value { font-size: 13px; font-weight: 800; color: #e2e8f0; }
+.ssr-value.danger { color: #f87171; }
+.ssr-value.gain { color: #6ee7b7; }
+
+/* 军报里的战力裁决块 */
+.scout-verdict {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #4b5563;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.scout-verdict.great { border-left-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.scout-verdict.even  { border-left-color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+.scout-verdict.weak  { border-left-color: #f97316; background: rgba(249, 115, 22, 0.1); }
+.scout-verdict.danger{ border-left-color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+
+.sv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.sv-badge {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.scout-verdict.great .sv-badge { color: #6ee7b7; }
+.scout-verdict.even  .sv-badge { color: #fbbf24; }
+.scout-verdict.weak  .sv-badge { color: #fdba74; }
+.scout-verdict.danger .sv-badge { color: #fca5a5; }
+
+.sv-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sv-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scout-verdict.great .sv-fill { background: linear-gradient(90deg, #059669, #34d399); }
+.scout-verdict.weak  .sv-fill { background: linear-gradient(90deg, #c2410c, #fb923c); }
+.scout-verdict.danger .sv-fill { background: linear-gradient(90deg, #991b1b, #f87171); }
+
+.sv-nums {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.sv-nums b { color: #e2e8f0; }
+
+.scout-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fbbf24;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* 守军三人明细行 */
+.scout-hero-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scout-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+}
+
+.shr-avatar {
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shr-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shr-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.shr-role {
+  font-size: 9px;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid #b45309;
+  color: #fbbf24;
+  padding: 0 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  font-weight: 700;
+}
+
+.shr-detail {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.shr-power {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6ee7b7;
+  flex-shrink: 0;
+}
+
+.scout-tip {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.7;
+  padding: 9px 11px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 6px;
+}
+
+.scout-tip b { color: #93c5fd; }
+.scout-tip strong { color: #fbbf24; }
+
+/* ============================================================
+   战报结算条 / 屯田成果面板
+   ============================================================ */
+.battle-reward-banner {
+  border-radius: 8px;
+  padding: 11px 14px;
+  margin-bottom: 12px;
+  border: 1px solid;
+}
+
+.battle-reward-banner.win {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.battle-reward-banner.lose {
+  background: rgba(239, 68, 68, 0.09);
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.brb-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fbbf24;
+  margin-bottom: 5px;
+}
+
+.battle-reward-banner.lose .brb-title { color: #fca5a5; }
+
+.brb-lines {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #e2e8f0;
+  line-height: 1.75;
+}
+
+.brb-extras {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
+  font-size: 11px;
+  color: #fbbf24;
+  line-height: 1.7;
+}
+
+.harvest-report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.harvest-big {
+  text-align: center;
+  padding: 16px 12px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 8px;
+}
+
+.hb-label { font-size: 11px; color: #9ca3af; }
+
+.hb-value {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.35);
+}
+
+.hb-sub { font-size: 10px; color: #6b7280; margin-top: 2px; }
+
+.harvest-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.harvest-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.harvest-row b { color: #e2e8f0; }
+
+.harvest-levelups {
+  padding: 9px 11px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 6px;
+}
+
+.hl-item {
+  font-size: 12px;
+  color: #fde68a;
+  line-height: 1.8;
+}
+
+.world-map-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 72px);
+  grid-template-rows: repeat(9, 72px);
+  gap: 6px;
+}
+
+.map-tile {
+  background: #191d24;
+  border: 1px solid #333d4e;
+  border-radius: var(--r-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.map-tile:hover {
+  transform: scale(1.06);
+  z-index: var(--z-sticky);
+  border-color: #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+.map-tile.player-owned {
+  border-color: #10b981;
+  box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.25);
+  background: #13241c;
+}
+
+.map-tile.main-city {
+  border: 2px solid #fbbf24;
+  background: radial-gradient(circle, #3d2b07 0%, #1a160c 100%);
+}
+
+.map-tile .tile-icon {
+  font-size: 20px;
+}
+
+.map-tile .tile-name {
+  font-size: 10px;
+  color: var(--text-light);
+  margin-top: 2px;
+  text-align: center;
+}
+
+.map-tile .tile-level {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.map-tile .tile-flag {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #10b981;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ================= 武将卡牌 (Card) 样式 ================= */
+/* 原版三战大立绘卡面：180px 宽，黄金 3:4 比例，整体作为画幅容器 */
+.general-card {
+  width: 180px;
+  background: #11141a;
+  border: 1.5px solid var(--line-subtle);
+  border-radius: 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  transition: transform var(--t-mid) var(--ease-in-out),
+              box-shadow var(--t-mid) var(--ease-in-out),
+              border-color var(--t-mid) var(--ease-in-out);
+  cursor: pointer;
+  user-select: none;
+}
+
+.general-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--border-gold);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 12px rgba(251, 191, 36, 0.35);
+  z-index: 2;
+}
+
+/* 五星名将：金边 + 金色辉光 */
+.general-card.star-5 {
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
+}
+
+.general-card.star-5:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.55), 0 8px 24px rgba(0, 0, 0, 0.8);
+}
+
+/* 满红星（顶配）：红金双辉光 */
+.general-card.full-red {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.55), inset 0 0 8px rgba(239, 68, 68, 0.25) !important;
+}
+
+.star-red {
+  color: var(--danger-text) !important;
+  font-weight: var(--fw-black);
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.85);
+}
+
+.star-gold {
+  color: #f59e0b;
+  text-shadow: 0 0 4px rgba(245, 158, 11, 0.5);
+}
+
+/* 🎯 原版三战大立绘主视窗 (240px 纵深视窗) */
+.general-card .avatar-box.general-card-portrait {
+  width: 100%;
+  height: 240px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 25%, #242c3b 0%, #0c0e14 100%);
+  display: block;
+}
+
+/* 智能自适应立绘：黄金比例上半身全幅展现 */
+.general-card .general-card-portrait .general-avatar-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute;
+  inset: 0;
+}
+
+.general-card .general-card-portrait .general-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 8%;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.general-card:hover .general-card-portrait .general-avatar-img {
+  transform: scale(1.08);
+}
+
+/* 顶部悬浮角标栏 */
+.general-card .card-float-header {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.general-card .camp-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  letter-spacing: 1px;
+}
+
+.general-card .card-float-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.general-card .badge-in-troop {
+  font-size: 10px;
+  font-weight: bold;
+  color: #34d399;
+  background: rgba(6, 78, 59, 0.85);
+  border: 1px solid #10b981;
+  padding: 1px 5px;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.general-card .cost-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fde047;
+  background: rgba(15, 17, 24, 0.82);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* 🎯 底部原版黑金渐变沉浸式铭牌 */
+.general-card .general-card-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 34px 8px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: linear-gradient(
+    to top,
+    rgba(10, 12, 17, 0.98) 0%,
+    rgba(14, 17, 25, 0.92) 55%,
+    rgba(14, 17, 25, 0.45) 82%,
+    transparent 100%
+  );
+}
+
+.general-card .hero-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.general-card .hero-name .name-text {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.general-card .hero-level-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 1.3;
+}
+
+.general-card .stars-row {
+  text-align: left;
+  font-size: 12px;
+  line-height: 1;
+  margin: 1px 0 2px 0;
+}
+
+.general-card .apt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin: 1px 0;
+}
+
+.general-card .hero-exp-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.general-card .hero-exp-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 2px;
+}
+
+.apt-tag.S { color: #fbbf24; font-weight: bold; }
+.apt-tag.A { color: #3b82f6; font-weight: bold; }
+.apt-tag.B { color: #10b981; }
+.apt-tag.C { color: #9ca3af; }
+
+.general-card .stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 6px;
+  font-size: 10px;
+  color: #d1d5db;
+  margin-bottom: 6px;
+}
+
+.general-card .tactic-desc {
+  font-size: 10px;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+/* ================= 城建内政页面样式 ================= */
+.city-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* 阶段 3 收敛：补上此前缺失的 box-shadow（6 类卡片里唯一没有悬浮阴影的），
+   统一内边距 16px 与 gap 12px 的取色来源。横向 flex 布局保留。 */
+.building-card {
+  background: var(--bg-card);
+  border: var(--bw) solid var(--border-dark);
+  border-radius: var(--r-md);
+  padding: var(--sp-5);
+  display: flex;
+  gap: var(--sp-4);
+  align-items: flex-start;
+  box-shadow: var(--sh-sm);
+  transition: transform var(--t-mid) var(--ease-in-out),
+              border-color var(--t-mid) var(--ease-in-out);
+}
+.building-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-gold);
+  box-shadow: var(--sh-gold);
+}
+
+.building-card .b-icon {
+  font-size: 36px;
+  background: #11141a;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.building-card .b-info {
+  flex: 1;
+}
+
+.building-card .b-title {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+}
+
+.building-card .b-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 6px 0;
+}
+
+.building-card .b-effect {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.building-card .upgrade-btn {
+  background: linear-gradient(135deg, var(--btn-primary-from) 0%, var(--btn-primary-to) 100%);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.building-card .upgrade-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.building-card .upgrade-btn:disabled {
+  background: #4b5563;
+  filter: none;
+}
+
+/* ================= 招募卡池页面样式 ================= */
+.gacha-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+}
+
+.gacha-banners {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.gacha-banner {
+  width: 340px;
+  background: radial-gradient(circle at top, #2d1d07 0%, #15110d 100%);
+  border: 2px solid #b45309;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+.gacha-banner.copper {
+  background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+  border-color: #475569;
+}
+
+.gacha-banner h3 {
+  color: #fde047;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.gacha-banner.copper h3 {
+  color: #94a3b8;
+}
+
+.gacha-banner .pool-rates {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.gacha-btn-group {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.gacha-btn-group-fast {
+  margin-top: 10px;
+}
+
+.gacha-btn {
+  flex: 1;
+  padding: 10px 4px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--gold-bright);
+  font-weight: 700;
+  background: linear-gradient(180deg, #4a3414 0%, #2a1c0a 100%);
+  color: #ffe9a8;
+  cursor: pointer;
+  line-height: 1.35;
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.gacha-btn-fast50 {
+  border-color: #8b5cf6;
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.gacha-btn-fast100 {
+  border-color: var(--cinnabar-bright);
+  box-shadow: inset 0 0 0 1px rgba(207, 70, 54, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.gacha-btn-copper-fast {
+  border-color: #2f9bd6;
+  box-shadow: inset 0 0 0 1px rgba(47, 155, 214, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.gacha-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.gacha-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ================= 战报弹窗与推演回放 ================= */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(10, 8, 5, 0.86) 0%, rgba(4, 3, 2, 0.94) 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-modal);
+  backdrop-filter: blur(4px);
+}
+
+/* 强制登录门禁：遮罩不透明、置顶，彻底挡住游戏内容，无法逃逸 */
+.modal-mask.is-gate {
+  z-index: 99999;
+  background: #0a0907;
+  backdrop-filter: none;
+}
+
+.modal-content {
+  position: relative;
+  background:
+    repeating-linear-gradient(91deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-800) 100%);
+  border: 2px solid var(--bronze);
+  border-radius: var(--r-lg);
+  width: 94%;
+  max-width: 860px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(197, 155, 39, 0.22), inset 0 1px 0 rgba(236, 200, 115, 0.12);
+}
+
+/* 弹窗顶部回纹分隔带（青铜齿纹） */
+.modal-content::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, var(--bronze-light) 0 5px, transparent 5px 10px);
+  opacity: 0.5;
+  border-top-left-radius: var(--r-lg);
+  border-top-right-radius: var(--r-lg);
+  flex: 0 0 auto;
+}
+
+.modal-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--bronze);
+  box-shadow: 0 1px 0 rgba(236, 200, 115, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.modal-close-btn {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--bronze);
+  color: var(--gold-bright);
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.18s ease;
+}
+
+.modal-close-btn:hover {
+  color: #fff;
+  background: var(--cinnabar);
+  border-color: var(--cinnabar-bright);
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 编队武将槽位可点击动效与大立绘卡面样式 */
+.troop-hero-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.troop-hero-card.clickable:hover {
+  border-color: #fbbf24 !important;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), 0 0 14px rgba(251, 191, 36, 0.3) !important;
+}
+
+.troop-hero-card .hero-click-area {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.2s ease;
+}
+
+.troop-hero-card .hero-portrait-box {
+  width: 100%;
+  height: 190px;
+  position: relative;
+  overflow: hidden;
+  background: #0b0f19;
+}
+
+.troop-hero-card .hero-portrait-box .general-avatar-img {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.troop-hero-card:hover .hero-portrait-box .general-avatar-img {
+  transform: scale(1.05);
+}
+
+/* 武将全息详情弹窗样式 */
+.hero-detail-section {
+  background: #11141a;
+  border: 1px solid #2d3340;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.hero-detail-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #fbbf24;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-growth-tag {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-left: 2px;
+}
+
+/* 战报全息阵容对决看板 */
+.battle-lineup-container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
+/* 阶段 3 收敛：#11141a 与 --bg-dark(#0f1115) 仅差 2 级明度，
+   视觉上就是「更沉一档的卡片底」，用 --bg-sunken 表达这层语义。
+   补上悬浮态，使其与另外 5 类卡片一致。 */
+.lineup-team-card {
+  background: var(--bg-sunken);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  border: var(--bw) solid var(--line-subtle);
+  box-shadow: var(--sh-sm);
+  transition: transform var(--t-mid) var(--ease-in-out),
+              border-color var(--t-mid) var(--ease-in-out);
+}
+.lineup-team-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-gold);
+  box-shadow: var(--sh-gold);
+}
+
+/* 阶段 3：渐变末端同步为 --bg-sunken，与基类的卡片底衔接。
+   顶部 3px 阵营色条是对垒视图的核心辨识度，保留。 */
+.lineup-team-card.player {
+  border-top: 3px solid var(--camp-shu);
+  background: linear-gradient(180deg, var(--camp-shu-bg) 0%, var(--bg-sunken) 100%);
+}
+
+.lineup-team-card.enemy {
+  border-top: 3px solid var(--camp-wu);
+  background: linear-gradient(180deg, var(--camp-wu-bg) 0%, var(--bg-sunken) 100%);
+}
+
+.lineup-team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 6px;
+}
+
+.lineup-hero-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lineup-hero-item {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid #2d3340;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lineup-hero-item.leader {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.lineup-hero-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lineup-hero-tactics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.lineup-tac-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid #9333ea;
+  color: #e9d5ff;
+  font-weight: 600;
+}
+
+/* S级战法：橙金高亮 */
+.lineup-tac-badge.q-s,
+.lineup-tac-badge.s-rank {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #d97706;
+  color: #fde047;
+}
+
+/* A级战法：紫晶高亮 */
+.lineup-tac-badge.q-a {
+  background: rgba(168, 85, 247, 0.16);
+  border-color: #9333ea;
+  color: #e9d5ff;
+}
+
+/* B级战法：湛蓝高亮 */
+.lineup-tac-badge.q-b {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: #2563eb;
+  color: #93c5fd;
+}
+
+.battle-vs-badge {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.modal-tab-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #2d3340;
+  padding-bottom: 8px;
+}
+
+.modal-tab-btn {
+  background: #1f2937;
+  border: 1px solid var(--border-dark);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.modal-tab-btn:hover {
+  background: #374151;
+  color: #fff;
+}
+
+.modal-tab-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.battle-log-item {
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.tag-player {
+  color: #34d399;
+  font-weight: bold;
+  background: rgba(52, 211, 153, 0.15);
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-right: 2px;
+}
+
+.tag-enemy {
+  color: #f87171;
+  font-weight: bold;
+  background: rgba(248, 113, 113, 0.15);
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-right: 2px;
+}
+
+/* 🎯 三战原版经典战报：伤害鲜红、治疗翡翠绿 */
+.battle-num-dmg {
+  color: #ef4444 !important;
+  font-weight: 800 !important;
+  font-size: 1.05em;
+  padding: 0 2px;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.battle-num-heal {
+  color: #10b981 !important;
+  font-weight: 800 !important;
+  font-size: 1.05em;
+  padding: 0 2px;
+  text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.battle-log-item.header {
+  background: #2a2007;
+  color: #fbbf24;
+  font-weight: bold;
+  border-radius: 4px;
+  margin: 6px 0;
+}
+
+.battle-log-item.round-start {
+  color: #60a5fa;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.battle-log-item.skill { color: #fbbf24; }
+.battle-log-item.action { color: #e5e7eb; }
+.battle-log-item.heal { color: #34d399; }
+.battle-log-item.debuff { color: #f87171; }
+.battle-log-item.victory { color: #34d399; font-weight: bold; font-size: 14px; background: rgba(52, 211, 153, 0.1); }
+.battle-log-item.defeat { color: #ef4444; font-weight: bold; font-size: 14px; background: rgba(239, 68, 68, 0.1); }
+
+/* 战报日志快速筛选栏 */
+.battle-log-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid #374151;
+  border-radius: 6px;
+}
+
+.log-filter-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: var(--r-xs);
+  background: #1f2937;
+  color: var(--text-muted);
+  border: 1px solid var(--border-dark);
+}
+
+.log-filter-btn:hover {
+  background: #374151;
+  color: #fff;
+}
+
+.log-filter-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+/* 🎯 战法释放专属大招横幅视觉强化 */
+.battle-log-item.skill-banner {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.16) 0%, rgba(31, 41, 55, 0.4) 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin: 4px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  color: #fef3c7;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.15s ease;
+}
+
+.battle-log-item.skill-banner:hover {
+  transform: translateX(2px);
+}
+
+.battle-log-item.skill-banner.player {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.20) 0%, rgba(15, 23, 42, 0.4) 100%);
+  border-left: 4px solid #10b981;
+}
+
+.battle-log-item.skill-banner.enemy {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.20) 0%, rgba(15, 23, 42, 0.4) 100%);
+  border-left: 4px solid #ef4444;
+}
+
+.skill-banner-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 800;
+  background: rgba(245, 158, 11, 0.25);
+  border: 1px solid #f59e0b;
+  color: #fde047;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.skill-banner-badge.player {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+.skill-banner-badge.enemy {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+/* 🎯 原版战报：战法明细面板样式 */
+.tactic-detail-row {
+  background: rgba(10, 15, 26, 0.45);
+}
+
+/* 阶段 3 收敛：半透明蓝底 rgba(15,23,42,.75) 是唯一「带透明度的卡片底」，
+   对应「内嵌在弹窗里的次级信息块」。用 --bg-sunken + 半透明边框
+   表达同等语义：底更沉、边更轻，视觉层级不变。 */
+.tactic-breakdown-card {
+  background: var(--bg-sunken);
+  border: var(--bw) solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--r-sm);
+  padding: var(--sp-3) var(--sp-4);
+  margin: var(--sp-1) var(--sp-2) var(--sp-3);
+}
+
+.tactic-breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.tactic-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.tactic-mini-table th {
+  background: rgba(30, 41, 59, 0.6);
+  color: #94a3b8;
+  padding: 4px 6px;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+}
+
+.tactic-mini-table td {
+  padding: 5px 6px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+}
+
+.tactic-mini-table tr:last-child td {
+  border-bottom: none;
+}
+
+.tac-badge-tag {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.tac-badge-tag.innate,
+.tac-badge-tag.q-s {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid #d97706;
+}
+
+.tac-badge-tag.inherited,
+.tac-badge-tag.q-a {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid #9333ea;
+}
+
+.tac-badge-tag.q-b {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid #2563eb;
+}
+
+.tac-badge-tag.normal {
+  background: rgba(107, 114, 128, 0.2);
+  color: #d1d5db;
+  border: 1px solid #4b5563;
+}
+
+.tac-type-pill {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.tac-type-pill.active { background: #d97706; color: #fff; }
+.tac-type-pill.assault { background: #7c3aed; color: #fff; }
+.tac-type-pill.passive { background: #2563eb; color: #fff; }
+.tac-type-pill.command { background: #059669; color: #fff; }
+.tac-type-pill.formation { background: #0891b2; color: #fff; }
+.tac-type-pill.arm { background: #b45309; color: #fff; }
+.tac-type-pill.normal { background: #4b5563; color: #e5e7eb; }
+
+.mini-bar-track {
+  width: 100%;
+  max-width: 60px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 2px auto 0 auto;
+}
+
+.mini-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  border-radius: 2px;
+}
+
+/* 招募开箱全息动画浮层 */
+.gacha-showcase-mask {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(31, 22, 13, 0.94) 0%, rgba(6, 4, 2, 0.98) 100%);
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-direction: column;
+  z-index: var(--z-showcase);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 40px 14px 80px 14px;
+  box-sizing: border-box;
+}
+
+.gacha-showcase-mask.has-gold {
+  background: radial-gradient(circle at center, rgba(217, 119, 6, 0.18) 0%, rgba(3, 7, 18, 0.98) 75%);
+}
+
+.gacha-showcase-mask.has-purple {
+  background: radial-gradient(circle at center, rgba(147, 51, 234, 0.15) 0%, rgba(3, 7, 18, 0.98) 75%);
+}
+
+.gacha-title-banner {
+  font-size: 26px;
+  font-weight: 900;
+  margin-bottom: 24px;
+  text-align: center;
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.6);
+  letter-spacing: 2px;
+  animation: bannerPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gacha-title-banner.gold {
+  color: #fbbf24;
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 0 40px rgba(217, 119, 6, 0.6);
+}
+
+.gacha-title-banner.purple {
+  color: #d8b4fe;
+  text-shadow: 0 0 20px rgba(192, 132, 252, 0.8), 0 0 35px rgba(147, 51, 234, 0.5);
+}
+
+.gacha-summary-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 1020px;
+  width: 96%;
+  margin: -8px 0 18px 0;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.92) 0%, rgba(11, 15, 25, 0.95) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  z-index: 10;
+}
+
+.gacha-summary-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.summary-chip em {
+  font-style: normal;
+  color: #fef08a;
+  margin-left: 2px;
+}
+
+.summary-chip.chip-total {
+  background: rgba(55, 65, 81, 0.6);
+  border: 1px solid #4b5563;
+  color: #e5e7eb;
+}
+
+.summary-chip.chip-five {
+  background: rgba(217, 119, 6, 0.22);
+  border: 1px solid #f59e0b;
+  color: #fde047;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+}
+
+.summary-chip.chip-four {
+  background: rgba(147, 51, 234, 0.2);
+  border: 1px solid #a855f7;
+  color: #e9d5ff;
+}
+
+.summary-chip.chip-three {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.gacha-fast-flip-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #fde047;
+  background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.gacha-fast-flip-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.12);
+}
+
+/* 阶段 3 收敛：保留 145deg 渐变（招募结果的仪式感来源）、
+   28/36px 巨型内边距与 480px 限宽（这是全站最大的卡片）。
+   底色改用令牌渐变，阴影用 --sh-lg。 */
+.gacha-three-star-summary-card {
+  background: linear-gradient(145deg, var(--bg-raised) 0%, var(--bg-dark) 100%);
+  border: var(--bw) solid var(--line-strong);
+  border-radius: var(--r-lg);
+  padding: var(--sp-8) calc(var(--sp-8) + var(--sp-2));
+  text-align: center;
+  box-shadow: var(--sh-lg);
+  max-width: 480px;
+}
+
+.gacha-cards-display {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 30px;
+  max-width: 1060px;
+  perspective: 1000px;
+}
+
+/* 抽卡卡片 3D 翻转卡片容器 */
+.gacha-card-wrapper {
+  width: 170px;
+  height: 250px;
+  perspective: 1200px;
+  -webkit-perspective: 1200px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  position: relative;
+  user-select: none;
+}
+
+.gacha-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+/* 翻开状态：整张卡牌沿 Y 轴旋转 180 度 */
+.gacha-card-wrapper.flipped .gacha-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* 卡牌正反两面公共属性 */
+.gacha-card-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden !important;
+  backface-visibility: hidden !important;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+/* 🎴 卡牌背面 (未翻开前 - 0度朝前) */
+.gacha-card-face.card-back {
+  background: radial-gradient(circle at center, #261f17 0%, #151009 60%, #0a0805 100%);
+  border: 2px solid #b45309;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(180, 83, 9, 0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  transform: rotateY(0deg);
+}
+
+.gacha-card-face.card-back::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.card-back-emblem {
+  font-size: 48px;
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.5));
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
+}
+
+.card-back-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #fde047;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  margin-bottom: 6px;
+}
+
+.card-back-hint {
+  font-size: 11px;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 1px;
+  animation: hintBlink 1.4s infinite ease-in-out;
+}
+
+/* 🎴 卡牌正面 (翻开后展示，初始预设 180 度反向 - 全画幅竖版立绘布局) */
+.gacha-card-face.card-front {
+  transform: rotateY(180deg) !important;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+}
+
+/* 翻开时精准露出正面，彻底封杀未翻牌前的任何透光透边 */
+.gacha-card-wrapper.flipped .gacha-card-face.card-front {
+  opacity: 1;
+  visibility: visible;
+}
+
+.gacha-card-face.card-front:hover {
+  transform: rotateY(180deg) !important;
+}
+
+/* 抽卡正面顶部悬浮角标（阵营 & 统御） */
+.gacha-card-face.card-front .gacha-front-header {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  right: 7px;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 !important;
+  pointer-events: none;
+}
+
+.gacha-card-face.card-front .gacha-front-header .camp-tag {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.gacha-card-face.card-front .gacha-front-header .cost-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fde047;
+  background: rgba(10, 12, 18, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* 抽卡正面全画幅竖版立绘视窗（匹配 3:4 原画构图，消除横向矮框裁切） */
+.gacha-card-face.card-front .avatar-box.gacha-front-portrait {
+  position: absolute;
+  inset: 0 0 24px 0;
+  width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: radial-gradient(circle at 50% 35%, #1f2633 0%, #0d1017 100%);
+}
+
+.gacha-card-face.card-front .avatar-box.gacha-front-portrait .general-avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+}
+
+/* 抽卡正面底部暗金渐变铭牌 */
+.gacha-card-face.card-front .gacha-front-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 26px 6px 7px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  background: linear-gradient(
+    to top,
+    rgba(9, 11, 16, 0.98) 0%,
+    rgba(13, 16, 23, 0.92) 48%,
+    rgba(13, 16, 23, 0.45) 78%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.gacha-card-face.card-front .gacha-front-footer .stars-row {
+  margin: 0 !important;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.95));
+}
+
+.gacha-card-face.card-front .gacha-front-footer .hero-name {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  line-height: 1.2;
+  margin: 1px 0 0 0 !important;
+  color: #f8fafc;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+}
+
+.gacha-card-face.card-front .gacha-front-footer .gacha-copper-badge {
+  font-size: 10px;
+  color: #34d399;
+  background: rgba(6, 78, 59, 0.85);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-align: center;
+  font-weight: bold;
+  margin-top: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.65);
+}
+
+/* 抽卡卡片入场弹入动画 */
+.gacha-anim-card {
+  opacity: 0;
+  transform: scale(0.6) translateY(40px);
+  animation: cardEntrance 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 悬停卡背微动效 */
+.gacha-card-wrapper:not(.flipped):hover .gacha-card-inner {
+  transform: translateY(-4px);
+}
+
+.gacha-card-wrapper:not(.flipped):hover .card-back {
+  border-color: #fbbf24;
+  box-shadow: 0 10px 25px rgba(245, 158, 11, 0.35);
+}
+
+.gacha-card-wrapper:not(.flipped):hover .card-back-emblem {
+  transform: scale(1.1);
+}
+
+@keyframes hintBlink {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* 🌟 金卡金光特效 (5星名将) - 严格绑定在已翻开状态，未翻开前绝不透光！ */
+.gacha-card-gold {
+  border: 2px solid #fbbf24 !important;
+  background: linear-gradient(145deg, #2b1f06 0%, #151004 100%) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+/* 翻开后立即点燃五星名将金光与呼吸 */
+.gacha-card-wrapper.flipped .gacha-card-gold {
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.6), 0 0 50px rgba(217, 119, 6, 0.4), inset 0 0 15px rgba(251, 191, 36, 0.3) !important;
+  animation: goldenPulse 2.4s infinite ease-in-out 0.3s !important;
+}
+
+.gacha-card-gold::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(251, 191, 36, 0.4) 50%,
+    rgba(255, 255, 255, 0.6) 52%,
+    transparent 60%
+  );
+  transform: rotate(25deg);
+  pointer-events: none;
+  z-index: 5; /* 卡面内部装饰层（光扫条纹），不参与全局层级竞争，故用局部值 */
+  display: none; /* 未翻开前彻底不渲染 */
+}
+
+/* 翻开后激活扫光 */
+.gacha-card-wrapper.flipped .gacha-card-gold::before {
+  display: block;
+  animation: shineSweeper 2.8s infinite ease-in-out;
+}
+
+.gacha-card-gold .avatar-box {
+  background: radial-gradient(circle at 50% 35%, rgba(251, 191, 36, 0.28) 0%, #11141a 85%) !important;
+  box-shadow: inset 0 0 18px rgba(251, 191, 36, 0.32);
+}
+
+.gacha-card-gold .gacha-front-footer {
+  background: linear-gradient(
+    to top,
+    rgba(24, 15, 3, 0.98) 0%,
+    rgba(36, 23, 5, 0.9) 50%,
+    rgba(36, 23, 5, 0.38) 78%,
+    transparent 100%
+  ) !important;
+}
+
+.gacha-card-gold .hero-name {
+  color: #fde047 !important;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95) !important;
+}
+
+.gacha-gold-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  letter-spacing: 1px;
+}
+
+/* 💜 紫卡紫光特效 (4星良将) - 严格绑定在已翻开状态 */
+.gacha-card-purple {
+  border: 2px solid #a855f7 !important;
+  background: linear-gradient(145deg, #221433 0%, #120b1c 100%) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+/* 翻开后点燃四星良将紫芒 */
+.gacha-card-wrapper.flipped .gacha-card-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.55), 0 0 40px rgba(126, 34, 206, 0.35), inset 0 0 12px rgba(168, 85, 247, 0.2) !important;
+  animation: purplePulse 2.6s infinite ease-in-out 0.3s !important;
+}
+
+.gacha-card-purple::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 42%,
+    rgba(192, 132, 252, 0.35) 50%,
+    rgba(255, 255, 255, 0.5) 52%,
+    transparent 58%
+  );
+  transform: rotate(25deg);
+  pointer-events: none;
+  z-index: 5; /* 卡面内部装饰层（光扫条纹），不参与全局层级竞争，故用局部值 */
+  display: none; /* 未翻开前不渲染 */
+}
+
+/* 翻开后激活紫光扫光 */
+.gacha-card-wrapper.flipped .gacha-card-purple::before {
+  display: block;
+  animation: shineSweeper 3.2s infinite ease-in-out;
+}
+
+.gacha-card-purple .avatar-box {
+  background: radial-gradient(circle at 50% 35%, rgba(168, 85, 247, 0.24) 0%, #11141a 85%) !important;
+  box-shadow: inset 0 0 15px rgba(168, 85, 247, 0.28);
+}
+
+.gacha-card-purple .gacha-front-footer {
+  background: linear-gradient(
+    to top,
+    rgba(18, 9, 28, 0.98) 0%,
+    rgba(30, 15, 46, 0.9) 50%,
+    rgba(30, 15, 46, 0.38) 78%,
+    transparent 100%
+  ) !important;
+}
+
+.gacha-card-purple .hero-name {
+  color: #e9d5ff !important;
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.85), 0 2px 4px rgba(0, 0, 0, 0.95) !important;
+}
+
+.gacha-purple-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+  letter-spacing: 1px;
+}
+
+/* 动效关键帧 */
+@keyframes cardEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes bannerPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes goldenPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(217, 119, 6, 0.4), inset 0 0 10px rgba(251, 191, 36, 0.2);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 38px rgba(251, 191, 36, 0.9), 0 0 70px rgba(217, 119, 6, 0.65), inset 0 0 22px rgba(251, 191, 36, 0.45);
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes purplePulse {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.5), 0 0 32px rgba(126, 34, 206, 0.3);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.8), 0 0 55px rgba(126, 34, 206, 0.55);
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes shineSweeper {
+  0% {
+    transform: translate(-100%, -100%) rotate(25deg);
+  }
+  20%, 100% {
+    transform: translate(100%, 100%) rotate(25deg);
+  }
+}
+
+/* 📜 国风金玺 · 收归麾下专属典雅按钮 */
+.gacha-confirm-seal-btn {
+  width: 250px;
+  height: 52px;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 40%, #b45309 70%, #78350f 100%);
+  border: 1px solid #fef08a;
+  outline: 2px solid #b45309;
+  outline-offset: 1px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65), 0 0 24px rgba(245, 158, 11, 0.45);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(254, 240, 138, 0.6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: filter var(--t-mid) ease, transform var(--t-fast) ease,
+    box-shadow var(--t-mid) ease;
+  position: relative;
+  overflow: hidden;
+  margin-top: 15px;
+  margin-bottom: 40px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.gacha-confirm-seal-btn::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 220%;
+  height: 200%;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.28) 45%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0.28) 55%,
+    transparent 80%
+  );
+  transform: rotate(20deg);
+  animation: sealBtnGleam 3.5s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes sealBtnGleam {
+  0% { transform: translateX(-100%) rotate(20deg); }
+  25%, 100% { transform: translateX(100%) rotate(20deg); }
+}
+
+.gacha-confirm-seal-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75), 0 0 35px rgba(251, 191, 36, 0.7);
+  filter: brightness(1.12);
+}
+
+.gacha-confirm-seal-btn:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8), 0 0 15px rgba(245, 158, 11, 0.4);
+}
+
+
+/* ================= 战役剧本与演武试炼样式 ================= */
+.campaign-card {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.campaign-card:hover {
+  transform: translateY(-2px);
+  border-color: #fbbf24;
+}
+
+.campaign-card.cleared {
+  border-color: #059669;
+}
+
+.campaign-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.campaign-icon {
+  font-size: 38px;
+  width: 64px;
+  height: 64px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.campaign-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.campaign-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.campaign-stars {
+  color: #fbbf24;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.campaign-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.campaign-hint {
+  font-size: 11px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.campaign-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 130px;
+}
+
+.enemy-heroes-preview {
+  display: flex;
+  gap: 4px;
+}
+
+.enemy-hero-tag {
+  background: #11141a;
+  border: 1px solid #374151;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #e5e7eb;
+}
+
+.btn-start-battle {
+  background: linear-gradient(180deg, #3e221c 0%, #230f0c 100%);
+  color: #ffd9d4;
+  border: 1px solid var(--cinnabar-bright);
+  padding: 8px 18px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(207, 70, 54, 0.45), 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-start-battle:hover:not(:disabled) {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
+
+.btn-start-battle:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.trial-card {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.trial-card.current {
+  border-color: #38bdf8;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+  background: radial-gradient(circle at left, rgba(56, 189, 248, 0.1) 0%, #181b22 100%);
+}
+
+.trial-card.cleared {
+  border-color: #059669;
+  opacity: 0.85;
+}
+
+/* ================= 战法研习升级卡片样式 ================= */
+.tactic-upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.tactic-upgrade-card {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tactic-upgrade-card:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.15);
+  transform: translateY(-2px);
+}
+
+.tactic-upgrade-card.max-level {
+  border-color: #f59e0b;
+  background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.12) 0%, #181b22 80%);
+}
+
+.tactic-type-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+.tactic-type-command { background: #1e3a8a; color: #93c5fd; }
+.tactic-type-passive { background: #4c1d95; color: #d8b4fe; }
+.tactic-type-active { background: #991b1b; color: #fca5a5; }
+.tactic-type-assault { background: #92400e; color: #fde68a; }
+
+.tactic-level-track {
+  width: 100%;
+  height: 6px;
+  background: #374151;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.tactic-level-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.tactic-upgrade-card.max-level .tactic-level-progress {
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+/* ================= 未解锁战法卡片与传承按钮样式 ================= */
+.tactic-upgrade-card.locked {
+  border: 1px dashed #4b5563;
+  background: #111318;
+  opacity: 0.85;
+}
+
+.tactic-upgrade-card.locked:hover {
+  border-color: #8b5cf6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.2);
+}
+
+.btn-inherit-tactic {
+  background: linear-gradient(180deg, #312244 0%, #1b1029 100%);
+  color: #e3c9ff;
+  border: 1px solid #8b5cf6;
+  padding: 4px 10px;
+  border-radius: var(--r-xs);
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.4);
+}
+
+.btn-inherit-tactic:hover:not(:disabled) {
+  filter: brightness(1.2);
+  transform: scale(1.02);
+}
+
+/* ================= 🏮 演义事件战法大厅古典画卷样式 ================= */
+.event-tactic-card {
+  background: linear-gradient(180deg, #191c24 0%, #12141a 100%);
+  border: 1px solid #2e3544;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.event-tactic-card:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 6px 22px rgba(245, 158, 11, 0.18);
+  transform: translateY(-2px);
+}
+
+.event-tactic-card.ready-to-exchange {
+  border-color: #d97706;
+  background: radial-gradient(circle at top right, rgba(217, 119, 6, 0.12) 0%, #161821 70%);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.22);
+}
+
+.event-tactic-card.completed {
+  border-color: #4b5563;
+  background: #111317;
+  opacity: 0.92;
+}
+
+.event-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.event-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.event-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #d97706 0%, #92400e 100%);
+  color: #fffbeb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.event-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f3f4f6;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.event-quality-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.event-story-banner {
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 3px solid #f59e0b;
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+}
+
+.event-story-text {
+  font-size: 12px;
+  color: #d1d5db;
+  line-height: 1.5;
+  margin: 0;
+  font-style: italic;
+}
+
+.event-tactic-detail-box {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.event-tactic-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-tactic-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.event-tactic-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.event-rate-tag {
+  font-size: 11px;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.event-tactic-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.45;
+}
+
+.event-tactic-tag {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+.tag-dmg-physical { color:#f87171; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); }
+.tag-dmg-tactical { color:#60a5fa; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); }
+.tag-dmg-heal { color:#34d399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); }
+.tag-dmg-buff { color:#e879f9; background:rgba(217,70,239,0.15); border:1px solid rgba(217,70,239,0.4); }
+.tag-dmg-debuff { color:#fb923c; background:rgba(251,146,60,0.15); border:1px solid rgba(251,146,60,0.4); }
+
+.event-req-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-req-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.event-req-tip {
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: normal;
+}
+
+.event-req-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.event-req-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #374151;
+  transition: all 0.2s ease;
+}
+
+.event-req-slot.satisfied {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.event-req-slot.missing {
+  border-color: #4b5563;
+  border-style: dashed;
+  background: rgba(31, 41, 55, 0.4);
+}
+
+.event-slot-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #f3f4f6;
+  flex-shrink: 0;
+}
+
+.event-slot-avatar.missing {
+  color: #6b7280;
+  background: #1f2937;
+  border: 1px dashed #4b5563;
+}
+
+.event-slot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.slot-hero-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f3f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-hero-star {
+  color: #fbbf24;
+  font-size: 10px;
+}
+
+.slot-hero-status {
+  font-size: 10px;
+}
+
+.status-ready { color: #34d399; font-weight: 600; }
+.status-missing { color: #9ca3af; }
+.status-deployed { color: #f87171; font-weight: 600; }
+
+.event-action-bar {
+  margin-top: 4px;
+  position: relative;
+}
+
+.event-stamp-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.event-stamp {
+  position: absolute;
+  right: 12px;
+  top: -24px;
+  border: 2px solid #ef4444;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 2px 10px;
+  border-radius: 6px;
+  transform: rotate(-12deg);
+  letter-spacing: 2px;
+  background: rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+  pointer-events: none;
+  font-family: serif, 'SimSun', STSong;
+}
+
+.btn-exchange-event {
+  width: 100%;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 0;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-exchange-event:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-event-lack {
+  width: 100%;
+  font-size: 12px;
+  padding: 8px 0;
+  background: #374151;
+  color: #d1d5db;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-event-lack:hover {
+  background: #4b5563;
+  color: #ffffff;
+}
+
+.btn-event-disabled {
+  width: 100%;
+  font-size: 12px;
+  padding: 8px 0;
+  background: #1f2937;
+  color: #6b7280;
+  border-radius: 6px;
+  border: 1px solid #374151;
+  cursor: not-allowed;
+}
+
+/* ================= 5 支军团切换与沙盒演习样式 ================= */
+.troop-tab-btn {
+  background: #151821;
+  border: 1px solid #2d3340;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.troop-tab-btn:hover {
+  background: rgba(42, 30, 18, 0.9);
+  color: #e7d9bd;
+  border-color: var(--bronze-light);
+}
+
+.troop-tab-btn.active {
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border-color: var(--gold-bright);
+  color: #ffe9a8;
+  font-weight: bold;
+  box-shadow: inset 0 0 0 1px rgba(226, 200, 115, 0.4), 0 0 10px rgba(217, 119, 6, 0.3);
+}
+
+.sandbox-slot-card {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #2d3340;
+  border-radius: var(--r-md);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color var(--t-mid) ease;
+}
+
+.sandbox-slot-card:hover {
+  border-color: #f87171;
+}
+
+.sandbox-tactic-badge {
+  background: #1e2430;
+  border: 1px solid #374151;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sandbox-tactic-badge:hover {
+  border-color: #fbbf24;
+  color: #fff;
+}
+
+/* ================= 📊 三战原版战报数据统计看板样式 ================= */
+.battle-stats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.25s ease;
+}
+
+.battle-mvp-banner {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+  border: 1px solid #d97706;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mvp-badge-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mvp-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mvp-tag.damage {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+.mvp-tag.heal {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.mvp-tag.tank {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+}
+
+.stats-table-wrapper {
+  background: #141720;
+  border: 1px solid #2d3340;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stats-table-header {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #2d3340;
+}
+
+.stats-table-header.player {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border-left: 4px solid #10b981;
+}
+
+.stats-table-header.enemy {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-left: 4px solid #ef4444;
+}
+
+.stats-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.stats-grid-table th {
+  background: #191d28;
+  color: #9ca3af;
+  padding: 8px 6px;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid #2d3340;
+  white-space: nowrap;
+}
+
+.stats-grid-table td {
+  padding: 10px 6px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #e5e7eb;
+}
+
+.stats-grid-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-hero-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding-left: 8px;
+}
+
+.stats-bar-track {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.stats-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.stats-bar-fill.damage {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.stats-bar-fill.heal {
+  background: linear-gradient(90deg, #059669, #34d399);
+}
+
+.stats-bar-fill.tank {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+/* ================= 名将卡池预览卡片样式 ================= */
+.pool-preview-card {
+  background: #181b22;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.pool-preview-card:hover {
+  transform: translateY(-3px);
+  border-color: #fbbf24;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.pool-preview-card.is-core {
+  border-color: #e11d48;
+  background: linear-gradient(145deg, #261219 0%, #151117 100%);
+  box-shadow: 0 0 10px rgba(225, 29, 72, 0.25);
+}
+
+.pool-preview-card.is-core:hover {
+  border-color: #f43f5e;
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.45);
+}
+
+.pool-preview-card.is-five {
+  border-color: #d97706;
+}
+
+.pool-preview-card.is-four {
+  border-color: #7c3aed;
+}
+
+.pool-preview-core-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.5);
+  letter-spacing: 0.5px;
+}
+
+/* ================= ⚔️ 战报原版 Buff / Debuff 胶囊徽章高亮 ================= */
+.buff-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 0 5px;
+  border-radius: 3px;
+  margin: 0 2px;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+/* 增益 Buff 样式 */
+.buff-badge.buff-insight {
+  background: rgba(234, 179, 8, 0.18);
+  border: 1px solid #eab308;
+  color: #fde047;
+}
+
+.buff-badge.buff-first-strike {
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid #38bdf8;
+  color: #7dd3fc;
+}
+
+.buff-badge.buff-true-strike {
+  background: rgba(244, 63, 94, 0.18);
+  border: 1px solid #f43f5e;
+  color: #fda4af;
+}
+
+.buff-badge.buff-continuous {
+  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid #f97316;
+  color: #fdba74;
+}
+
+.buff-badge.buff-shield {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.buff-badge.buff-evasion {
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid #6366f1;
+  color: #a5b4fc;
+}
+
+.buff-badge.buff-crit {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+.buff-badge.buff-tactical-crit {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid #a855f7;
+  color: #d8b4fe;
+}
+
+/* 减益 Debuff 样式 */
+.buff-badge.debuff-stun {
+  background: rgba(234, 88, 12, 0.22);
+  border: 1px solid #ea580c;
+  color: #fb923c;
+}
+
+.buff-badge.debuff-silence {
+  background: rgba(147, 51, 234, 0.22);
+  border: 1px solid #9333ea;
+  color: #c084fc;
+}
+
+.buff-badge.debuff-disarm {
+  background: rgba(225, 29, 72, 0.22);
+  border: 1px solid #e11d48;
+  color: #fb7185;
+}
+
+.buff-badge.debuff-weakness {
+  background: rgba(107, 114, 128, 0.25);
+  border: 1px solid #6b7280;
+  color: #d1d5db;
+}
+
+.buff-badge.debuff-confused {
+  background: rgba(14, 165, 233, 0.22);
+  border: 1px solid #0ea5e9;
+  color: #38bdf8;
+}
+
+.buff-badge.debuff-burn {
+  background: rgba(220, 38, 38, 0.22);
+  border: 1px solid #dc2626;
+  color: #f87171;
+}
+
+.buff-badge.debuff-water {
+  background: rgba(2, 132, 199, 0.22);
+  border: 1px solid #0284c7;
+  color: #38bdf8;
+}
+
+.buff-badge.debuff-cannot-heal {
+  background: rgba(127, 29, 29, 0.25);
+  border: 1px solid #991b1b;
+  color: #fca5a5;
+}
+
+/* 🎯 伤害乘区修正徽章 (增伤/减伤/易伤/削弱) */
+.buff-badge.buff-dmg-boost {
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.buff-badge.buff-dmg-reduce {
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid #10b981;
+  color: #34d399;
+  font-weight: 700;
+}
+
+.buff-badge.debuff-dmg-taken {
+  background: rgba(239, 68, 68, 0.22);
+  border: 1px solid #ef4444;
+  color: #f87171;
+  font-weight: 700;
+}
+
+.buff-badge.debuff-dmg-nerf {
+  background: rgba(156, 163, 175, 0.22);
+  border: 1px solid #9ca3af;
+  color: #d1d5db;
+  font-weight: 600;
+}
+
+/* ================= 📱 移动端小屏响应式适配 ================= */
+@media (max-width: 768px) {
+  :root {
+    --header-height: 48px;
+    --bottom-nav-height: 56px;
+  }
+
+  /* 1. 顶部 HUD 极致紧凑防折行溢出
+     注意：此处不能用 height/padding 简写，否则会清掉基础层里的
+     env(safe-area-inset-top) 安全区补偿，导致刘海屏遮挡标题。 */
+  .res-hud {
+    min-height: 48px !important;
+    padding: env(safe-area-inset-top, 0px) 10px 0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .brand-area {
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .brand-area span:first-child {
+    font-size: 18px !important;
+  }
+
+  .game-title {
+    font-size: 13px !important;
+    letter-spacing: 0.5px !important;
+    white-space: nowrap !important;
+  }
+
+  .game-sub-title {
+    display: none !important; /* 手机端隐藏占用空间的副标题，彻底消除垂直折行拉长 */
+  }
+
+  .res-items {
+    gap: 6px !important;
+    padding: 2px 0 !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .res-badge {
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    border-radius: 4px !important;
+  }
+
+  .res-badge span:first-child {
+    font-size: 10px !important;
+  }
+
+  #btnResetGame {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+  }
+
+  /* 2. 页面容器与全局小屏内边距 */
+  .slg-tab-page {
+    padding: 10px 10px 16px 10px !important;
+  }
+
+  /* 3. 首页 (战棋沙盘 · 资源领地) 移动端适配 */
+  .map-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .map-controls h2 {
+    font-size: 15px !important;
+  }
+
+  #btnQuickFarmAll {
+    width: 100% !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .resource-lands-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    margin-top: 10px !important;
+  }
+
+  .resource-land-card {
+    padding: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .resource-land-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .resource-land-title-wrap {
+    gap: 10px !important;
+  }
+
+  .resource-land-icon {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 26px !important;
+    border-radius: 8px !important;
+  }
+
+  .resource-land-name {
+    font-size: 15px !important;
+  }
+
+  .resource-land-badge {
+    align-self: flex-start !important;
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+  }
+
+  .resource-land-stats-box {
+    padding: 8px 10px !important;
+    margin: 8px 0 !important;
+  }
+
+  .resource-land-stats-box > div:first-child div:nth-child(2) {
+    font-size: 14px !important;
+  }
+
+  .resource-land-actions {
+    gap: 8px !important;
+  }
+
+  .resource-land-actions .btn-farm-single {
+    padding: 8px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .resource-land-actions .btn-select-level {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* 4. 征战页面 (战役剧本 · 演武试炼 · 沙盒演武场) 移动端重构 */
+  .battle-subtabs-header {
+    margin-bottom: 10px !important;
+    padding: 6px !important;
+    gap: 8px !important;
+  }
+
+  .battle-subtabs-nav {
+    display: flex !important;
+    width: 100% !important;
+    gap: 5px !important;
+    padding: 3px !important;
+  }
+
+  .battle-subtabs-nav .battle-subtab-btn {
+    flex: 1 !important;
+    padding: 8px 4px !important;
+    font-size: 11.5px !important;
+    gap: 4px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    border-radius: 6px !important;
+  }
+
+  .battle-subtabs-nav .battle-subtab-btn .subtab-icon {
+    font-size: 13px !important;
+  }
+
+  .battle-subtabs-nav .battle-subtab-btn .subtab-badge {
+    display: none !important;
+  }
+
+  .battle-subtabs-hints {
+    display: none !important; /* 手机端隐藏多行辅助说明，避免首屏堆叠 */
+  }
+
+  /* 经典战役卡片改为自适应纵向结构 */
+  .campaign-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 12px 14px !important;
+    border-radius: 10px !important;
+  }
+
+  .campaign-left {
+    width: 100% !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .campaign-icon {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 28px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .campaign-name {
+    font-size: 15px !important;
+  }
+
+  .campaign-desc {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    margin-bottom: 4px !important;
+  }
+
+  .campaign-right {
+    width: 100% !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding-top: 10px !important;
+    gap: 10px !important;
+  }
+
+  .btn-start-battle {
+    flex: 1 !important;
+    max-width: 150px !important;
+    padding: 9px 12px !important;
+    font-size: 13px !important;
+    text-align: center !important;
+  }
+
+  /* 假想敌沙盒工作台移动端单列排列 */
+  .sandbox-battlefield-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .sandbox-vs-divider {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    padding: 8px 14px !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border: 1px dashed rgba(251, 191, 36, 0.4) !important;
+    border-radius: 8px !important;
+  }
+
+  .sandbox-vs-divider > div:first-child {
+    font-size: 20px !important;
+  }
+
+  .sandbox-vs-divider span {
+    display: none !important;
+  }
+
+  /* 5. 底部导航栏自适应与 iPhone 底部安全区 */
+  .bottom-nav {
+    min-height: 56px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    /* padding-bottom 不在此覆盖，保留基础层的 env(safe-area-inset-bottom) */
+  }
+
+  .bottom-nav .nav-tab-btn {
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+    gap: 2px !important;
+  }
+
+  .bottom-nav .nav-tab-btn .icon {
+    font-size: 16px !important;
+  }
+
+  /* 武将卡牌移动端自适应：双列排布，大立绘高度适配 */
+  .general-card {
+    width: 100% !important;
+    max-width: 180px !important;
+  }
+  .general-card .avatar-box.general-card-portrait {
+    height: 220px !important;
+  }
+
+  /* 抽卡揭晓浮层移动端自适应 */
+  .gacha-showcase-mask {
+    padding: 24px 10px 90px 10px !important;
+  }
+  .gacha-title-banner {
+    font-size: 19px !important;
+    margin-bottom: 14px !important;
+    letter-spacing: 1px !important;
+  }
+  .gacha-cards-display {
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+  .gacha-card-wrapper {
+    width: 140px !important;
+    height: 215px !important;
+  }
+  .gacha-card-wrapper .avatar-box.gacha-front-portrait {
+    inset: 0 0 22px 0 !important;
+    height: auto !important;
+  }
+  .gacha-card-wrapper .hero-name {
+    font-size: 14px !important;
+    margin: 1px 0 0 0 !important;
+  }
+  .gacha-confirm-seal-btn {
+    width: 220px !important;
+    height: 46px !important;
+    font-size: 15px !important;
+    margin-top: 10px !important;
+    margin-bottom: 50px !important;
+  }
+}
+/* ================= 🏦 金铢钱庄 · 模拟充值样式 ================= */
+.recharge-tier-card {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recharge-tier-card:hover {
+  transform: translateY(-3px);
+  border-color: #fbbf24 !important;
+  box-shadow: 0 6px 18px rgba(251, 191, 36, 0.25) !important;
+}
+
+.recharge-tier-card.popular {
+  animation: rechargeGlow 3s infinite ease-in-out;
+}
+
+@keyframes rechargeGlow {
+  0%, 100% {
+    border-color: #d97706;
+    box-shadow: 0 0 10px rgba(217, 119, 6, 0.25);
+  }
+  50% {
+    border-color: #fbbf24;
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.45);
+  }
+}
+
+.btn-do-recharge:active {
+  transform: scale(0.97);
+}
+
+/* ============================================================
+   动效偏好适配
+   系统开启「减弱动态效果」或用户对动效敏感时，关闭循环动画与位移过渡。
+   保留必要的颜色/透明度变化，避免界面失去状态反馈。
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* 按钮按下反馈改为纯色变化，去掉位移，避免前庭不适 */
+  button:active:not(:disabled) {
+    transform: none !important;
+  }
+
+  .gacha-btn:hover:not(:disabled),
+  .btn-start-battle:hover:not(:disabled),
+  .gacha-confirm-seal-btn:hover,
+  .btn-inherit-tactic:hover:not(:disabled),
+  .upgrade-btn:hover:not(:disabled),
+  .bottom-nav .nav-tab-btn.active .icon {
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   视觉精修层
+   index.html 存在 214 处内联 style，优先级高于任何选择器，
+   导致上方令牌化基础层对「实际外观」几乎无效。此层用 !important
+   精准压制内联里写死的粗糙值，统一为一套精致的古风金属质感。
+
+   范围严格限定在 HUD / 底部导航 / 主操作按钮 三类高频控件，
+   不触碰卡片布局与内容区，避免大范围视觉位移。
+   ============================================================ */
+
+/* ---------- ① 顶部资源条：深色玻璃 + 顶部高光，与页面拉开层次 ---------- */
+.res-hud {
+  background: linear-gradient(180deg, var(--wood-800) 0%, var(--wood-700) 62%, var(--wood-900) 100%) !important;
+  border-bottom: 1px solid rgba(226, 200, 115, 0.5) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 236, 200, 0.08) !important;
+}
+
+/* 资源徽章：内联写死了 border/color，此处统一接管边框与字重 */
+.res-badge {
+  border-radius: var(--r-sm) !important;
+  border: 1px solid var(--bronze) !important;
+  background: linear-gradient(180deg, rgba(42, 30, 18, 0.92), rgba(21, 16, 10, 0.92)) !important;
+  color: #e7d9bd !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.2px;
+  transition: background-color var(--t-mid) ease, border-color var(--t-mid) ease, box-shadow var(--t-mid) ease !important;
+}
+
+.res-badge:hover {
+  background: linear-gradient(180deg, rgba(58, 42, 24, 0.95), rgba(36, 24, 9, 0.95)) !important;
+  border-color: var(--bronze-light) !important;
+}
+
+.res-badge span.val {
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+  color: #f0e3c8 !important;
+}
+
+/* 金铢徽章保留金色识别，但压低饱和避免与主按钮抢焦点 */
+.res-badge.gold {
+  border-color: rgba(226, 200, 115, 0.55) !important;
+  background: rgba(217, 119, 6, 0.14) !important;
+}
+
+/* ---------- ② 底部导航：图标上浮 + 顶部金色指示条 ---------- */
+.bottom-nav {
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%) !important;
+  border-top: 1px solid rgba(226, 200, 115, 0.32) !important;
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.6) !important;
+}
+
+.bottom-nav .nav-tab-btn {
+  position: relative;
+  border-radius: var(--r-sm) !important;
+  transition: color var(--t-mid) ease, background-color var(--t-mid) ease,
+    transform var(--t-fast) ease;
+}
+
+/* 选中态：顶部金色横条 + 图标轻微放大，比纯变色更容易辨识 */
+.bottom-nav .nav-tab-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--cinnabar-bright), var(--gold-bright), var(--cinnabar-bright));
+  transition: transform var(--t-mid) cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.bottom-nav .nav-tab-btn.active::before {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.bottom-nav .nav-tab-btn.active {
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: var(--text-gold) !important;
+}
+
+.bottom-nav .nav-tab-btn.active .icon {
+  transform: translateY(-1px) scale(1.12);
+  filter: drop-shadow(0 2px 6px rgba(245, 158, 11, 0.5));
+}
+
+.bottom-nav .nav-tab-btn .icon {
+  transition: transform var(--t-mid) cubic-bezier(0.34, 1.4, 0.64, 1),
+    filter var(--t-mid) ease;
+}
+
+/* ---------- ③ 主操作按钮：金属质感 + 内高光 ---------- */
+/* 内联写法千差万别（linear-gradient/#059669/#047857...），
+   此处按"绿色=收益 / 金橙=主操作 / 红色=消耗"统一接管。
+
+   ⚠️ 配色决策（已按 WCAG 对比度实测）：
+   亮色渐变背景一律配深色前景字（#0f172a），不用白字。
+   实测：白字配 #10b981 绿仅 2.41:1（远低于 AA 的 4.5:1，会看不清）；
+        深字配亮绿为 7.04:1（AAA）。下同。 */
+.upgrade-btn {
+  /* 青铜木牌按钮：JS 动态渲染的部分按钮（btn-change-hero / btn-add-hero /
+     btn-modal-change-tac1|2 等）内联既无 background 也无 color，原本依赖外层继承。
+     精修层一旦加了 border 就会打断继承链，导致深色字落在深色底上不可见。
+     此处显式兜底为「木底 + 青铜边 + 鎏金内线」，杜绝此类回归，并与 Phase5 木牍金边统一。 */
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  color: #f0e3c8;
+  border: 1px solid var(--bronze);
+  border-radius: var(--r-sm) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 0 0 1px rgba(197, 155, 39, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.5) !important;
+  transition: filter var(--t-mid) ease, transform var(--t-fast) ease,
+    box-shadow var(--t-mid) ease, border-color var(--t-mid) ease !important;
+}
+
+.upgrade-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--bronze-light);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(226, 200, 115, 0.5),
+    0 5px 14px rgba(0, 0, 0, 0.55),
+    0 0 12px rgba(197, 155, 39, 0.22) !important;
+}
+
+.upgrade-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.upgrade-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.45);
+}
+
+/* ===== 语义色变体：在统一「木牌」基底上以描边 / 辉光区分语义，兼顾原版古典与可用性 =====
+   内联渐变被 !important 木底覆盖，色相仅作边线 / 辉光点缀（嗅探机制见上方说明）。 */
+/* 绿色系（收益 / 屯田 / 预设 / 招募单次）——玉绿描边 */
+.upgrade-btn[style*="059669"],
+.upgrade-btn[style*="047857"],
+.upgrade-btn[style*="065f46"],
+.upgrade-btn[style*="10b981"] {
+  background: linear-gradient(180deg, #2c3a26 0%, #182415 100%) !important;
+  border-color: #2f9e6f !important;
+  color: #bdf3d6 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(52, 211, 153, 0.28) !important;
+}
+
+/* 金橙系主操作（主 CTA / 升级 / 招募十连 / 卡池预览）——鎏金描边（最强强调） */
+.upgrade-btn[style*="f59e0b"],
+.upgrade-btn[style*="d97706"],
+.upgrade-btn[style*="854d0e"],
+.upgrade-btn[style*="b45309"],
+.upgrade-btn[style*="ea580c"],
+.upgrade-btn[style*="c2410c"],
+.upgrade-btn[style*="251,191,36"] {
+  background: linear-gradient(180deg, #4a3414 0%, #2a1c0a 100%) !important;
+  border-color: var(--gold-bright) !important;
+  color: #ffe9a8 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(226, 200, 115, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(245, 158, 11, 0.34) !important;
+}
+
+/* 红色系消耗 / 危险操作——朱红描边 */
+.upgrade-btn[style*="dc2626"],
+.upgrade-btn[style*="ef4444"],
+.upgrade-btn[style*="991b1b"],
+.upgrade-btn[style*="b91c1c"] {
+  background: linear-gradient(180deg, #3e221c 0%, #230f0c 100%) !important;
+  border-color: var(--cinnabar-bright) !important;
+  color: #ffc9c4 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(239, 68, 68, 0.30) !important;
+}
+
+/* 紫色系（战法传承 / 四星分解）——紫描边 */
+.upgrade-btn[style*="7c3aed"],
+.upgrade-btn[style*="5b21b6"] {
+  background: linear-gradient(180deg, #312244 0%, #1b1029 100%) !important;
+  border-color: #8b5cf6 !important;
+  color: #e3c9ff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(139, 92, 246, 0.30) !important;
+}
+
+/* 蓝色系（试炼 / 演武 / 水系战法）——青蓝描边 */
+.upgrade-btn[style*="0284c7"],
+.upgrade-btn[style*="0369a1"],
+.upgrade-btn[style*="1e3a8a"] {
+  background: linear-gradient(180deg, #1c2c3e 0%, #0f1822 100%) !important;
+  border-color: #2f9bd6 !important;
+  color: #bfe9ff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(56, 189, 248, 0.28) !important;
+}
+
+/* 中性灰系（次要操作 / 分解 / 清空）——最弱强调，仅青铜边 */
+.upgrade-btn[style*="374151"],
+.upgrade-btn[style*="4b5563"] {
+  background: linear-gradient(180deg, #34302a 0%, #211d18 100%) !important;
+  border-color: #6b7280 !important;
+  color: #d6dae0 !important;
+}
+
+/* 幽灵按钮（低优先级：换将 / 详情 / 移除）——透明木纹描边 */
+.upgrade-btn[style*="255,255,255,0.0"] {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(197, 155, 39, 0.30) !important;
+  color: #e7d9bd !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.upgrade-btn[style*="255,255,255,0.0"]:hover:not(:disabled) {
+  background: rgba(197, 155, 39, 0.12) !important;
+  border-color: var(--gold-bright) !important;
+  color: #ffe9a8 !important;
+}
+
+/* 无背景（纯文字型操作，如"移除"） */
+.upgrade-btn[style*="background:transparent"],
+.upgrade-btn[style*="background: transparent"] {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(197, 155, 39, 0.28) !important;
+  color: #e2d6bd !important;
+}
+
+/* ---------- ④ 重置按钮：木牌 + 朱红描边，危险态警示 ---------- */
+#btnResetGame {
+  background: linear-gradient(180deg, #3e221c 0%, #230f0c 100%) !important;
+  border: 1px solid var(--cinnabar-bright) !important;
+  color: #ffc9c4 !important;
+  border-radius: var(--r-sm) !important;
+  font-weight: 600 !important;
+  padding: 5px 11px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 0 10px rgba(207, 70, 54, 0.25) !important;
+}
+
+#btnResetGame:hover {
+  background: linear-gradient(180deg, #4a2820 0%, #2a120d 100%) !important;
+  border-color: #e0584a !important;
+  color: #ffd9d4 !important;
+}
+
+/* ---------- ⑤ 页面区块标题：内联 18px 偏小且无层级，加左金线 + 提字号 ---------- */
+.slg-tab-page h2 {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px;
+  padding-left: 11px;
+  border-left: 3px solid var(--border-gold);
+  line-height: 1.35;
+}
+
+/* 区块描述文字：内联 12px 灰暗，提升对比度 */
+.slg-tab-page h2 + div > div,
+.map-controls > div > div:nth-child(2) {
+  line-height: 1.65;
+}
+
+/* ---------- ⑥ 表单控件：内联 border-radius 各异，统一令牌 ---------- */
+.slg-tab-page input[type="text"],
+.slg-tab-page input[type="number"],
+.slg-tab-page select {
+  border-radius: var(--r-sm) !important;
+  transition: border-color var(--t-mid) ease, box-shadow var(--t-mid) ease;
+}
+
+.slg-tab-page input[type="text"]:focus,
+.slg-tab-page input[type="number"]:focus,
+.slg-tab-page select:focus {
+  border-color: rgba(245, 158, 11, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+  outline: none !important;
+}
+
+/* ---------- ⑦ 通用卡片：内联 border-radius 多为 8/10/12px，统一到令牌 ---------- */
+.slg-tab-page [style*="border-radius: 10px"],
+.slg-tab-page [style*="border-radius:12px"],
+.slg-tab-page [style*="border-radius: 12px"] {
+  border-radius: var(--r-md) !important;
+}
+
+/* ---------- ⑧ 滚动条：与暗色主题统一，不再刺眼 ---------- */
+.slg-tab-page::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.slg-tab-page::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.slg-tab-page::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(197, 155, 39, 0.35);
+  border-radius: 3px;
+}
+
+.slg-tab-page::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 155, 39, 0.6);
+}
+
+/* ---------- ⑨ 内联颜色的导航/筛选按钮：保留阵营语义色但统一质感 ---------- */
+/* JS 动态渲染的阵营筛选（蜀绿/魏蓝/吴红）、军团切换按钮，
+   内联写死了 color/font-size，需 !important 接管才能加 hover 反馈。 */
+.nav-tab-btn[style*="color:"] {
+  font-weight: 600 !important;
+  transition: background-color var(--t-mid) ease, transform var(--t-fast) ease,
+    box-shadow var(--t-mid) ease !important;
+}
+
+.nav-tab-btn[style*="color:"]:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+.nav-tab-btn[style*="color:"].active {
+  background: linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%) !important;
+  box-shadow: inset 0 0 0 1px currentColor, 0 0 10px rgba(251, 191, 36, 0.22);
+}
+
+/* ---------- ⑩ 移动端视觉同步 ---------- */
+@media (max-width: 768px) {
+  .slg-tab-page h2 {
+    font-size: 17px !important;
+  }
+
+  .upgrade-btn {
+    border-radius: var(--r-xs) !important;
+  }
+
+  .res-badge {
+    padding: 2px 7px !important;
+  }
+}
+
+/* ============================================================
+   减弱动效模式下的视觉精修补偿
+   上方 @media(prefers-reduced-motion) 里的 * { transition-duration: 0.01ms }
+   会把 hover 反馈彻底抹平。此处在该模式下单独恢复关键控件的
+   颜色/阴影反馈——不动效，但状态依然可辨。
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .res-badge:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .upgrade-btn:hover:not(:disabled) {
+    filter: brightness(1.14) !important;
+  }
+
+  .bottom-nav .nav-tab-btn.active::before {
+    transform: translateX(-50%) scaleX(1) !important;
+  }
+}
+
+/* ============================================================
+   ★ 五星名将揭晓仪式感特效层
+   原实现仅有「卡面边框发光 + 扫光条纹」，缺少炸裂瞬间的冲击力。
+   此处构建四层递进特效，全部由纯 CSS 绘制，不引入任何图片资源：
+
+     ① 金光炸裂  gacha-burst-ring / gacha-flash-white   0ms
+     ② 放射光柱  gacha-rays                             180ms
+     ③ 金屑粒子  gacha-sparkles                         300ms
+     ④ 屏幕震动  gacha-showcase-mask.shake              450ms
+
+   触发方式：main.js 翻牌编排给 .gacha-card-wrapper 加 .burst-five /
+   .burst-core 标记，本层负责呈现。核心名将（刘备/曹操/孙权等大核心）
+   额外获得「霸业」横幅与更强烈的震动。
+   ============================================================ */
+
+/* ---------- 特效载体：卡牌需为定位上下文 ---------- */
+/* isolation:isolate 建立独立的混合组：所有光层的screen 混合只与卡片区域叠加，
+   不会穿透到 .gacha-showcase-mask 的深色背景上（否则整个浮层会被提亮成灰雾）。 */
+.gacha-card-wrapper {
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---------- Canvas 粒子层（路径 B） ----------
+   覆盖整个抽卡浮层，承载真加色混合（lighter）与 Bloom 泛光。
+   放在浮层内最后 → 同级 z-index 下位于卡牌之上，且不参与卡牌的 3D 翻转上下文。
+   pointer-events:none 让粒子不拦截点击，浮层内按钮仍可正常操作。 */
+.gold-fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 25;
+  pointer-events: none;
+}
+
+/* ============================================================
+   ★ 加色混合（路径 A 核心）
+   CSS 默认混合模式是 normal —— 后一层不透明区域会「盖住」前一层。
+   而金光的核心物理特性是能量叠加：粒子重叠处应当「更亮」而非「被覆盖」。
+   mix-blend-mode:screen 的公式 (1-a)(1-b) 恰好是加色的近似，
+   这是纯 CSS 方案能摸到的、最接近原版 additive blending 的手段。
+   注意：必须配合 isolation 使用，且元素不能在 3D 变换容器内（会失效）。 */
+.gacha-burst-ring,
+.gacha-flash-white,
+.gacha-bloom,
+.gacha-rays,
+.gacha-sparkle {
+  mix-blend-mode: screen;
+}
+
+/* ============================================================
+   ★ 伪泛光层（模拟原版 Bloom 后处理）
+   真实 Bloom 是「全屏亮度提取 → 高斯模糊 → 加回原图」。
+   纯 CSS 做不到全屏处理，但可以用一张大尺寸径向渐变 + blur 双层叠加，
+   逼近「亮部向四周溢出光晕」的观感，替代原先 box-shadow 的硬边描光。 */
+.gacha-bloom {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 460px;
+  height: 460px;
+  margin: -230px 0 0 -230px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle,
+      rgba(255, 252, 240, 0.9) 0%,
+      rgba(255, 232, 160, 0.55) 22%,
+      rgba(251, 191, 36, 0.28) 42%,
+      rgba(217, 119, 6, 0.1) 60%,
+      transparent 76%);
+  filter: blur(12px);
+  pointer-events: none;
+  z-index: 17;
+  opacity: 0;
+}
+
+/* 外层再叠一圈更大更淡的光晕，制造"光溢出到卡片之外"的层次 */
+.gacha-bloom::after {
+  content: '';
+  position: absolute;
+  inset: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 214, 120, 0.4) 0%,
+    rgba(251, 191, 36, 0.14) 45%,
+    transparent 72%);
+  filter: blur(22px);
+}
+
+.gacha-card-wrapper.burst-five .gacha-bloom {
+  animation: bloomExpand 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 核心名将：泛光更亮更久 */
+.gacha-card-wrapper.burst-core .gacha-bloom {
+  animation-duration: 2.5s;
+}
+
+@keyframes bloomExpand {
+  0% { opacity: 0; transform: scale(0.2); }
+  14% { opacity: 1; transform: scale(0.62); }
+  46% { opacity: 0.85; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* ---------- ① 金光炸裂：双层扩散光环 ---------- */
+/* 用两层光环错开启动时间，制造"炸开后余波仍在扩散"的层次 */
+.gacha-burst-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  margin: -90px 0 0 -90px;
+  border-radius: 50%;
+  border: 3px solid rgba(253, 230, 138, 0.9);
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+}
+
+.gacha-burst-ring.ring-outer {
+  width: 260px;
+  height: 260px;
+  margin: -130px 0 0 -130px;
+  border-width: 2px;
+  border-color: rgba(251, 191, 36, 0.55);
+}
+
+/* 卡片翻开瞬间触发：光环由内向外扩散并淡出 */
+.gacha-card-wrapper.burst-five .gacha-burst-ring {
+  animation: burstRingOut 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 外环延后 0.12s，形成错落的余波 */
+.gacha-card-wrapper.burst-five .gacha-burst-ring.ring-outer {
+  animation-delay: 0.12s;
+  animation-duration: 1.05s;
+}
+
+@keyframes burstRingOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.25);
+    border-width: 6px;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+    border-width: 1px;
+  }
+}
+
+/* ---------- ① 强白闪：整屏瞬时提亮 ---------- */
+.gacha-flash-white {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 240, 200, 0.5) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 19;
+  opacity: 0;
+}
+
+.gacha-card-wrapper.burst-five .gacha-flash-white {
+  animation: flashWhite 0.32s ease-out forwards;
+}
+
+@keyframes flashWhite {
+  0% { opacity: 0; transform: scale(0.3); }
+  15% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+
+/* ---------- ② 放射光柱：12 道锥形光芒 ---------- */
+/* 用 conic-gradient 做扇形渐变，再用 mask 收敛成锥形，
+   比逐个画 div 便宜得多。12 道通过 conic 的重复色标自然生成。
+   加 blur 让扇形边界柔化——原版光柱是体积光，没有清晰边缘。 */
+.gacha-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 460px;
+  height: 460px;
+  margin: -230px 0 0 -230px;
+  pointer-events: none;
+  z-index: 18;
+  opacity: 0;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 240, 200, 0) 0deg,
+    rgba(255, 235, 170, 0.75) 4deg,
+    rgba(255, 240, 200, 0) 9deg,
+    transparent 30deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 12%, #000 30%, #000 62%, transparent 78%);
+  mask-image: radial-gradient(circle, transparent 12%, #000 30%, #000 62%, transparent 78%);
+  filter: blur(2.5px);
+}
+
+.gacha-card-wrapper.burst-five .gacha-rays {
+  animation: raysExpand 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 核心名将：光柱改为金色加密版，且持续更久 */
+.gacha-card-wrapper.burst-core .gacha-rays {
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 245, 210, 0) 0deg,
+    rgba(255, 225, 140, 0.95) 3deg,
+    rgba(255, 245, 210, 0) 7deg,
+    transparent 22.5deg
+  );
+  filter: blur(3px);
+  animation-duration: 2.4s;
+}
+
+@keyframes raysExpand {
+  0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  12% { opacity: 1; }
+  60% { opacity: 0.75; }
+  100% { opacity: 0; transform: scale(1.5) rotate(28deg); }
+}
+
+/* ---------- ③ 金屑粒子：56 粒抛洒 ---------- */
+/* 每一粒用 --tx/--ty 随机方向 + --sway 湍流摆动 + --delay 随机延迟，
+   由 JS 在创建时注入内联变量（避免 CSS 里写死数十套重复规则）。
+   尺寸/时长/延迟全部随机，避免机械感。 */
+.gacha-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff7e0;
+  /* 辉光靠外层 screen 混合层叠加实现，这里只留很轻的自发光，
+     避免 box-shadow 的硬边光晕在加色混合下反而显脏 */
+  box-shadow: 0 0 4px 0 rgba(255, 232, 170, 0.55);
+  pointer-events: none;
+  z-index: 21;
+  opacity: 0;
+}
+
+/* 大亮片：每 4 粒掺 1 枚，柔和虚化后视觉上像失焦的光点 */
+.gacha-sparkle.big {
+  background: #fffef8;
+  box-shadow: 0 0 8px 1px rgba(255, 240, 200, 0.75);
+  filter: blur(0.4px);
+}
+
+.gacha-card-wrapper.burst-five .gacha-sparkle {
+  /* 两个动画叠加：sparkleFly 管位移，sparkleTwinkle 管闪烁。
+     原版粒子有独立的亮度脉动，单纯位移动画做不到这一点。 */
+  animation:
+    sparkleFly var(--dur, 1s) cubic-bezier(0.25, 0.6, 0.4, 1) var(--delay, 0s) forwards,
+    sparkleTwinkle calc(var(--dur, 1s) / 3) ease-in-out var(--delay, 0s) infinite;
+}
+
+/* 位移：抛物线下落 + 中途横向摆动，模拟湍流而非标准抛物线 */
+@keyframes sparkleFly {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.15);
+  }
+  45% {
+    /* --sway 在中段最大，形成绕流轨迹 */
+    transform: translate(calc(var(--tx, 60px) * 0.45 + var(--sway, 0px)), calc(var(--ty, 90px) * 0.34)) scale(1);
+  }
+  72% {
+    transform: translate(calc(var(--tx, 60px) * 0.82 + var(--sway, 0px) * 0.3), calc(var(--ty, 90px) * 0.76)) scale(0.72);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx, 60px), var(--ty, 90px)) scale(0.2);
+  }
+}
+
+/* 闪烁：与位移正交，只控亮度。CSS 无法在两个动画间共享进度，
+   故用独立的短周期动画近似原版的亮度脉动。 */
+@keyframes sparkleTwinkle {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.75); }
+}
+
+/* ---------- ④ 屏幕震动：浮层整体轻微抖动 ---------- */
+@keyframes showcaseShake {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-3px, 2px); }
+  26% { transform: translate(3px, -2px); }
+  40% { transform: translate(-2px, -3px); }
+  55% { transform: translate(2px, 2px); }
+  70% { transform: translate(-1px, 1px); }
+}
+
+.gacha-showcase-mask.shake {
+  animation: showcaseShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* 核心名将震动更重更久 */
+.gacha-showcase-mask.shake-core {
+  animation: showcaseShakeCore 0.75s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes showcaseShakeCore {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  10% { transform: translate(-6px, 4px) scale(1.006); }
+  22% { transform: translate(6px, -5px) scale(1.008); }
+  36% { transform: translate(-5px, -4px) scale(1.005); }
+  50% { transform: translate(4px, 4px) scale(1.003); }
+  64% { transform: translate(-3px, 2px); }
+  78% { transform: translate(2px, -1px); }
+}
+
+/* ---------- 核心名将「霸业」横幅 ---------- */
+/* 刻意不加 screen 混合：横幅是带文字的实底色块，screen 会让金色底与文字
+   互相提亮导致文字糊掉。文字类元素保持 normal 混合。 */
+.gacha-core-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.6);
+  padding: 5px 20px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, rgba(253, 230, 138, 0.95) 0%, rgba(217, 119, 6, 0.95) 100%);
+  color: #2b1a02;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 22;
+  opacity: 0;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 24px rgba(251, 191, 36, 0.7);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.gacha-card-wrapper.burst-core .gacha-core-banner {
+  animation: coreBannerIn 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes coreBannerIn {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  20% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  32% { transform: translateX(-50%) scale(1); }
+  78% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
+}
+
+/* ---------- 紫卡揭晓：克制的简化版 ---------- */
+/* 四星不配金屑粒子与屏幕震动，只保留一圈柔光扩散，避免与五星抢戏 */
+.gacha-burst-ring.purple {
+  border-color: rgba(216, 180, 254, 0.9);
+}
+
+.gacha-burst-ring.purple.ring-outer {
+  border-color: rgba(167, 139, 250, 0.5);
+}
+
+.gacha-card-wrapper.burst-four .gacha-burst-ring {
+  animation: burstRingFour 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.gacha-card-wrapper.burst-four .gacha-burst-ring.ring-outer {
+  animation-delay: 0.1s;
+  animation-duration: 0.9s;
+}
+
+@keyframes burstRingFour {
+  0% { opacity: 0; transform: scale(0.3); }
+  20% { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* ============================================================
+   招募页 · 三条保底进度可视化
+   纯数字「3 / 30」看不出紧迫感，改用进度条呈现，
+   接近保底时填充转为警示红，提示"下一抽必出"。
+   ============================================================ */
+.pity-panel {
+  width: 100%;
+  max-width: 704px;
+  background: linear-gradient(145deg, rgba(22, 25, 34, 0.9) 0%, rgba(17, 20, 27, 0.9) 100%);
+  border: 1px solid rgba(197, 155, 39, 0.25);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.pity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pity-name {
+  flex: 0 0 96px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.pity-bar {
+  flex: 1;
+  min-width: 0;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 底部一道更亮的高光，让进度条有金属质感 */
+.pity-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent);
+  pointer-events: none;
+}
+
+.pity-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+}
+
+/* 四星保底：紫色系 */
+.pity-bar.purple .pity-fill {
+  background: linear-gradient(90deg, #7c3aed 0%, #c084fc 100%);
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.5);
+}
+
+/* 大核心 7+1：红金系，强调稀有度 */
+.pity-bar.core .pity-fill {
+  background: linear-gradient(90deg, #b91c1c 0%, #fbbf24 100%);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.55);
+}
+
+/* 接近保底：填充转红并加脉冲，视觉上"发烫" */
+.pity-fill.is-near {
+  background: linear-gradient(90deg, #ef4444 0%, #fca5a5 100%) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+  animation: pityHeat 1.1s ease-in-out infinite;
+}
+
+@keyframes pityHeat {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
+
+.pity-label {
+  flex: 0 0 auto;
+  min-width: 48px;
+  text-align: right;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.pity-hint {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #64748b;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.pity-hint b {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+/* 移动端：名称独占一行，进度条与计数另起一行 */
+@media (max-width: 768px) {
+  .pity-row {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .pity-name {
+    flex: 0 0 auto;
+  }
+
+  .pity-bar {
+    flex: 1 1 100%;
+    order: 3;
+  }
+}
+
+/* 减弱动效：进度条宽度变化属信息呈现，仅停掉脉冲呼吸 */
+@media (prefers-reduced-motion: reduce) {
+  .pity-fill.is-near {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   减弱动效降级：保留静态金色标识，去掉全部动态特效
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .gacha-burst-ring,
+  .gacha-flash-white,
+  .gacha-bloom,
+  .gacha-rays,
+  .gacha-sparkle,
+  .gacha-core-banner {
+    display: none !important;
+  }
+
+  .gacha-showcase-mask.shake,
+  .gacha-showcase-mask.shake-core {
+    animation: none !important;
+  }
+
+  /* 仍给五星金卡保留一层静态光晕，保证"出金"依然可辨 */
+  .gacha-card-wrapper.burst-five .gacha-card-gold {
+    box-shadow: 0 0 25px rgba(251, 191, 36, 0.6),
+      0 0 50px rgba(217, 119, 6, 0.4),
+      inset 0 0 15px rgba(251, 191, 36, 0.3) !important;
+  }
+}
+
+/* ============================================================
+   ♻️ 三战原版：招募自动转化铜币设置栏 (3★ / 4★ 可选开关)
+   ============================================================ */
+.gacha-autoconvert-bar {
+  width: 100%;
+  max-width: 704px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.gacha-autoconvert-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gacha-autoconvert-title > span:first-child {
+  font-size: 13px;
+  font-weight: 800;
+  color: #34d399;
+}
+
+.gacha-autoconvert-sub {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.gacha-autoconvert-options {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.autoconvert-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid #334155;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.autoconvert-check-label:hover {
+  border-color: #64748b;
+  background: rgba(30, 41, 59, 0.85);
+}
+
+.autoconvert-check-label input[type="checkbox"] {
+  accent-color: #10b981;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.autoconvert-check-label.star-3:has(input:checked) {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+  color: #eff6ff;
+}
+
+.autoconvert-check-label.star-3 b {
+  color: #60a5fa;
+}
+
+.autoconvert-check-label.star-4:has(input:checked) {
+  border-color: #9333ea;
+  background: rgba(168, 85, 247, 0.18);
+  color: #faf5ff;
+}
+
+.autoconvert-check-label.star-4 b {
+  color: #c084fc;
+}
+
+.autoconvert-check-label small {
+  font-size: 10px;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+
+/* ============================================================
+   骨架层（阶段 2）
+   ------------------------------------------------------------
+   本层解决审计发现的第三个源头：7 个 .slg-tab-page 各自
+   `padding:14/16/20px` 起手、页头结构各写一遍、内边距基线
+   不统一。做法是提供一组「结构类」与「外观类」，
+   让 index.html 能把内联样式替换成 class。
+
+   设计约束（重要，改动前必读）：
+   1. **不碰 display 的管辖权**。main.js 有 75 处 `.style.display`
+      直接接管弹窗/子视图的显隐（tileActionModal 8 处、
+      sandboxCustomModal 4 处、gachaShowcase 3 处…）。
+      凡 JS 会写 display 的元素，其初始 display 必须留在内联
+      style 上，否则 JS 的 'flex'/'none' 会被类里的 display 覆盖
+      或反之，出现「弹窗打不开」或「隐藏元素冒出来」。
+      → 本层因此不提供任何 display 相关声明。
+   2. 宽度/内边距/字号等**非 display 属性**才迁移到类上。
+   3. 所有值一律取自阶段 1 的设计令牌，本层不引入裸数字色值。
+   ============================================================ */
+
+/* ---------- 页面骨架 ---------- */
+/* 页头：标题 + 描述 + 右侧操作区 的三段式。
+   此前 7 个 tab 各写一遍 flex/space-between/align-center，
+   统一后窄屏换行行为也一致（靠 flex-wrap）。 */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+.page-head--bordered {
+  border-bottom: var(--bw) solid var(--line-subtle);
+  padding-bottom: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+/* 窄屏下页头改为纵向堆叠，避免标题与按钮挤成一行 */
+@media (max-width: 768px) {
+  .page-head {
+    align-items: flex-start;
+  }
+}
+
+/* 标题行的 icon + 主标题 + 可选徽章 */
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+/* ---------- 排版基类 ---------- */
+/* 页面主标题。此前散落 font-size:18px / 22px 两种，
+   统一到 --fs-xl(18px)，招募页因是主视觉入口单独用 --fs-2xl。 */
+.page-title {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-gold);
+  line-height: var(--lh-tight);
+  margin: 0;
+}
+.page-title--hero {
+  font-size: var(--fs-2xl);
+}
+
+/* 标题下的说明文字 */
+.page-desc {
+  font-size: var(--fs-base);
+  color: var(--text-subtle);
+  margin-top: var(--sp-2);
+  line-height: var(--lh-relaxed);
+  max-width: 62ch;
+}
+.page-desc--tight {
+  margin-top: var(--sp-2);
+}
+
+/* 居中变体（招募页标题） */
+.page-head--center {
+  flex-direction: column;
+  text-align: center;
+  gap: var(--sp-1);
+}
+.page-head--center .page-desc {
+  margin-top: 0;
+  max-width: 56ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- 布局工具 ---------- */
+/* 垂直堆叠容器。gap 走 --sp-* 令牌，不再各写各的 6/8/10/12/14/16/20px。 */
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+/* 横向排列容器 */
+.row {
+  display: flex;
+  align-items: center;
+}
+/* 自动换行的横向排列（筛选按钮组、预设按钮组） */
+.row--wrap {
+  flex-wrap: wrap;
+}
+
+/* 网格容器。minmax 下限从令牌层的可读性要求出发：
+   280px 以下标题与描述会开始折行，故不用更小的下限。 */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-min, 280px), 1fr));
+  gap: var(--sp-5);
+}
+.grid-cards--wide { --card-min: 320px; }
+.grid-cards--narrow { --card-min: 150px; gap: var(--sp-4); }
+.grid-cards--tile { --card-min: 180px; gap: var(--sp-4); }
+
+/* ---------- 徽章 / 提示条 ---------- */
+/* 页面右上角的「状态胶囊」，如「统御限制已解禁」「Cost 上限 21」 */
+.notice {
+  font-size: var(--fs-sm);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-sm);
+  border: var(--bw) solid transparent;
+  line-height: var(--lh-normal);
+}
+.notice--gold { color: var(--text-gold); background: var(--warn-bg); border-color: var(--warn-border); }
+.notice--ok   { color: var(--ok-text);  background: var(--ok-bg);   border-color: var(--ok-border); }
+
+/* 标题旁的微型标签，如「战棋直连」「全武将·全战法自由配置」 */
+.tag {
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-xs);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-normal);
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(42, 30, 18, 0.9), rgba(21, 16, 10, 0.9));
+  border: 1px solid var(--bronze);
+  color: #e7d9bd;
+}
+.tag--ok   { background: var(--ok-bg);     border-color: rgba(52, 211, 153, 0.55);  color: var(--ok-text); }
+.tag--gold { background: var(--warn-bg);   border-color: rgba(226, 200, 115, 0.55); color: var(--warn-text); }
+/* 实心标签：白字，用于「充值」「双倍」等强提示 */
+.tag--solid { background: var(--cinnabar); border-color: var(--cinnabar-bright); color: #fff; }
+.tag--plain { background: rgba(16, 185, 129, 0.6); border-color: #34d399; color: #fff; }
+
+/* ---------- 筛选按钮组 ---------- */
+/* 「阵营: 全部 魏 蜀 吴 群」这类深底胶囊容器。
+   此前 index.html 与 main.js 共出现 12 次同样的 rgba(0,0,0,0.3)
+   + border + padding 组合，统一到一处。 */
+.filter-group {
+  display: flex;
+  gap: var(--sp-1);
+  align-items: center;
+  background: var(--bg-sunken);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-sm);
+  border: var(--bw) solid var(--line-subtle);
+  flex-wrap: wrap;
+}
+.filter-label {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-right: var(--sp-1);
+}
+/* 组内小按钮：padding 2px 8px + 11px 是筛选按钮的固定规格 */
+.filter-btn {
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+}
+
+/* 筛选条外层容器（多组筛选纵向排列时的父级） */
+.filter-bar {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+  background: rgba(0, 0, 0, 0.3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  border: var(--bw) solid var(--line-subtle);
+}
+
+/* ---------- 统计瓦片 ---------- */
+/* 招募页/充值弹窗的看板格子：「历史累计招募 0 次」等。
+   统一底色、描边、圆角与居中排版。 */
+.stat-tile {
+  background: var(--bg-card);
+  border: var(--bw) solid var(--line-subtle);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+  text-align: center;
+}
+.stat-tile--sunken {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: var(--border-dark);
+}
+.stat-tile-label {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.stat-tile-value {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-black);
+  color: var(--text-gold);
+  margin-top: var(--sp-1);
+}
+.stat-tile-value--hero { font-size: var(--fs-2xl); }
+.stat-tile-unit {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-weight: var(--fw-normal);
+}
+
+/* ---------- 面板 ---------- */
+/* 通用内容面板：沙盘导言、战法研习导言、充值历史区等。
+   用 --tone 系列变量做变体，避免每个面板重复写背景+描边。 */
+.panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(58,42,24,0.45) 0%, rgba(20,14,8,0.55) 100%),
+    var(--bg-card);
+  border: var(--bw) solid var(--bronze);
+  border-radius: var(--r-md);
+  padding: var(--sp-4) var(--sp-5);
+  box-shadow: inset 0 0 0 1px rgba(226,200,115,0.14), var(--sh-sm);
+}
+.panel--gold {
+  background: linear-gradient(135deg, var(--warn-bg) 0%, rgba(180, 83, 9, 0.08) 100%);
+  border-color: var(--warn-border);
+  box-shadow: 0 0 15px rgba(217, 119, 6, 0.2);
+}
+.panel--danger {
+  background: linear-gradient(135deg, var(--danger-bg) 0%, rgba(185, 28, 28, 0.05) 100%);
+  border-color: var(--danger-border);
+}
+.panel--sunken {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: var(--line-subtle);
+}
+.panel--raised {
+  background: var(--bg-sunken);
+  border-color: var(--camp-shu-border);
+}
+
+/* 面板内的标题行 */
+.panel-title {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  color: var(--text-gold);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.panel-title--lg { font-size: var(--fs-lg); }
+
+/* 面板内的说明文字 */
+.panel-desc {
+  font-size: var(--fs-base);
+  color: var(--text-subtle);
+  margin-top: var(--sp-2);
+  line-height: var(--lh-relaxed);
+  max-width: 62ch;
+}
+
+/* 招募概率说明：行高放松 + 次级正文色，密集信息更易读 */
+.pool-rates {
+  line-height: var(--lh-relaxed);
+  color: var(--text-subtle);
+}
+
+/* ---------- 按钮尺寸变体 ---------- */
+/* .upgrade-btn 已在既有按钮体系里定义外观，这里只补尺寸档。
+   sm = 常规操作按钮（4px 10px / 11px），xs = 更紧凑的筛选类。 */
+.upgrade-btn--sm {
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-xs);
+}
+.upgrade-btn--md {
+  padding: var(--sp-3) var(--sp-5);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- 弹窗宽度变体 ---------- */
+/* .modal-content 默认 max-width:860px，其余弹窗按需改宽度。
+   统一改成类，避免 4 个弹窗各自内联 max-width/width。 */
+.modal-content--680 { max-width: 680px; width: 92%; }
+.modal-content--650 { max-width: 650px; width: 92%; }
+.modal-content--780 { max-width: 780px; width: 95%; max-height: 90vh; }
+.modal-content--900 { max-width: 900px; width: 95%; max-height: 90vh; }
+
+/* 弹窗内可滚动正文区 */
+.modal-body--scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.modal-body--tall {
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--sp-5);
+}
+
+/* 弹窗头部内的标题 + 徽章组合 */
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.modal-subtitle {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+}
+
+/* 弹窗头部下方的筛选/工具条 */
+.modal-toolbar {
+  padding: var(--sp-3) var(--sp-5);
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: var(--bw) solid var(--line-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+/* ---------- 文案辅助类 ---------- */
+/* 说明文字里需要着色的关键词（资源名、数值强调） */
+.hl-wood  { color: var(--res-wood); }
+.hl-iron  { color: var(--res-iron); }
+.hl-stone { color: var(--res-stone); }
+.hl-grain { color: var(--res-grain); }
+.hl-gold  { color: var(--text-gold); }
+.hl-ok    { color: var(--ok-text); }
+.hl-info  { color: var(--info-text); }
+.hl-danger{ color: var(--danger-text); }
+
+/* 数值强调（配合阶段 1 的 tabular-nums 生效） */
+.num-strong { font-weight: var(--fw-black); }
+
+/* 居中文本块 */
+.text-center { text-align: center; }
+
+/* ============================================================
+   阶段 2 补漏：桌面端基线
+   ------------------------------------------------------------
+   以下两类原先靠 index.html 内联样式生效，迁移后需要
+   正式声明，否则桌面端会退回浏览器默认样式。
+   ============================================================ */
+
+/* 副标题：移动端（3557 行）已用 !important 隐藏，
+   此处只负责桌面端字号与颜色。10px 是审计确认的 micro 档下限。 */
+.game-sub-title {
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+  line-height: var(--lh-normal);
+}
+
+/* HUD 重置按钮。刻意不用 .upgrade-btn——
+   重置是破坏性操作，必须与「建设/升级」类金色按钮在视觉上区分。 */
+.btn-reset {
+  background: rgba(239, 68, 68, 0.2);
+  border: var(--bw) solid var(--danger-border);
+  color: var(--danger-text);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-4);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.btn-reset:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: var(--danger-text);
+}
+
+/* 抽卡浮层右上角关闭按钮：圆形、金色描边、磨砂底。
+   抽卡浮层是全屏 overlay，关闭按钮必须浮在最上层且始终可见，
+   因此用 fixed 定位 + 高 z-index（--z-showcase 之上）。 */
+.showcase-close-btn {
+  position: fixed;
+  top: var(--sp-5);
+  right: var(--sp-5);
+  font-size: 22px;
+  color: var(--text-gold);
+  z-index: 320;
+  width: 38px;
+  height: 38px;
+  background: rgba(0, 0, 0, 0.6);
+  border: var(--bw) solid rgba(251, 191, 36, 0.4);
+  border-radius: var(--r-circle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.showcase-close-btn:hover {
+  border-color: var(--text-gold);
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* ============================================================
+   阶段 2 补漏：筛选按钮语义色
+   ------------------------------------------------------------
+   战法筛选区的 16 个筛选按钮里，同一组颜色重复出现 4~5 次
+   （如 #c084fc 紫、#60a5fa 蓝）。抽成语义类后，
+   换主题时只改这一处，不必回到 HTML 逐个改。
+   命名对应 UI 语义而非色相，色相调整时语义不变。
+   ============================================================ */
+.tone-purple { color: #c084fc; }
+.tone-purple-dim { color: #c084fc; border-color: rgba(192, 132, 252, 0.3); }
+.tone-blue { color: #60a5fa; }
+.tone-blue-strong { color: #3b82f6; }
+.tone-red { color: #f87171; }
+.tone-red-strong { color: #ef4444; }
+.tone-green { color: #10b981; }
+.tone-green-bright { color: #34d399; }
+.tone-gold { color: var(--text-gold); }
+.tone-gold-dim { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
+.tone-pink { color: #e879f9; }
+.tone-amber { color: #f59e0b; }
+.tone-muted { color: var(--text-muted); }
+.tone-hint { color: var(--text-hint); }
+.tone-subtle { color: var(--text-subtle); }
+
+/* ============================================================
+   卡片基类层（阶段 3）
+   ------------------------------------------------------------
+   审计发现 6 类卡片各写各的底：底色 5 种写法、边框 3 种来源、
+   圆角 6 种、有的有悬浮阴影有的没有。这是「整体感」缺失的
+   直接原因——不是某页不好看，是每页各自好看但拼不成一个东西。
+
+   本层实际交付：
+   1) 6 类卡片的底色/边框/圆角/阴影/间距全部改为令牌取值（下方各处）
+   2) 补齐 .building-card / .lineup-team-card 缺失的 box-shadow 与悬浮态
+   3) 抽出卡片内排版原语与数值语义色（下方）
+   未交付：统一的 .card 类名层——实测目标卡片零引用，
+   且带 display 的基类与阶段 2 铁律冲突，详见下方说明。
+
+   迁移约定：后续新增卡片一律从令牌取值，禁止裸写
+   background/border-radius/box-shadow 的字面色值。
+   ============================================================ */
+
+/* ---------- 为什么没有 .card 基类 ----------
+   初版曾定义 .card + 6 个尺寸档 + 6 个色调变体，实测发现：
+   6 类目标卡片（.general-card / .resource-land-card 等）在 JS/HTML 中
+   共出现 8 处，但没有任何一处挂上了 .card——它们各自已有完整定义，
+   基类从未被引用，属于「零接线的抽象」。
+   同时 .card 含 display:flex，与阶段 2 确立的铁律冲突：
+   **凡 JS 会写 .style.display 的元素，样式必须留在内联**。
+   实测 6 类卡片虽无 JS 写 display，但为避免后续维护者误挂，
+   此处不提供任何带 display 的卡片基类。
+   结论：卡片收敛靠「统一取色来源」（本层已完成），不靠统一类名。 */
+
+/* ---------- 卡片悬浮态的统一参数（记录用）----------
+   6 类卡片统一为 translateY(-3px) + 金边 + 金色辉光，
+   实现上各卡片自带 :hover 规则（因多数带 display，需保持局部可控）。 */
+
+/* ---------- 卡片内排版原语 ----------
+   接线门槛（Rule of Three）：只有 JS/HTML 中出现 >=3 次的组合才抽类。
+   实测重复量：11px+muted 43 处 / 10px+muted 15 处 / 12px+muted 11 处
+   / space-between+center 31 处 —— 均达标。
+   而 padding:2px 8px(18) / 1px 5px(16) 等属于 badge、chip 类，
+   横竖内边距与圆角强绑定，抽类反而要覆盖更多变体，故保留内联。 */
+
+/* 次级说明文字：全站最高频文字组合，token 化后可随主题换色。
+   变体仅保留已接线的一种（--tight）；其余字号变体因实测形态碎片化
+   （29 种写法、多数只出现 1-2 次），达不到Rule of Three 门槛，不定义。 */
+.card-note {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: var(--lh-normal);
+}
+.card-note--tight { margin-top: var(--sp-1); }
+
+/* 两端对齐行：只负责 space-between +垂直居中，
+   **刻意不声明 gap 与 flex-wrap**——原 36 处中23 处原本没有 gap，
+   若由类提供会凭空多出 8px 间隙改变布局。间距仍由各元素内联决定。 */
+.card-row--split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+/* 需要换行时显式叠加，语义化意图而非隐式副作用 */
+.card-row--wrap { flex-wrap: wrap; }
+
+/* 微型文字：10px 金色，多见于卡片右上角稀有度标记 */
+.card-micro {
+  font-size: var(--fs-micro);
+  color: var(--text-gold);
+  line-height: var(--lh-normal);
+}
+
+/* ---------- 数值语义色（收敛 main.js 中 22+8+7+4+4 次的裸色） ----------
+   #34d399 22 次 · #fde047 8 次 · #6ee7b7 7 次 · #f87171 4 次 · #ef4444 4 次
+   这些色值语义明确（成功/金量/铜量/伤害/危险），抽成语义类后
+   换主题只需改这一处。 */
+.val-ok      { color: #34d399; }   /* 成功、已获得、可执行 */
+.val-gold    { color: #fde047; }   /* 金铢、五星、稀有度 */
+.val-copper  { color: #6ee7b7; }   /* 铜币、经验、成长值 */
+.val-damage  { color: #f87171; }   /* 兵刃伤害、减益 */
+.val-danger  { color: #ef4444; }   /* 危险、敌方、扣减 */
+.val-muted   { color: #9ca3af; }   /* 次级说明 */
+
+/* ============================================================
+   标题衬线层（阶段 4 · A）
+   ------------------------------------------------------------
+   审计发现：--font-serif 从阶段 1 起就定义好了，但全项目 3 处
+   font-family 没有一处引用它，body 至今是系统无衬线。
+   这是「像网页不像游戏」的直接来源——三国策略游戏的字骨应当
+   有宋体的横细竖粗与顿笔，换成衬线后标题层级会立刻立起来。
+
+   为什么不用 body 全局换衬线？
+   ——正文与数值（--fs-xs 10px 的说明文字、表格数字）在 SimSun
+   下笔画过细、深色底上发虚。全局换会让密集信息区可读性下降。
+   只换标题是「保留信息密度、改变气质」的最小改动。
+
+   三个必须处理的细节：
+   1) 14/18 处标题以 emoji 开头（🗺️🏯🛡️🏮📜⚔️🎯🪙🎴）。
+      emoji 走 Segoe UI Emoji 字体，会脱离 font-family 继承，
+      与衬线中文并排时基线错位。解法见下方 .title-emoji。
+   2) SimSun 字面偏小、笔画细，配fw-bold + 0.02em 字距补偿。
+   3) .nav-tab-btn 是顶部导航标签，属于操作控件而非标题，
+      刻意保持无衬线——按钮用宋体会显得像静态文本、点击感变弱。
+   ============================================================ */
+
+/* ---------- 各标题接入 ---------- */
+/* 逐类声明而非抽基类：本层覆盖 6 个标题类共 18 处使用，
+   但各类的字重/字距/阴影需求都不同（渐变填充、层次区分），
+   抽基类反而要靠更多变体覆盖差异，收益为负。 */
+
+/* 页面主标题：18px/22px，最能体现字体气质
+   ⚠️ 必须用 !important：既有的 .slg-tab-page h2（L4174）带
+   font-size:20px !important，特异性 (0,1,1) 且优先级最高，
+   不加important 会把本页的 18px/22px 全部压成 20px——
+   那样 hero 变体与普通标题将毫无字号差异，
+   招募页作为主视觉入口的层级定位就失效了。
+   这里是「既有important 规则的必要对齐」，不是提升优先级。 */
+.page-title,
+.page-title--hero {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  font-size: var(--fs-xl) !important;
+  font-weight: var(--fw-title) !important;
+}
+.page-title--hero {
+  font-size: var(--fs-2xl) !important;   /* 22px，与普通标题拉开层级 */
+}
+
+/* 游戏主标题「三国·战略版」：唯一使用 background-clip:text 渐变填充的标题。
+   ⚠️ 该技术下 -webkit-text-fill-color:transparent 使 text-shadow 不可见
+   （阴影画在透明填充之下），因此这里刻意**不加** text-shadow，
+   也**不降级**字重——原800 比 --fw-title(700) 更饱满，保留。 */
+.game-title {
+  font-family: var(--font-serif);
+  font-weight: 800;
+  letter-spacing: 0.06em;   /* 主标题字距放大，强化仪式感 */
+}
+
+/* 副标题：衬线但字重降一级，与主标题拉开层次 */
+.game-sub-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-normal);
+  letter-spacing: var(--ls-title);
+}
+
+/* 弹窗标题：沉浸感最强的地方，衬线最能出效果 */
+.modal-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* 面板标题：14px/16px，衬线仍成立（面板多为区块名，非密集数据） */
+.panel-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+}
+
+/* 建筑卡标题：建筑名是三国题材的核心信息，衬线强化代入感 */
+.b-title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-title);
+}
+
+/* ---------- emoji 与衬线中文的基线对齐 ----------
+   emoji 使用系统彩色字体，字面宽度与高度都和衬线中文不一致，
+   直接并排会出现「emoji 偏上、文字居中」的错位感。
+   处理方式：emoji 降一级字号 + 轻微下移，使其视觉中心与中文对齐。
+   ⚠️ 这是纯视觉补偿，无浏览器工具验证，字号/位移量可能需微调。 */
+.title-emoji {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 0.88em;
+  vertical-align: -0.04em;
+  margin-right: 0.28em;
+  /* emoji 默认无边距，紧贴中文会显得拥挤 */
+  letter-spacing: 0;
+}
+
+/* 徽标/标签类：字体类不做衬线，保持紧凑与功能性。
+   .game-badge 在本项目不存在，故只声明确实在用的三类。 */
+.nav-tab-btn,
+.filter-btn,
+.upgrade-btn {
+  font-family: var(--font-sans);
+}
+
+/* ============================================================
+   页面切换动效层（阶段 4 · B）
+   ------------------------------------------------------------
+   审计发现：20 个 @keyframes 全用于抽卡特效，页面切换本身
+   零动效——.slg-tab-page 靠 display:none/block 硬切，7 个 tab
+   来回切换时像在翻静态网页。
+
+   为什么用 animation 而不是 transition？
+   —— 元素从 display:none 变为 block 时，transition 不会触发
+   （元素此前不参与渲染，没有「旧状态」可过渡）。
+   必须在 .active 生效的那一帧用 animation 触发一次。
+   这是 display 切换场景下唯一可行的方案。
+
+   为什么不改用 opacity/visibility 代替 display？
+   —— 阶段 2 已确立铁律：**凡 JS 会写 .style.display 的元素，
+   显隐必须留在内联**。审计确认 7 个 .slg-tab-page 均无 JS 写
+   display（switchTab 只 toggle class），但改动显隐机制的风险
+   远大于收益，故保持 display 方案不动，只叠加 animation。
+
+   时长选择：--t-mid(0.2s)。比按钮反馈略长，比页面内容重绘快，
+   符合「切页是导航动作」的直觉——太快像闪烁，太慢像卡顿。
+   ============================================================ */
+
+/* 页面淡入：透明度 0→1 + 6px 上移。
+   位移刻意做小（6px 而非 12px+）：页面上有大量卡片，
+   大位移会让整屏内容「飘」一下，反而显得轻浮。
+   ⚠️ keyframes 不能按媒体查询分别同名定义——后定义的会全局覆盖前者。
+   故拆成两个不同名字的动画，由下方媒体查询选择启用哪个。 */
+@keyframes slgPageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 触屏版：只淡入不位移。移动端切页常伴随手指滑动，
+   页面自身再做纵向位移会与手势方向叠加，产生「双重滑动」眩晕。 */
+@keyframes slgPageEnterTouch {
+  from { opacity: 0; transform: none; }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 默认（指针设备）：淡入 + 微上移。
+   animation-fill-mode: both 让首帧保持透明，
+   避免动画开始前的瞬间闪现未淡入的内容。 */
+.slg-tab-page.active {
+  animation: slgPageEnter var(--t-mid) var(--ease-out) both;
+}
+
+/* 触屏降级：换成只淡入的动画 */
+@media (hover: none), (pointer: coarse) {
+  .slg-tab-page.active {
+    animation-name: slgPageEnterTouch;
+  }
+}
+
+/* ---------- 关于二级 tab ----------
+   审计结论：**不做二级 tab 动效**。战斗页/武将页的子标签
+   （战役/试炼/沙盒、武将/战法）切换时，只 toggle 按钮的 .active，
+   内容区是 renderCampaigns() / renderTrials() 等整体重渲染，
+   没有独立的内容容器元素——加了animation 也没有作用对象。
+   若后续把这些子视图拆成独立容器，届时再加。 */
+
+/* ============================================================
+   阶段 5 · 青铜木牍金边 · 原版古典装饰层（框架氛围）
+   纯 CSS 实现，不新增图片素材；仅作用于框架容器与标题，
+   不触碰按钮/徽章/标签等组件内部（属组件层，后续里程碑）。
+   ------------------------------------------------------------ */
+:root {
+  --wood-900: #15100a;   /* 最暗木底 */
+  --wood-800: #1f160d;
+  --wood-700: #2a1e12;   /* 木褐主色 */
+  --bronze: #9a7748;     /* 青铜主色（边框） */
+  --bronze-light: #c2a063;
+  --gold-bright: #ecc873;   /* 鎏金亮（文字 / 细线） */
+  --cinnabar: #a8302a;       /* 朱红 / 辰砂 */
+  --cinnabar-bright: #cf4636;
+}
+
+/* 顶部 HUD：木质底座定位上下文 + 底部回纹分隔带 */
+.res-hud { position: relative; }
+.res-hud::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -2px;
+  height: 3px;
+  background: repeating-linear-gradient(90deg,
+    var(--bronze-light) 0 4px, transparent 4px 8px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 页面主标题 → 横匾（左竖朱红章 + 鎏金下划线） */
+.page-title {
+  position: relative;
+  padding-left: 10px;
+  border-left: 3px solid var(--cinnabar);
+}
+.page-title::after {
+  content: "";
+  display: block;
+  width: 44px; height: 3px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent);
+}
+.page-title--hero { border-left-width: 4px; }
+.page-title--hero::after { width: 56px; }
+
+/* 底部导航激活指示 → 战旗烽火感（金红渐变已由 ::before 接管，此处加宽加高） */
+.bottom-nav .nav-tab-btn.active::before {
+  width: 26px;
+  height: 3px;
+}
+
+/* ============================================================
+   阶段 6 · 弹窗古典化（青铜木牍 · 组件层）
+   覆盖所有 .modal-* 弹窗 + 新增古典轻提示 slgNotice
+   ------------------------------------------------------------ */
+
+/* 弹窗标题 → 朱红印章 + 鎏金衬线（叠加阶段4-A 的字体设定） */
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold-bright);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.modal-title::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--cinnabar-bright), var(--cinnabar));
+  box-shadow: 0 0 6px rgba(207, 70, 54, 0.5);
+}
+.modal-body { color: var(--text-body); }
+
+/* 📜 古典轻提示 slgNotice（替代原生 alert 的统一组件） */
+.slg-notice {
+  position: relative;
+  width: 92%;
+  max-width: 420px;
+  background:
+    repeating-linear-gradient(91deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-800) 100%);
+  border: 2px solid var(--bronze);
+  border-radius: var(--r-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(197, 155, 39, 0.22);
+  padding: 22px 24px 20px;
+  text-align: center;
+  animation: slgNoticePop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.slg-notice::before {
+  content: "";
+  position: absolute;
+  left: 14px; right: 14px; top: 8px;
+  height: 3px;
+  background: repeating-linear-gradient(90deg, var(--bronze-light) 0 5px, transparent 5px 10px);
+  opacity: 0.45;
+  border-radius: 2px;
+}
+.slg-notice__seal {
+  font-size: 34px;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.slg-notice__title {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-title);
+  font-size: 19px;
+  color: var(--gold-bright);
+  letter-spacing: var(--ls-title);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  margin-bottom: 10px;
+}
+.slg-notice__body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-body);
+  white-space: pre-line;
+  margin-bottom: 18px;
+}
+.slg-notice__actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.slg-notice__btn {
+  min-width: 96px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.18s ease;
+  font-family: var(--font-sans);
+}
+.slg-notice__btn--gold {
+  background: linear-gradient(180deg, #f6c453, #d98e1f);
+  color: #2a1a06;
+  border-color: #b9760f;
+  box-shadow: 0 3px 10px rgba(217, 142, 31, 0.35);
+}
+.slg-notice__btn--gold:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.slg-notice__btn--gold:active { transform: translateY(0) scale(0.98); }
+.slg-notice__btn--ghost {
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--gold-bright);
+  border-color: var(--bronze);
+}
+.slg-notice__btn--ghost:hover { background: rgba(0, 0, 0, 0.4); }
+
+/* 类型氛围：标题/印章随 type 微调 */
+#slgNotice[data-type="warn"] .slg-notice__title { color: #f59e0b; }
+#slgNotice[data-type="danger"] .slg-notice__title { color: #f87171; }
+
+@keyframes slgNoticePop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* =========================================================
+   Phase 3 · 数据看板 / 进度条 / 卡片质感（青铜木牍统一）
+   设计约束：多数卡片在 JS 内联写了 background/borderColor，
+   故统一层用「box-shadow 青铜内框 + 伪元素鎏金角饰」实现，
+   这两类声明叠在背景之上、不被内联压制；纯 CSS 卡片额外套木底。
+   ========================================================= */
+
+/* ---------- Phase 3-A: 古典进度槽（保底可视化强化） ---------- */
+.pity-bar {
+  height: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, var(--wood-900) 0%, #0b0805 100%);
+  border: 1px solid var(--bronze);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(197,155,39,0.18);
+}
+.pity-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 55% 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.13), transparent);
+  pointer-events: none;
+}
+.pity-fill {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #c8841a 0%, #f6c453 55%, #ffe9a8 100%);
+  box-shadow: 0 0 10px rgba(246,196,83,0.55), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+/* 金光流光：填充上的横向高光扫过 */
+.pity-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  transform: translateX(-100%);
+  animation: pityShine 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pityShine {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(240%); }
+}
+
+/* ---------- Phase 3-B: 数据看板瓦片 + 横幅 ---------- */
+.stat-tile {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--bronze);
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.18), 0 4px 12px rgba(0,0,0,0.4);
+}
+.stat-tile--sunken {
+  background: var(--bg-sunken);
+  border-color: var(--border-dark);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+}
+/* 普通提示横幅：木底 + 青铜边 + 左侧朱红印条；保留 gold/ok 语义色不变 */
+.notice:not(.notice--gold):not(.notice--ok) {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, rgba(42,30,18,0.92), rgba(21,16,10,0.94));
+  border: 1px solid var(--bronze);
+  border-left: 4px solid var(--cinnabar);
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.14);
+}
+
+/* ---------- Phase 3-C: 卡片质感（青铜内框 + 角饰 + hover 微光） ---------- */
+/* 青铜内描边：box-shadow 叠在背景之上，不受内联 background/borderColor 影响，
+   故对全部卡片（含 JS 内联主题的 resource-land-card / campaign-card / troop-hero-card）统一生效。 */
+.resource-land-card,
+.campaign-card,
+.trial-card,
+.troop-hero-card,
+.general-card {
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.28), 0 4px 14px rgba(0,0,0,0.45);
+}
+/* 左上 + 右下 鎏金 L 形角饰（伪元素，不被内联背景压制） */
+.resource-land-card::before, .campaign-card::before,
+.trial-card::before, .troop-hero-card::before, .general-card::before {
+  content: "";
+  position: absolute;
+  top: 5px; left: 5px;
+  width: 12px; height: 12px;
+  border-top: 2px solid var(--gold-bright);
+  border-left: 2px solid var(--gold-bright);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.resource-land-card::after, .campaign-card::after,
+.trial-card::after, .troop-hero-card::after, .general-card::after {
+  content: "";
+  position: absolute;
+  bottom: 5px; right: 5px;
+  width: 12px; height: 12px;
+  border-bottom: 2px solid var(--gold-bright);
+  border-right: 2px solid var(--gold-bright);
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* hover：上浮 + 青铜辉光（transform 不受内联影响） */
+.resource-land-card:hover,
+.campaign-card:hover,
+.trial-card:hover,
+.general-card:hover {
+  transform: translateY(-4px);
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.4), 0 10px 26px rgba(0,0,0,0.5), 0 0 16px rgba(236,200,115,0.18);
+}
+/* 仅对纯 CSS 卡片（无内联背景）套木底，避免与内联主题色冲突 */
+.trial-card {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--bronze);
+}
+.general-card {
+  background:
+    repeating-linear-gradient(91deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--wood-700) 0%, var(--wood-900) 100%);
+  border: 1px solid var(--bronze);
+}
+
+/* =========================================================
+   Phase 4 · 微交互（切换过渡 / hover 平滑 / 按钮压感 / 列表入场 / 提示层次）
+   原则：全部为「平滑既有变化」与「一次性入场」，
+   不新增显隐机制、不改动 JS、不引入零引用令牌（缓动用字面量 cubic-bezier）。
+   ========================================================= */
+
+/* ---------- Phase 4-A：子标签 active 切换过渡补齐 ---------- */
+/* sub-nav-tab-btn 原仅 hover 有过渡，active 切换是瞬间跳变；补过渡 + 轻压感 */
+.sub-nav-tab-btn {
+  transition: background-color .2s ease, border-color .2s ease,
+    color .2s ease, box-shadow .2s ease, transform .18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sub-nav-tab-btn:active { transform: scale(0.97); }
+
+/* troop-tab-btn 同理：补过渡 + 轻压感 */
+.troop-tab-btn {
+  transition: background-color .2s ease, border-color .2s ease,
+    color .2s ease, box-shadow .2s ease, transform .18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.troop-tab-btn:active { transform: scale(0.97); }
+
+/* 顶部/底部主导航：补按下压感（hover 已有，缺按压缩手感） */
+.nav-tab-btn:active { transform: scale(0.94); }
+
+/* ---------- Phase 4-B：卡片 hover 平滑 + 角饰微亮 ---------- */
+/* Phase 3 卡片 hover 用 transform/box-shadow，但基类无 transition → 瞬移；补平滑。
+   trial-card 已有 transition:all .2s，故从此组排除避免覆盖其原有过渡。 */
+.resource-land-card,
+.campaign-card,
+.troop-hero-card,
+.general-card {
+  transition: transform .22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow .22s ease;
+}
+/* 四角鎏金角饰：hover 微亮 + 平滑过渡（伪元素 layer 不受内联背景压制） */
+.resource-land-card::before, .campaign-card::before, .trial-card::before,
+.troop-hero-card::before, .general-card::before,
+.resource-land-card::after, .campaign-card::after, .trial-card::after,
+.troop-hero-card::after, .general-card::after {
+  transition: opacity .2s ease;
+}
+.resource-land-card:hover::before, .campaign-card:hover::before, .trial-card:hover::before,
+.troop-hero-card:hover::before, .general-card:hover::before,
+.resource-land-card:hover::after, .campaign-card:hover::after, .trial-card:hover::after,
+.troop-hero-card:hover::after, .general-card:hover::after {
+  opacity: 0.9;
+}
+
+/* ---------- Phase 4-C：按钮统一压感 + 过渡补齐 ---------- */
+/* gacha-btn / btn-start-battle / btn-inherit-tactic 基类缺 transition → hover/active 瞬移 */
+.gacha-btn {
+  transition: transform .12s ease, filter .15s ease, box-shadow .2s ease;
+}
+.btn-start-battle {
+  transition: transform .12s ease, filter .15s ease, box-shadow .2s ease;
+}
+.btn-inherit-tactic {
+  transition: transform .12s ease, filter .15s ease, box-shadow .2s ease;
+}
+.btn-inherit-tactic:active:not(:disabled) { transform: scale(0.97); }
+
+/* ---------- Phase 4-D：列表柔和入场（一次性淡入上移） ---------- */
+/* ⚠️ animation 用 backwards 填充：delay 期间保持首帧(opacity:0)，
+   播完释放 transform，不锁 hover 的 translateY(-4px)。
+   切 tab 显示时元素重渲染，动画自然重播，强化「展开」观感。 */
+@keyframes slgListIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.resource-land-card,
+.campaign-card,
+.troop-hero-card,
+.general-card {
+  animation: slgListIn .42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.trial-card {
+  animation: slgListIn .42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* ---------- Phase 4-E：slgNotice 入场层次（印章→标题→正文→按钮 依次弹入） ---------- */
+@keyframes slgNoticeChildIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.slg-notice__seal    { animation: slgNoticeChildIn .35s .08s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slg-notice__title   { animation: slgNoticeChildIn .35s .16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slg-notice__body    { animation: slgNoticeChildIn .35s .24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slg-notice__actions { animation: slgNoticeChildIn .35s .32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* =========================================================
+   Phase 5 · 云服务 UI（登录/注册弹窗 + 顶部账号入口 + 轻提示）
+   视觉沿用青铜木牍金边语言，与既有弹窗体系一致。
+   ========================================================= */
+
+/* 顶部 header 的云端账号按钮（与 .btn-reset 同族） */
+.btn-cloud {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: var(--fs-sm, 13px);
+  color: var(--text-gold, #ecc873);
+  background: linear-gradient(180deg, rgba(60,42,24,0.9), rgba(38,26,15,0.95));
+  border: 1px solid var(--bronze, #c59b27);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(197,155,39,0.18);
+  transition: transform .12s ease, filter .15s ease, box-shadow .2s ease;
+}
+.btn-cloud:hover { filter: brightness(1.12); box-shadow: 0 0 12px rgba(236,200,115,0.22), inset 0 0 0 1px rgba(197,155,39,0.3); }
+.btn-cloud:active { transform: scale(0.96); }
+.btn-cloud.is-signed {
+  color: #9be8b0;
+  border-color: #2f8f5b;
+  box-shadow: inset 0 0 0 1px rgba(47,143,91,0.3);
+}
+
+/* 登录弹窗容器 */
+.modal-content--cloud { max-width: 420px; width: 92%; }
+.cloud-modal-body { display: flex; flex-direction: column; gap: var(--sp-4, 16px); }
+
+/* 已登录视图 */
+.cloud-user-row { display: flex; align-items: center; gap: var(--sp-3, 12px); }
+.cloud-user-avatar {
+  width: 44px; height: 44px; flex: 0 0 44px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; border-radius: 50%;
+  background: rgba(47,143,91,0.16); border: 1px solid #2f8f5b;
+}
+.cloud-user-name { font-size: var(--fs-md, 15px); font-weight: var(--fw-bold, 700); color: var(--text-gold, #ecc873); }
+.cloud-user-hint { font-size: var(--fs-xs, 12px); color: var(--text-subtle, #9ca3af); margin-top: 2px; }
+.cloud-action-row { display: flex; gap: var(--sp-3, 12px); }
+.cloud-action-row .upgrade-btn { flex: 1; justify-content: center; }
+.btn-cloud-logout {
+  background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%) !important;
+  color: #fff !important;
+}
+
+/* 未登录：方式切换标签 */
+.cloud-tabs { display: flex; gap: 6px; }
+.cloud-tab {
+  flex: 1; padding: 8px 0; font-size: var(--fs-sm, 13px);
+  color: var(--text-subtle, #9ca3af);
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border-dark, #2a2a2a);
+  border-radius: 8px; cursor: pointer; transition: all .18s ease;
+}
+.cloud-tab:hover { color: var(--text-gold, #ecc873); }
+.cloud-tab.active {
+  color: #1a120a; font-weight: var(--fw-bold, 700);
+  background: linear-gradient(135deg, var(--gold-bright, #f3d27a), var(--bronze, #c59b27));
+  border-color: var(--gold-bright, #f3d27a);
+}
+
+/* 输入区 */
+.cloud-pane { display: flex; flex-direction: column; gap: var(--sp-3, 12px); }
+.cloud-input-row { display: flex; gap: 8px; align-items: stretch; }
+.cloud-input {
+  flex: 1; width: 100%; padding: 10px 12px;
+  font-size: var(--fs-sm, 13px); color: #f2e9d8;
+  background: rgba(0,0,0,0.35); border: 1px solid var(--bronze, #c59b27);
+  border-radius: 8px; outline: none; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.cloud-input:focus { border-color: var(--gold-bright, #f3d27a); box-shadow: 0 0 0 2px rgba(236,200,115,0.2); }
+.cloud-input::placeholder { color: #6b6253; }
+.cloud-submit { justify-content: center; width: 100%; }
+
+/* 状态/错误条 */
+.cloud-status { min-height: 18px; font-size: var(--fs-xs, 12px); color: var(--text-subtle, #9ca3af); text-align: center; }
+.cloud-status.is-error { color: #f87171; }
+.cloud-status.is-ok { color: #6ee7a0; }
+
+/* 首登昵称步骤提示 */
+.cloud-nick-hint { font-size: var(--fs-sm, 13px); color: var(--text-subtle, #9ca3af); line-height: 1.6; margin: 6px 0 12px; text-align: center; }
+
+/* 轻量Toast */
+.cloud-toast {
+  position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%) translateY(12px);
+  padding: 9px 18px; font-size: var(--fs-sm, 13px); color: #1a120a; font-weight: var(--fw-bold, 700);
+  background: linear-gradient(135deg, var(--gold-bright, #f3d27a), var(--bronze, #c59b27));
+  border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; z-index: 9999;
+}
+.cloud-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.cloud-toast.is-error { background: linear-gradient(135deg, #f87171, #b91c1c); color: #fff; }
+
+/* ============================================================
+   ⚔️ 排位赛（天梯）UI · Phase 7
+   依赖 index.html #pvpModal 结构与 pvpUI.js 渲染出的类名
+   ============================================================ */
+
+/* 顶部「对战」入口按钮（复用 .btn-cloud 基础造型，改为赤铜战纹配色） */
+.btn-pvp {
+  background: linear-gradient(135deg, #7f1d1d 0%, #b45309 100%) !important;
+  border-color: rgba(248, 180, 108, 0.6) !important;
+}
+
+/* 对战弹窗加宽，容纳天梯榜与战报列表 */
+.modal-content--pvp { max-width: 640px; }
+.pvp-modal-body { max-height: 74vh; overflow-y: auto; }
+
+/* 未登录引导 */
+.pvp-need-login { text-align: center; padding: 18px 6px 8px; }
+.pvp-need-login__text { color: var(--ink-light, #e8dcc8); font-size: var(--fs-sm, 13px); margin-bottom: 14px; line-height: 1.7; }
+
+/* 页签与通用提示 */
+.pvp-tabs { margin-bottom: 14px; }
+.pvp-hint {
+  font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76);
+  line-height: 1.7; margin-bottom: 10px;
+}
+.pvp-hint b { color: var(--gold-bright, #f3d27a); }
+.pvp-block { margin: 14px 0 4px; }
+.pvp-block-title {
+  font-size: var(--fs-sm, 13px); font-weight: var(--fw-bold, 700);
+  color: var(--gold-bright, #f3d27a); margin-bottom: 6px;
+}
+
+/* ---------- 段位徽章 ---------- */
+.tier-badge { display: block; flex: none; }
+.tier-tag { display: inline-flex; align-items: center; gap: 6px; }
+.tier-tag-name { font-size: var(--fs-xs, 12px); font-weight: var(--fw-bold, 700); }
+.tier-tag-pts { font-size: 11px; color: var(--ink-dim, #9a8b76); }
+
+/* ---------- 段位卡 ---------- */
+.pvp-tier-card {
+  padding: 14px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(120, 83, 32, 0.26) 0%, rgba(52, 36, 16, 0.3) 100%);
+  border: 1px solid rgba(200, 160, 90, 0.3);
+}
+.pvp-tier-head { display: flex; align-items: center; gap: 14px; }
+.pvp-tier-info { flex: 1 1 auto; min-width: 0; }
+.pvp-tier-name { font-size: var(--fs-lg, 18px); font-weight: var(--fw-bold, 700); line-height: 1.3; }
+.pvp-tier-pts { font-size: var(--fs-md, 14px); color: var(--ink-light, #e8dcc8); font-weight: var(--fw-bold, 700); }
+.pvp-tier-pts .unit { font-size: var(--fs-xs, 12px); font-weight: 400; color: var(--ink-dim, #9a8b76); }
+.pvp-tier-rank { text-align: right; }
+.pvp-rank-no {
+  display: inline-block; font-size: var(--fs-sm, 13px); font-weight: var(--fw-bold, 700);
+  color: var(--gold-bright, #f3d27a);
+  padding: 3px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(200, 160, 90, 0.35);
+}
+.pvp-rank-none { font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76); }
+.pvp-tier-bar {
+  height: 6px; border-radius: 999px; margin-top: 12px;
+  background: rgba(0, 0, 0, 0.4); overflow: hidden;
+}
+.pvp-tier-bar-fill { height: 100%; border-radius: 999px; transition: width .4s ease; }
+.pvp-tier-next { font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76); margin-top: 6px; }
+.pvp-tier-next b { color: var(--gold-bright, #f3d27a); }
+.pvp-tier-rec {
+  display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap;
+  margin-top: 10px; font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76);
+}
+.pvp-tier-rec b { font-size: var(--fs-sm, 14px); margin-right: 3px; }
+.pvp-tier-rec b.win { color: #f87171; }
+.pvp-tier-rec b.lose { color: #4ade80; }
+.pvp-winrate { margin-left: auto; }
+
+/* ---------- 挂载与匹配 ---------- */
+.pvp-select {
+  width: 100%; margin-bottom: 10px; cursor: pointer;
+  background: rgba(20, 14, 8, 0.6) !important;
+  color: var(--ink-light, #e8dcc8) !important;
+  border: 1px solid rgba(200, 160, 90, 0.3) !important;
+  border-radius: 6px; padding: 8px 10px; font-size: var(--fs-sm, 13px);
+  appearance: none; -webkit-appearance: none;
+}
+.pvp-select option { background: #241a0f; color: #e8dcc8; }
+.pvp-action-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.pvp-action-row .cloud-submit { flex: 1 1 auto; margin: 0; }
+.pvp-match-btn { width: 100%; margin-top: 14px; padding: 12px; font-size: var(--fs-md, 14px); }
+.pvp-match-btn:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
+
+/* ---------- 阵型卡 ---------- */
+.pvp-card {
+  margin: 10px 0; padding: 12px;
+  background: rgba(12, 9, 5, 0.5);
+  border: 1px solid rgba(200, 160, 90, 0.22); border-radius: 8px;
+}
+.pvp-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.pvp-card-title { font-size: var(--fs-md, 14px); font-weight: var(--fw-bold, 700); color: var(--gold-bright, #f3d27a); }
+.pvp-card-sub { font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76); }
+.pvp-arm { font-size: var(--fs-xs, 12px); color: var(--bronze, #c59b27); margin-bottom: 8px; }
+.pvp-heroes { display: grid; grid-template-columns: repeat(auto-fill, minmax(152px, 1fr)); gap: 6px; }
+.pvp-hero {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 6px 8px; border-radius: 6px;
+  background: rgba(45, 32, 16, 0.5); border: 1px solid rgba(200, 160, 90, 0.18);
+  font-size: var(--fs-xs, 12px);
+}
+.pvp-hero-star { color: #fde047; letter-spacing: -1px; }
+.pvp-hero-name { color: var(--ink-light, #e8dcc8); font-weight: var(--fw-bold, 700); }
+.pvp-hero-lv { color: var(--jade, #6ee7b7); }
+.pvp-hero-sol { color: var(--ink-dim, #9a8b76); margin-left: auto; }
+.pvp-card-empty { padding: 14px; text-align: center; font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76); }
+.pvp-loading { padding: 14px; text-align: center; font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76); }
+
+/* ---------- 匹配结果 ---------- */
+.pvp-mr-opp {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 10px; margin-bottom: 10px;
+  border-bottom: 1px dashed rgba(200, 160, 90, 0.22);
+}
+.pvp-mr-opp-power { font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76); margin-left: auto; }
+.pvp-scope {
+  font-size: 10px; padding: 1px 7px; border-radius: 4px;
+  background: rgba(217, 119, 6, 0.28); color: #fcd34d; border: 1px solid rgba(217, 119, 6, 0.45);
+}
+.pvp-pts-delta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: var(--fs-sm, 13px); font-weight: var(--fw-bold, 700);
+  padding: 7px 11px; border-radius: 6px; margin-bottom: 8px;
+}
+.pvp-pts-delta.win  { background: rgba(239, 68, 68, 0.14); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.32); }
+.pvp-pts-delta.lose { background: rgba(34, 197, 94, 0.14); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.32); }
+.pvp-pts-delta.draw { background: rgba(154, 139, 118, 0.16); color: #d6c9b4; border: 1px solid rgba(154, 139, 118, 0.35); }
+.pvp-pts-tot { font-weight: 400; font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76); }
+.pvp-tier-chg {
+  font-weight: var(--fw-bold, 700); font-size: var(--fs-xs, 12px);
+  padding: 2px 9px; border-radius: 999px;
+  background: rgba(250, 204, 21, 0.2); color: #fde68a; border: 1px solid rgba(250, 204, 21, 0.45);
+}
+
+/* ---------- 天梯榜 ---------- */
+.pvp-list { display: flex; flex-direction: column; gap: 6px; }
+.pvp-row {
+  display: grid;
+  grid-template-columns: 30px 24px minmax(0, 1fr) auto auto auto auto;
+  align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 6px;
+  background: rgba(45, 32, 16, 0.4); border: 1px solid rgba(200, 160, 90, 0.16);
+  font-size: var(--fs-xs, 12px);
+}
+.pvp-row.is-me { background: rgba(217, 119, 6, 0.2); border-color: rgba(243, 210, 122, 0.5); }
+.pvp-rank-no { text-align: center; font-weight: var(--fw-bold, 700); color: var(--ink-dim, #9a8b76); }
+.pvp-rank-no.top { color: #fde047; }
+.pvp-row-name { color: var(--ink-light, #e8dcc8); font-weight: var(--fw-bold, 700); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-tag-me { margin-left: 4px; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--bronze, #c59b27); color: #1a120a; }
+.pvp-row-tier { font-weight: var(--fw-bold, 700); white-space: nowrap; }
+.pvp-row-pts { font-weight: var(--fw-bold, 700); color: var(--gold-bright, #f3d27a); min-width: 38px; text-align: right; }
+.pvp-row-power { color: var(--bronze, #c59b27); min-width: 52px; text-align: right; }
+.pvp-row-rec { color: var(--ink-dim, #9a8b76); min-width: 62px; text-align: right; }
+
+.pvp-my-rank { margin-top: 12px; }
+.pvp-my-rank-inner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 8px;
+  background: linear-gradient(135deg, rgba(120, 83, 32, 0.3) 0%, rgba(52, 36, 16, 0.3) 100%);
+  border: 1px solid rgba(243, 210, 122, 0.45);
+  font-size: var(--fs-xs, 12px);
+}
+.pvp-my-rank-name { color: var(--ink-dim, #9a8b76); }
+.pvp-my-rank-no { font-weight: var(--fw-bold, 700); color: var(--gold-bright, #f3d27a); }
+.pvp-my-rank-pts { margin-left: auto; color: var(--ink-light, #e8dcc8); font-weight: var(--fw-bold, 700); }
+
+/* ---------- 战绩 ---------- */
+.pvp-record {
+  padding: 9px 10px; border-radius: 6px;
+  background: rgba(45, 32, 16, 0.4);
+  border: 1px solid rgba(200, 160, 90, 0.16); border-left-width: 3px;
+  font-size: var(--fs-xs, 12px);
+}
+.pvp-record.win  { border-left-color: #ef4444; }
+.pvp-record.lose { border-left-color: #22c55e; }
+.pvp-record.draw { border-left-color: #9a8b76; }
+.pvp-record-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pvp-role { font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+.pvp-role.atk { background: rgba(127, 29, 29, 0.6); color: #fecaca; }
+.pvp-role.def { background: rgba(30, 58, 138, 0.6); color: #bfdbfe; }
+.pvp-record-name { color: var(--ink-light, #e8dcc8); font-weight: var(--fw-bold, 700); }
+.pvp-outcome { font-weight: var(--fw-bold, 700); }
+.pvp-outcome.win { color: #f87171; }
+.pvp-outcome.lose { color: #4ade80; }
+.pvp-outcome.draw { color: var(--ink-dim, #9a8b76); }
+.pvp-pts-chip { font-weight: var(--fw-bold, 700); padding: 1px 7px; border-radius: 4px; }
+.pvp-pts-chip.win  { background: rgba(239, 68, 68, 0.18); color: #fca5a5; }
+.pvp-pts-chip.lose { background: rgba(34, 197, 94, 0.18); color: #86efac; }
+.pvp-pts-chip.draw { background: rgba(154, 139, 118, 0.2); color: #d6c9b4; }
+.pvp-record-time { color: var(--ink-dim, #9a8b76); margin-left: auto; }
+.pvp-record-sub { margin-top: 4px; color: var(--ink-dim, #9a8b76); display: flex; gap: 10px; flex-wrap: wrap; }
+.pvp-record-power { color: var(--bronze, #c59b27); }
+
+/* ---------- 战报 ---------- */
+.pvp-report { margin-top: 12px; padding: 12px; border-radius: 8px; background: rgba(12, 9, 5, 0.55); border: 1px solid rgba(200, 160, 90, 0.22); }
+.pvp-report-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: var(--fs-sm, 13px); color: var(--ink-light, #e8dcc8); margin-bottom: 8px; }
+.pvp-report-badge { font-size: var(--fs-md, 14px); font-weight: var(--fw-bold, 700); padding: 2px 12px; border-radius: 6px; }
+.pvp-report-head.win  .pvp-report-badge { background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fff; }
+.pvp-report-head.lose .pvp-report-badge { background: linear-gradient(135deg, #22c55e, #15803d); color: #fff; }
+.pvp-report-head.draw .pvp-report-badge { background: linear-gradient(135deg, #9a8b76, #5b4d3a); color: #fff; }
+.pvp-report-verify { font-size: var(--fs-xs, 12px); padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; line-height: 1.6; }
+.pvp-report-verify.ok   { background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+.pvp-report-verify.warn { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); }
+.pvp-report-logs { margin-top: 6px; }
+.pvp-report-logs > summary {
+  cursor: pointer; font-size: var(--fs-xs, 12px); color: var(--bronze, #c59b27);
+  padding: 5px 0; user-select: none;
+}
+.pvp-log-list {
+  max-height: 260px; overflow-y: auto; margin-top: 6px; padding: 8px;
+  background: rgba(0, 0, 0, 0.35); border-radius: 6px;
+  font-size: 11px; line-height: 1.75; color: var(--ink-dim, #b6a68e);
+}
+.pvp-log { padding: 1px 0; border-bottom: 1px dashed rgba(200, 160, 90, 0.12); }
+.pvp-log:last-child { border-bottom: none; }
+
+/* ---------- 窄屏适配 ---------- */
+@media (max-width: 600px) {
+  .modal-content--pvp { max-width: 96vw; }
+  .pvp-row { grid-template-columns: 26px 22px minmax(0, 1fr) auto auto; }
+  .pvp-row-power, .pvp-row-rec { display: none; }
+  .pvp-action-row { flex-wrap: wrap; }
+}
+
+/* ============================================================
+   📜 战报全书 · 分类筛选条（Phase 8）
+   ============================================================ */
+.report-filter-bar {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin: var(--sp-4) 0 var(--sp-5);
+}
+.report-filter-chip {
+  --chip-color: #9ca3af;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  font-size: var(--fs-sm, 13px); cursor: pointer;
+  color: var(--ink-dim, #9a8b76);
+  background: rgba(30, 22, 12, 0.6);
+  border: 1px solid rgba(200, 160, 90, 0.22);
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.report-filter-chip:hover { color: var(--ink-light, #e8dcc8); border-color: rgba(200, 160, 90, 0.45); }
+.report-filter-chip.active {
+  color: #fff;
+  background: var(--chip-color);
+  border-color: var(--chip-color);
+  font-weight: var(--fw-bold, 700);
+}
+.report-filter-name { line-height: 1.2; }
+.report-filter-num {
+  min-width: 20px; padding: 0 6px; border-radius: 999px;
+  font-size: 11px; line-height: 18px; text-align: center;
+  background: rgba(0, 0, 0, 0.28);
+}
+.report-filter-chip.active .report-filter-num { background: rgba(0, 0, 0, 0.22); }
+
+/* 战报卡片内的分类标签 */
+.report-cat-tag {
+  font-size: 11px; font-weight: var(--fw-bold, 700);
+  padding: 1px 8px; border-radius: 4px;
+  border: 1px solid; flex: none;
+}
+
+/* 战绩页的战报引导条 */
+.pvp-record-guide {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 7px; padding: 7px 10px; border-radius: 6px;
+  font-size: var(--fs-xs, 12px); color: var(--ink-dim, #9a8b76);
+  background: rgba(250, 204, 21, 0.07);
+  border: 1px dashed rgba(200, 160, 90, 0.35);
+}
+.pvp-record-guide b { color: var(--gold-bright, #f3d27a); }
+.pvp-guide-btn {
+  margin-left: auto; flex: none;
+  padding: 3px 11px; border-radius: 999px; cursor: pointer;
+  font-size: var(--fs-xs, 12px); font-weight: var(--fw-bold, 700);
+  color: #1a120a;
+  background: linear-gradient(135deg, var(--gold-bright, #f3d27a), var(--bronze, #c59b27));
+  border: none;
+}
+.pvp-guide-btn:hover { filter: brightness(1.08); }
+
+/* ============================================================
+   🏯 主城城景 · Phase 9（分区排布 + 等级外观 + 详情弹窗）
+   ============================================================ */
+
+/* 顶部总览条：多列指标卡 */
+.city-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 1px;
+  background: rgba(200, 160, 90, 0.22);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.city-stat {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 7px 10px;
+  background: rgba(26, 19, 11, 0.92);
+}
+.city-stat i { font-style: normal; font-size: 11px; color: var(--ink-dim, #9a8b76); }
+.city-stat b { font-size: var(--fs-sm, 13px); }
+.val-info { color: #7dd3fc; }
+.val-jade { color: #6ee7b7; }
+
+/* ---------- 城景容器 ---------- */
+.city-scene {
+  display: flex; flex-direction: column; gap: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+
+/* 中枢：君王殿独占一行，视觉权重最高 */
+.city-hall {
+  position: relative;
+  padding: var(--sp-5) var(--sp-4);
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(217, 119, 6, 0.18) 0%, rgba(20, 14, 8, 0) 70%),
+    rgba(18, 13, 8, 0.72);
+  border: 1px solid rgba(200, 160, 90, 0.4);
+  display: flex; justify-content: center;
+}
+.city-hall::after {
+  content: '主城中枢';
+  position: absolute; left: 12px; top: 10px;
+  font-size: 11px; letter-spacing: 2px;
+  color: var(--gold-bright, #f3d27a); opacity: .8;
+}
+.city-hall .city-slot { width: 100%; max-width: 320px; }
+
+/* 军事区 / 内政区并排 */
+.city-district-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-4);
+}
+
+/* 分区面板 */
+.city-district {
+  padding: var(--sp-4);
+  border-radius: 12px;
+  background: rgba(16, 12, 7, 0.6);
+  border: 1px solid rgba(200, 160, 90, 0.16);
+}
+.city-district-head {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(200, 160, 90, 0.22);
+}
+.city-district-name {
+  font-size: var(--fs-sm, 13px); font-weight: var(--fw-bold, 700);
+  color: var(--gold-bright, #f3d27a);
+}
+.city-district-desc { font-size: 11px; color: var(--ink-dim, #9a8b76); }
+.city-district-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+/* ---------- 建筑牌位 ---------- */
+.city-slot {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 14px 10px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  background: linear-gradient(180deg, rgba(38, 28, 15, 0.9) 0%, rgba(20, 14, 8, 0.9) 100%);
+  border: 1px solid rgba(200, 160, 90, 0.24);
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.city-slot:hover { transform: translateY(-3px); }
+.city-slot:active { transform: translateY(-1px); }
+
+/* 大图标外面套一层"地基"以呈现建筑感 */
+.city-slot-icon {
+  display: grid; place-items: center;
+  width: 54px; height: 54px; border-radius: 10px;
+  font-size: 30px; line-height: 1;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(200, 160, 90, 0.22);
+}
+.city-slot-name {
+  font-size: var(--fs-sm, 13px); font-weight: var(--fw-bold, 700);
+  color: var(--ink-light, #e8dcc8);
+}
+.city-slot-lv { font-size: 11px; color: var(--gold-bright, #f3d27a); font-weight: var(--fw-bold, 700); }
+.city-slot-lv i { font-style: normal; color: var(--ink-dim, #9a8b76); font-weight: 400; }
+.city-slot-bar {
+  width: 100%; height: 4px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45); overflow: hidden;
+}
+.city-slot-bar > i { display: block; height: 100%; border-radius: 999px; transition: width .35s ease; }
+
+/* 状态徽记 */
+.city-slot-status {
+  position: absolute; top: 6px; right: 6px;
+  font-size: 10px; padding: 1px 6px; border-radius: 4px;
+  border: 1px solid transparent;
+}
+.city-slot.st-ready { border-color: rgba(243, 210, 122, 0.5); box-shadow: 0 0 0 1px rgba(243, 210, 122, 0.14) inset; }
+.city-slot.st-ready .city-slot-status { color: #1a120a; background: var(--gold-bright, #f3d27a); }
+.city-slot.st-lack .city-slot-status { color: #fca5a5; background: rgba(239, 68, 68, 0.16); border-color: rgba(239, 68, 68, 0.4); }
+.city-slot.st-max .city-slot-status { color: #6ee7b7; background: rgba(16, 185, 129, 0.16); border-color: rgba(16, 185, 129, 0.4); }
+.city-slot.st-locked { border-style: dashed; opacity: .68; cursor: not-allowed; }
+.city-slot.st-locked:hover { transform: none; box-shadow: none; }
+.city-slot.st-locked .city-slot-status { color: #fca5a5; background: rgba(239, 68, 68, 0.16); border-color: rgba(239, 68, 68, 0.4); }
+
+/* 等级档位外观：草创 → 初具 → 精良 → 鼎盛（未建造为灰败态） */
+.city-slot.tier-none { opacity: .72; filter: grayscale(.5); }
+.city-slot.tier-rough .city-slot-icon { border-color: rgba(150, 120, 80, 0.4); }
+.city-slot.tier-rough .city-slot-bar > i { background: #9a7b4f; }
+
+.city-slot.tier-grown .city-slot-icon { border-color: rgba(200, 160, 90, 0.5); }
+.city-slot.tier-grown .city-slot-bar > i { background: #c59b27; }
+
+.city-slot.tier-fine .city-slot-icon { border-color: rgba(243, 210, 122, 0.65); box-shadow: 0 0 8px rgba(243, 210, 122, 0.18); }
+.city-slot.tier-fine .city-slot-bar > i { background: linear-gradient(90deg, #c59b27, #f3d27a); }
+
+.city-slot.tier-peak { border-color: rgba(243, 210, 122, 0.7); }
+.city-slot.tier-peak .city-slot-icon {
+  border-color: rgba(243, 210, 122, 0.9);
+  box-shadow: 0 0 12px rgba(243, 210, 122, 0.35);
+  background: rgba(243, 210, 122, 0.1);
+}
+.city-slot.tier-peak .city-slot-bar > i { background: linear-gradient(90deg, #f3d27a, #fff3c4); }
+.city-slot.tier-peak::after {
+  content: '★';
+  position: absolute; top: 4px; left: 8px;
+  font-size: 12px; color: var(--gold-bright, #f3d27a);
+}
+
+/* ---------- 建筑详情弹窗 ---------- */
+.modal-content--building { max-width: 520px; }
+
+.bld-hero {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(120, 83, 32, 0.26) 0%, rgba(52, 36, 16, 0.3) 100%);
+  border: 1px solid rgba(200, 160, 90, 0.32);
+}
+.bld-hero-icon {
+  flex: none;
+  display: grid; place-items: center;
+  width: 62px; height: 62px; border-radius: 12px;
+  font-size: 34px; line-height: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(200, 160, 90, 0.28);
+}
+.bld-hero-info { flex: 1 1 auto; min-width: 0; }
+.bld-hero-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.bld-hero-lv { font-size: var(--fs-md, 14px); font-weight: var(--fw-bold, 700); color: var(--gold-bright, #f3d27a); }
+.bld-hero-lv i { font-style: normal; font-size: 11px; color: var(--ink-dim, #9a8b76); font-weight: 400; }
+.bld-hero-tier {
+  font-size: 11px; padding: 1px 8px; border-radius: 4px;
+  color: var(--ink-light, #e8dcc8);
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(200, 160, 90, 0.35);
+}
+.bld-bar { height: 6px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); overflow: hidden; }
+.bld-bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #c59b27, #f3d27a); transition: width .35s ease; }
+.bld-hero-desc { font-size: 11px; color: var(--ink-dim, #9a8b76); line-height: 1.6; margin-top: 6px; }
+
+.bld-hero.tier-none .bld-bar > i { background: #6b7280; }
+.bld-hero.tier-peak { border-color: rgba(243, 210, 122, 0.7); box-shadow: 0 0 14px rgba(243, 210, 122, 0.18); }
+.bld-hero.tier-peak .bld-hero-icon { border-color: rgba(243, 210, 122, 0.9); box-shadow: 0 0 12px rgba(243, 210, 122, 0.3); }
+
+/* 功效对比 */
+.bld-effect { margin-top: 12px; }
+.bld-effect-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.26);
+  font-size: var(--fs-sm, 13px);
+}
+.bld-effect-row.next { background: rgba(243, 210, 122, 0.08); border: 1px dashed rgba(243, 210, 122, 0.3); }
+.bld-effect-label { flex: none; font-size: 11px; color: var(--ink-dim, #9a8b76); }
+.bld-effect-now { color: #7dd3fc; }
+.bld-effect-next { color: var(--gold-bright, #f3d27a); }
+
+/* 升级费用 */
+.bld-cost { margin-top: 12px; }
+.bld-cost-title { font-size: 11px; color: var(--ink-dim, #9a8b76); margin-bottom: 6px; }
+.bld-cost-item {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 6px 10px; border-radius: 6px; margin-bottom: 4px;
+  background: rgba(0, 0, 0, 0.24);
+  font-size: var(--fs-xs, 12px);
+  border-left: 3px solid transparent;
+}
+.bld-cost-item.ok { border-left-color: #22c55e; }
+.bld-cost-item.lack { border-left-color: #ef4444; }
+.bld-cost-name { flex: none; color: var(--ink-light, #e8dcc8); }
+.bld-cost-num { font-weight: var(--fw-bold, 700); }
+.bld-cost-item.ok .bld-cost-num { color: #6ee7b7; }
+.bld-cost-item.lack .bld-cost-num { color: #fca5a5; }
+.bld-cost-have { margin-left: auto; color: var(--ink-dim, #9a8b76); font-size: 11px; }
+.bld-shortage {
+  margin-top: 6px; padding: 7px 10px; border-radius: 6px;
+  font-size: var(--fs-xs, 12px); color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.bld-shortage b { color: #f87171; }
+
+/* 升级按钮与满级提示 */
+.bld-upgrade-btn {
+  width: 100%; margin-top: 14px; padding: 12px;
+  font-size: var(--fs-md, 14px); font-weight: var(--fw-bold, 700);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+.bld-upgrade-btn.is-lack {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  cursor: not-allowed; opacity: .7;
+}
+.bld-maxed {
+  margin-top: 14px; padding: 12px; border-radius: 8px; text-align: center;
+  font-size: var(--fs-sm, 13px); font-weight: var(--fw-bold, 700);
+  color: var(--gold-bright, #f3d27a);
+  background: rgba(243, 210, 122, 0.1); border: 1px solid rgba(243, 210, 122, 0.4);
+}
+.bld-foot-hint {
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px dashed rgba(200, 160, 90, 0.2);
+  font-size: 11px; color: var(--ink-dim, #9a8b76); text-align: center;
+}
+
+/* ---------- 窄屏适配 ---------- */
+@media (max-width: 480px) {
+  .city-hall { padding: var(--sp-4) var(--sp-3); }
+  .city-district { padding: var(--sp-3); }
+  .city-district-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .city-slot { padding: 12px 6px 8px; }
+  .city-slot-icon { width: 46px; height: 46px; font-size: 25px; }
+  .city-slot-name { font-size: var(--fs-xs, 12px); }
+  .city-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modal-content--building { max-width: 96vw; }
+  .bld-hero { gap: 10px; padding: 12px; }
+  .bld-hero-icon { width: 52px; height: 52px; font-size: 28px; }
+}
+
+/* ============================================================
+   🏯 主城城景 · 修正与增强（Phase 9.1）
+   ============================================================ */
+
+/* 总览条：已移出 .page-head，去掉 notice 的底色描边，交由内部 .city-stats 呈现 */
+#cityStatsBanner {
+  padding: 0;
+  background: none;
+  border: none;
+  margin-bottom: var(--sp-4);
+}
+
+/* ------------- 顶栏资源条横向溢出修复（全局既有缺陷） -------------
+   .res-items 内 9 枚资源徽章总宽远超容器（1000px 时内容 1416 / 可用 781），
+   固定一行时后半段资源会被永久裁掉。改为可横向滚动（隐藏滚动条），
+   并在窄屏压缩徽章间距，尽量让常用资源一屏可见。 */
+.res-items {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.res-items::-webkit-scrollbar { display: none; height: 0; }
+
+@media (max-width: 768px) {
+  .res-items { gap: 4px; }
+  .res-items .res-badge {
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: var(--fs-xs, 12px);
+  }
+  .res-badge .val { font-size: var(--fs-xs, 12px); }
+}
+
+/* ------------- 中枢君王殿：放大为主视觉 ------------- */
+.city-hall .city-slot { max-width: 420px; padding: 20px 16px 14px; }
+.city-hall .city-slot-icon { width: 72px; height: 72px; font-size: 40px; }
+.city-hall .city-slot-name { font-size: var(--fs-lg, 18px); }
+.city-hall .city-slot-lv { font-size: var(--fs-sm, 13px); }
+
+/* 军事区 3 张卡 / 资源区 4 张卡都撑满所在区，
+   用 auto-fit（而非 auto-fill）让空轨道折叠、卡片自动拉伸，避免右侧留白 */
+.city-district-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+/* 建筑详情弹窗断点放宽到 560px，覆盖更多窄屏设备 */
+@media (max-width: 560px) {
+  .modal-content--building { max-width: 96vw; width: 96vw; }
+}

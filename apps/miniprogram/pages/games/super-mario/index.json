@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "超级马里奥兄弟",
+  "navigationBarBackgroundColor": "#000000",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#000000",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "usingComponents": {}
+}

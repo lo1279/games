@@ -1,0 +1,39 @@
+<!-- pages/games/three-kingdoms-slg/trials/index.wxml -->
+<view class="trials-container">
+  <view class="page-head">
+    <text class="page-back" bindtap="back">‹ 返回</text>
+    <view class="page-title">🗡️ 演武·通天试炼阁</view>
+  </view>
+  <view class="cur-floor">当前进度：第 <text class="cf-num">{{currentFloor}}</text> 层</view>
+
+  <scroll-view class="trials-scroll" scroll-y>
+    <block wx:for="{{floors}}" wx:key="floor" wx:for-item="f">
+      <view class="trial-card status-{{f.status}}">
+        <view class="trial-top">
+          <text class="trial-floor">第 {{f.floor}} 层</text>
+          <text class="trial-difi">{{f.difficulty}}</text>
+          <text class="trial-status">
+            {{f.status === 'cleared' ? '✅ 已通关' : f.status === 'current' ? '⚔️ 挑战中' : '🔒 未解锁'}}
+          </text>
+        </view>
+        <view class="trial-title">{{f.title}}</view>
+        <view class="trial-meta">守关：{{f.leadName}} · {{f.heroCount}} 名敌将 · 兵种 {{f.arm}}</view>
+        <view class="trial-hint">💡 {{f.hint}}</view>
+        <button wx:if="{{f.status !== 'locked'}}" class="trial-btn" bindtap="launchTrial" data-floor="{{f.floor}}">出战挑战</button>
+        <button wx:else class="trial-btn disabled" disabled>未解锁</button>
+      </view>
+    </block>
+  </scroll-view>
+
+  <view class="modal-overlay" wx:if="{{showBattleModal}}">
+    <view class="modal-box battle-log-box">
+      <view class="modal-head">{{battleResult.victory ? '🎉 演武告捷' : '💔 演武受挫'}}</view>
+      <scroll-view class="battle-scroll" scroll-y>
+        <block wx:for="{{battleResult.logs}}" wx:key="*this">
+          <view class="b-log-row">{{item}}</view>
+        </block>
+      </scroll-view>
+      <button class="modal-close" bindtap="closeBattleModal">收兵</button>
+    </view>
+  </view>
+</view>

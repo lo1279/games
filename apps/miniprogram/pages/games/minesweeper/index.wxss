@@ -1,0 +1,512 @@
+/**
+ * pages/games/minesweeper/index.wxss
+ *
+ * 完全同步 PC 网页版（web-hall/minesweeper）视觉：
+ *   现代暗夜毛玻璃 (theme-modern，默认) & 经典 Win98 复古拟物 (theme-classic)
+ *
+ * 小程序兼容性说明：
+ *  1. 棋盘为 canvas 绘制，不存在 .cell / .board-grid 等 WXML 节点样式。
+ *  2. 禁用 display:grid —— 小程序 WXSS 对 grid 支持不完整，
+ *     尤其 grid-template-columns 内联动态值会整块失效。
+ *  3. 禁用 max-content —— 小程序 WXSS 不支持该取值。
+ *  4. 禁用 100vw —— 部分机型算错；.container 用 100vh 是允许的。
+ *  5. 滚动区必须写 height:0 + min-height:0，否则被内容撑开顶穿底部栏。
+ */
+
+/* ============================================================
+   容器（对应 PC 的 .game-window 面板）
+   ============================================================ */
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* 现代主题默认面板 */
+  background-color: #0b0f19;
+  background-image:
+    radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(239, 68, 68, 0.06) 0%, transparent 40%);
+  padding: 16rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+/* 经典 Win98 面板：3px 凹凸浮雕边框 */
+.theme-classic.container {
+  background-color: #008080;
+  background-image: none;
+  border-top: 6rpx solid #ffffff;
+  border-left: 6rpx solid #ffffff;
+  border-right: 6rpx solid #808080;
+  border-bottom: 6rpx solid #808080;
+  padding: 12rpx;
+}
+
+/* ============================================================
+   ① 顶部工具栏（对应 PC .toolbar + .controls-left/right + .btn）
+   ============================================================ */
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-shrink: 0;
+  margin-bottom: 14rpx;
+}
+
+.controls-left,
+.controls-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.controls-right {
+  margin-left: 12rpx;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1rpx solid #475569;
+  border-radius: 10rpx;
+  padding: 10rpx 18rpx;
+  font-size: 24rpx;
+  box-sizing: border-box;
+}
+
+.toolbar-btn {
+  margin-right: 10rpx;
+}
+
+.controls-right .toolbar-btn {
+  margin-right: 0;
+  margin-left: 10rpx;
+}
+
+.btn-glyph {
+  font-size: 26rpx;
+  margin-right: 6rpx;
+}
+
+.btn-text {
+  font-size: 22rpx;
+  white-space: nowrap;
+}
+
+/* 经典主题按钮：矩形立体浮雕 */
+.theme-classic .btn {
+  background: #c0c0c0;
+  color: #000000;
+  border-top: 3rpx solid #ffffff;
+  border-left: 3rpx solid #ffffff;
+  border-right: 3rpx solid #808080;
+  border-bottom: 3rpx solid #808080;
+  border-radius: 0;
+}
+
+.theme-classic .btn:active {
+  border-top: 3rpx solid #808080;
+  border-left: 3rpx solid #808080;
+  border-right: 3rpx solid #ffffff;
+  border-bottom: 3rpx solid #ffffff;
+}
+
+/* ============================================================
+   ② HUD 仪表盘（对应 PC .hud-panel + .led-display + .smiley-btn）
+   ============================================================ */
+.hud-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-shrink: 0;
+  background: #030712;
+  padding: 10rpx 24rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 12rpx;
+  margin-bottom: 14rpx;
+  box-sizing: border-box;
+}
+
+.theme-classic .hud-panel {
+  background: #c0c0c0;
+  border-top: 4rpx solid #808080;
+  border-left: 4rpx solid #808080;
+  border-right: 4rpx solid #ffffff;
+  border-bottom: 4rpx solid #ffffff;
+  border-radius: 0;
+  padding: 8rpx 16rpx;
+  margin-bottom: 10rpx;
+}
+
+/* LED 数码管：红字黑底 */
+.led-display {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 48rpx;
+  font-weight: 900;
+  background: #111827;
+  color: #ef4444;
+  text-shadow: 0 0 12rpx rgba(239, 68, 68, 0.5);
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  letter-spacing: 4rpx;
+  min-width: 120rpx;
+  text-align: center;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.theme-classic .led-display {
+  background: #000000;
+  color: #ff0000;
+  border-top: 3rpx solid #808080;
+  border-left: 3rpx solid #808080;
+  border-right: 3rpx solid #ffffff;
+  border-bottom: 3rpx solid #ffffff;
+  border-radius: 0;
+  padding: 2rpx 10rpx;
+  text-shadow: none;
+  font-size: 44rpx;
+}
+
+/* 笑脸重置按钮 */
+.smiley-btn {
+  background: #1e293b;
+  border: 1rpx solid #475569;
+  border-radius: 50%;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  box-sizing: border-box;
+}
+
+.smiley-active {
+  transform: scale(0.94);
+}
+
+.theme-classic .smiley-btn {
+  border-radius: 0;
+  width: 60rpx;
+  height: 60rpx;
+  font-size: 34rpx;
+  background: #c0c0c0;
+  border-top: 3rpx solid #ffffff;
+  border-left: 3rpx solid #ffffff;
+  border-right: 3rpx solid #808080;
+  border-bottom: 3rpx solid #808080;
+}
+
+.theme-classic .smiley-btn:active {
+  border-top: 3rpx solid #808080;
+  border-left: 3rpx solid #808080;
+  border-right: 3rpx solid #ffffff;
+  border-bottom: 3rpx solid #ffffff;
+}
+
+/* ============================================================
+   ③ 棋盘容器（对应 PC .board-container；凹陷面板边框）
+   canvas 位图尺寸由 JS 按实测可视区 × dpr 设置，
+   CSS 上用 width/height:100% 撑满本容器。
+   flex:1 + height:0 + min-height:0 三者缺一不可，否则顶穿底部栏。
+   ============================================================ */
+.board-container {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 12rpx;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.theme-classic .board-container {
+  background: #c0c0c0;
+  border-top: 4rpx solid #808080;
+  border-left: 4rpx solid #808080;
+  border-right: 4rpx solid #ffffff;
+  border-bottom: 4rpx solid #ffffff;
+  border-radius: 0;
+  padding: 0;
+}
+
+.board-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+}
+
+/* ============================================================
+   ④ 移动端模式切换栏（对应 PC .mobile-mode-bar + .mobile-mode-btn）
+   ============================================================ */
+.mobile-mode-bar {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  flex-shrink: 0;
+  gap: 24rpx;
+  margin-top: 16rpx;
+}
+
+.mobile-mode-btn {
+  flex: 1;
+  max-width: 320rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 18rpx 20rpx;
+  background: #1e293b;
+  border: 1rpx solid #475569;
+  color: #f8fafc;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.mode-icon {
+  font-size: 32rpx;
+}
+
+.mode-title {
+  font-size: 26rpx;
+}
+
+/* 激活态高亮（与 PC 一致：挖掘=蓝，插旗=红） */
+.mobile-mode-btn.active.reveal-mode {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.mobile-mode-btn.active.flag-mode {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.theme-classic .mobile-mode-btn {
+  background: #c0c0c0;
+  color: #000000;
+  border-top: 3rpx solid #ffffff;
+  border-left: 3rpx solid #ffffff;
+  border-right: 3rpx solid #808080;
+  border-bottom: 3rpx solid #808080;
+  border-radius: 0;
+}
+
+.theme-classic .mobile-mode-btn.active {
+  border-top: 3rpx solid #808080;
+  border-left: 3rpx solid #808080;
+  border-right: 3rpx solid #ffffff;
+  border-bottom: 3rpx solid #ffffff;
+  background: #dfdfdf;
+  font-weight: bold;
+}
+
+/* ============================================================
+   ⑤ 底部操作说明（对应 PC .footer-tips + .kbd）
+   ============================================================ */
+.footer-tips {
+  margin-top: 14rpx;
+  width: 100%;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.tip-line {
+  margin: 2rpx 0;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 2rpx 10rpx;
+  font-size: 20rpx;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1rpx solid rgba(255, 255, 255, 0.15);
+  border-radius: 6rpx;
+  margin: 0 2rpx;
+}
+
+.theme-classic .footer-tips {
+  color: #000000;
+}
+
+.theme-classic .kbd {
+  background: #e0e0e0;
+  border: 1rpx solid #808080;
+  color: #000000;
+}
+
+/* ============================================================
+   弹窗（对应 PC .modal-overlay + .modal）
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background: #111827;
+  border: 1rpx solid #374151;
+  border-radius: 24rpx;
+  width: 82%;
+  padding: 40rpx;
+  box-sizing: border-box;
+}
+
+.theme-classic .modal-content {
+  background: #c0c0c0;
+  border-top: 6rpx solid #ffffff;
+  border-left: 6rpx solid #ffffff;
+  border-right: 6rpx solid #808080;
+  border-bottom: 6rpx solid #808080;
+  border-radius: 0;
+  padding: 28rpx;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  text-align: center;
+  color: #f8fafc;
+  margin-bottom: 30rpx;
+}
+
+.theme-classic .modal-title {
+  color: #000000;
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 30rpx;
+}
+
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 22rpx;
+  margin-bottom: 14rpx;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10rpx;
+  font-size: 28rpx;
+}
+
+.theme-classic .record-item {
+  background: #dfdfdf;
+  border: 1rpx solid #808080;
+}
+
+.record-label {
+  color: #cbd5e1;
+}
+
+.theme-classic .record-label {
+  color: #000000;
+}
+
+.record-val {
+  color: #38bdf8;
+  font-weight: bold;
+}
+
+.theme-classic .record-val {
+  color: #000080;
+}
+
+.win-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 30rpx;
+  color: #cbd5e1;
+  margin-bottom: 30rpx;
+}
+
+.theme-classic .win-detail {
+  color: #000000;
+}
+
+.win-time {
+  font-size: 38rpx;
+  color: #38bdf8;
+  font-weight: bold;
+  margin-top: 14rpx;
+}
+
+.theme-classic .win-time {
+  color: #000080;
+}
+
+.modal-buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
+.btn-primary,
+.btn-secondary {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  font-size: 28rpx;
+  font-weight: bold;
+  border-radius: 12rpx;
+  margin: 0 10rpx;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.theme-classic .btn-primary,
+.theme-classic .btn-secondary {
+  background: #c0c0c0;
+  color: #000000;
+  border-top: 3rpx solid #ffffff;
+  border-left: 3rpx solid #ffffff;
+  border-right: 3rpx solid #808080;
+  border-bottom: 3rpx solid #808080;
+  border-radius: 0;
+}

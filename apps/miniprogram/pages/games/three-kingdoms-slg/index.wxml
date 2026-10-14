@@ -1,0 +1,380 @@
+<!-- pages/games/three-kingdoms-slg/index.wxml -->
+<view class="slg-container">
+  <!-- 顶部轻量全局资源 HUD -->
+  <view class="res-hud">
+    <view class="brand-area">
+      <text class="brand-icon">⚔️</text>
+      <view class="brand-text">
+        <view class="brand-title">三国·战略版</view>
+        <view class="brand-sub">原版历史战役 · 沙盘内政全量移植</view>
+      </view>
+    </view>
+
+    <!-- 资源看板滚动区 -->
+    <scroll-view class="hud-scroll" scroll-x enable-flex>
+      <view class="res-pill gold" bindtap="openRechargeModal">
+        <text class="res-lbl">👑 金铢:</text>
+        <text class="res-num">{{gameState.resources.gold}}</text>
+        <text class="res-tag">充值</text>
+      </view>
+      <view class="res-pill copper">
+        <text class="res-lbl">🪙 铜币:</text>
+        <text class="res-num">{{gameState.resources.copper}}</text>
+      </view>
+      <view class="res-pill">
+        <text class="res-lbl">🌲 木材:</text>
+        <text class="res-num">{{gameState.resources.wood}}</text>
+      </view>
+      <view class="res-pill">
+        <text class="res-lbl">⛏️ 铁矿:</text>
+        <text class="res-num">{{gameState.resources.iron}}</text>
+      </view>
+      <view class="res-pill">
+        <text class="res-lbl">🪨 石料:</text>
+        <text class="res-num">{{gameState.resources.stone}}</text>
+      </view>
+      <view class="res-pill">
+        <text class="res-lbl">🌾 粮食:</text>
+        <text class="res-num">{{gameState.resources.grain}}</text>
+      </view>
+      <view class="res-pill">
+        <text class="res-lbl">🛡️ 预备兵:</text>
+        <text class="res-num">{{gameState.resources.reserveSoldiers}}</text>
+      </view>
+    </scroll-view>
+
+    <!-- 顶部辅助工具栏 (云端状态与重置) -->
+    <view class="hud-tools">
+      <view class="tool-btn sync-btn" bindtap="handleCloudSync">
+        <text class="tool-icon">☁️</text>
+        <text class="tool-txt">{{cloudSynced ? '已同步' : '云存档'}}</text>
+      </view>
+      <view class="tool-btn reset-btn" bindtap="handleReset">
+        <text class="tool-icon">🔄</text>
+        <text class="tool-txt">重置</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 原版底部主导航（1:1 对齐 Web .bottom-nav 的 7 个 Tab） -->
+  <view class="main-tabs">
+    <view class="tab-btn {{activeTab === 'map' ? 'active' : ''}}" bindtap="switchTab" data-tab="map">
+      <text class="tab-emoji">🗺️</text>
+      <text class="tab-name">沙盘</text>
+    </view>
+    <view class="tab-btn {{activeTab === 'city' ? 'active' : ''}}" bindtap="switchTab" data-tab="city">
+      <text class="tab-emoji">🏯</text>
+      <text class="tab-name">主城</text>
+    </view>
+    <view class="tab-btn {{activeTab === 'battle' ? 'active' : ''}}" bindtap="switchTab" data-tab="battle">
+      <text class="tab-emoji">⚔️</text>
+      <text class="tab-name">征战</text>
+    </view>
+    <view class="tab-btn {{activeTab === 'troops' ? 'active' : ''}}" bindtap="switchTab" data-tab="troops">
+      <text class="tab-emoji">🛡️</text>
+      <text class="tab-name">编队</text>
+    </view>
+    <view class="tab-btn {{activeTab === 'generals' ? 'active' : ''}}" bindtap="switchTab" data-tab="generals">
+      <text class="tab-emoji">🎴</text>
+      <text class="tab-name">武将</text>
+    </view>
+    <view class="tab-btn {{activeTab === 'gacha' ? 'active' : ''}}" bindtap="switchTab" data-tab="gacha">
+      <text class="tab-emoji">🏮</text>
+      <text class="tab-name">招募</text>
+    </view>
+    <view class="tab-btn {{activeTab === 'reports' ? 'active' : ''}}" bindtap="switchTab" data-tab="reports">
+      <text class="tab-emoji">📜</text>
+      <text class="tab-name">战报</text>
+    </view>
+  </view>
+
+  <!-- 子系统全量玩法入口（M1-M4）-->
+  <scroll-view class="subsys-nav" scroll-x>
+    <view class="subsys-item" bindtap="navTo" data-page="tech">🏛️ 太学府</view>
+    <view class="subsys-item" bindtap="navTo" data-page="trials">🗡️ 试炼阁</view>
+    <view class="subsys-item" bindtap="navTo" data-page="sandbox">⚔️ 自由对战</view>
+    <view class="subsys-item" bindtap="navTo" data-page="generals">📖 武将图鉴</view>
+    <view class="subsys-item" bindtap="navTo" data-page="tactics">🎴 战法</view>
+    <view class="subsys-item" bindtap="navTo" data-page="hero">🔼 养成</view>
+    <view class="subsys-item" bindtap="navTo" data-page="reports">📜 战报</view>
+    <view class="subsys-item" bindtap="navTo" data-page="pvp">🏆 排位赛</view>
+    <view class="subsys-item" bindtap="navTo" data-page="account">☁️ 云端账号</view>
+  </scroll-view>
+
+  <!-- 主视窗容器 -->
+  <scroll-view class="main-viewport" scroll-y>
+
+    <!-- 1. 战棋沙盘 · 四大战略资源领地 -->
+    <view class="page-sec" wx:if="{{activeTab === 'map'}}">
+      <view class="sec-banner">
+        <view class="sec-title-row">
+          <text class="sec-title">🗺️ 四大战略资源领地开拓</text>
+          <button class="action-sm-btn" bindtap="farmAllLands">🌾 全境一键屯田 (+3h收益)</button>
+        </view>
+        <view class="sec-desc">掌控林场、铁矿、石场、粮田 4 大核心资源，挑战 1~10 级土地提升每小时产量！</view>
+      </view>
+
+      <view class="lands-grid">
+        <block wx:for="{{resourceLandsList}}" wx:key="key">
+          <view class="land-card" style="border-color: {{item.border}};">
+            <view class="land-head">
+              <text class="land-icon">{{item.icon}}</text>
+              <view class="land-title-box">
+                <text class="land-name">{{item.name}} ({{item.resName}})</text>
+                <text class="land-lv">已占领最高: Lv.{{item.maxOccupiedLevel}}</text>
+              </view>
+            </view>
+            <view class="land-info">当前产能: +{{item.prodPerHour}}/小时</view>
+            <view class="land-actions">
+              <button class="land-btn btn-attack" bindtap="attackNextLevelLand" data-type="{{item.key}}">
+                出征 Lv.{{item.maxOccupiedLevel < 10 ? item.maxOccupiedLevel + 1 : 10}}
+              </button>
+            </view>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 2. 主城内政城建与太学科技 -->
+    <view class="page-sec" wx:if="{{activeTab === 'city'}}">
+      <view class="sec-banner">
+        <view class="sec-title">🏯 主城营建司 · 城建与军备设施</view>
+        <view class="sec-desc">升级君王殿提升部队 Cost 上限，扩建兵营提升武将带兵量，营建四大工农业！</view>
+      </view>
+
+      <view class="buildings-list">
+        <block wx:for="{{buildingsList}}" wx:key="id">
+          <view class="build-card">
+            <view class="build-icon">{{item.icon}}</view>
+            <view class="build-info">
+              <view class="build-name-row">
+                <text class="build-name">{{item.name}}</text>
+                <text class="build-lv">Lv.{{item.level}} / {{item.maxLevel}}</text>
+              </view>
+              <view class="build-desc">{{item.desc}}</view>
+              <view class="build-effect">{{item.effectText}}</view>
+              <view class="build-cost">消耗: 🌲{{item.cost.wood}} ⛏️{{item.cost.iron}} 🪨{{item.cost.stone}}</view>
+            </view>
+            <button class="upgrade-btn {{item.canUpgrade ? '' : 'btn-disabled'}}" 
+                    bindtap="upgradeBuilding" 
+                    data-id="{{item.id}}" 
+                    disabled="{{!item.canUpgrade}}">
+              {{item.isMax ? '已满级' : '升级'}}
+            </button>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 3. 历史战役演义 & 演武天梯 -->
+    <view class="page-sec" wx:if="{{activeTab === 'battle'}}">
+      <view class="sec-banner">
+        <view class="sec-title">⚔️ 历史著名战役演义 (全6章挑战)</view>
+        <view class="sec-desc">虎牢关、官渡、赤壁、夷陵、汉中争霸，体验严谨的兵种克制与大军团对垒！</view>
+      </view>
+
+      <view class="campaigns-list">
+        <block wx:for="{{campaignsList}}" wx:key="id">
+          <view class="campaign-card">
+            <view class="camp-head">
+              <text class="camp-name">{{item.name}}</text>
+              <text class="camp-star">{{item.cleared ? '已通关 ⭐⭐⭐' : '待平定'}}</text>
+            </view>
+            <view class="camp-desc">{{item.desc}}</view>
+            <view class="camp-enemy">
+              <text>敌主帅: {{item.enemyName}}</text>
+              <text>兵种: {{item.enemyArmLabel}}</text>
+              <text>总兵力: {{item.enemySoldiers}}</text>
+            </view>
+            <button class="camp-attack-btn" bindtap="startCampaignBattle" data-id="{{item.id}}">
+              挥师出征
+            </button>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 4. 点将招募 (三战全量武将卡池) -->
+    <view class="page-sec" wx:if="{{activeTab === 'gacha'}}">
+      <view class="gacha-board">
+        <view class="gacha-head">
+          <view class="gacha-title">📜 名将招募 · 群英荟萃</view>
+          <view class="gacha-sub">原版概率：5星 5.6%（30抽大保底）、4星 36%、3星自动折铜币</view>
+          <view class="pity-counter">距离 5 星名将保底还有: <text class="pity-num">{{30 - gameState.gachaPity}}</text> 抽</view>
+        </view>
+        <view class="gacha-btn-group">
+          <button class="g-btn btn-single" bindtap="executeGacha" data-type="single">招募 1 次 (198金)</button>
+          <button class="g-btn btn-five" bindtap="executeGacha" data-type="five">五连招募 (948金)</button>
+        </view>
+      </view>
+
+      <view class="generals-inventory">
+        <view class="sec-title">麾下将领录 (已拥有 {{gameState.ownedGenerals.length}} 位)</view>
+        <view class="generals-deck">
+          <block wx:for="{{gameState.ownedGenerals}}" wx:key="id">
+            <view class="gen-card" style="border-color: {{item.avatarBg || '#ca8a04'}}">
+              <view class="gen-avatar-circle" style="background-color: {{item.avatarBg || '#1e3a8a'}}">
+                {{item.avatar || '🎖️'}}
+              </view>
+              <view class="gen-body">
+                <view class="gen-title-line">
+                  <text class="gen-name">{{item.name}}</text>
+                  <text class="gen-star">{{item.star}}⭐</text>
+                </view>
+                <view class="gen-stats">Lv.{{item.level}} | 武{{item.force}} 智{{item.intel}} 统{{item.command}}</view>
+                <view class="gen-arm">适性: 骑{{item.aptitude.cavalry}} 盾{{item.aptitude.shield}} 弓{{item.aptitude.bow}} 枪{{item.aptitude.spear}}</view>
+              </view>
+            </view>
+          </block>
+        </view>
+      </view>
+    </view>
+
+    <!-- 5. 军团出征与配置 -->
+    <view class="page-sec" wx:if="{{activeTab === 'troops'}}">
+      <view class="sec-banner">
+        <view class="sec-title">🛡️ 军团军营编制 (5大主力大营)</view>
+        <view class="sec-desc">委任主将与副将，选择兵种、补给满兵，统领全军征战天下！</view>
+      </view>
+
+      <!-- 军团选择器 -->
+      <view class="troop-nav">
+        <block wx:for="{{gameState.troops}}" wx:key="id">
+          <view class="troop-nav-item {{currentTroopIdx === index ? 'active' : ''}}" 
+                bindtap="selectTroopTab" 
+                data-idx="{{index}}">
+            {{item.name}}
+          </view>
+        </block>
+      </view>
+
+      <!-- 当前军团卡片 -->
+      <view class="current-troop-card" wx:if="{{currentTroop}}">
+        <view class="troop-ctrl-row">
+          <view class="troop-arm-selector">
+            <text class="ctrl-lbl">兵种专精:</text>
+            <picker bindchange="onArmChange" value="{{currentArmIndex}}" range="{{armsList}}">
+              <view class="picker-val">{{currentTroop.arm}} (点击切换)</view>
+            </picker>
+          </view>
+          <button class="fill-soldiers-btn" bindtap="fillTroopSoldiers">满兵补充 (耗预备兵)</button>
+        </view>
+
+        <!-- 3个上阵槽位 (主将、副将1、副将2) -->
+        <view class="hero-slots-row">
+          <view class="slot-box main-hero-slot" bindtap="openSelectHeroModal" data-pos="0">
+            <view class="slot-role-tag">主帅</view>
+            <view class="slot-icon" style="background: {{currentTroop.heroes[0] ? currentTroop.heroes[0].avatarBg : '#2a221a'}}">
+              {{currentTroop.heroes[0] ? currentTroop.heroes[0].avatar : '➕'}}
+            </view>
+            <view class="slot-hero-name">{{currentTroop.heroes[0] ? currentTroop.heroes[0].name : '点选配置主将'}}</view>
+            <view class="slot-hero-soldier" wx:if="{{currentTroop.heroes[0]}}">
+              兵力: {{currentTroop.heroes[0].currentSoldiers}}/{{currentTroop.heroes[0].maxSoldiers}}
+            </view>
+          </view>
+
+          <view class="slot-box" bindtap="openSelectHeroModal" data-pos="1">
+            <view class="slot-role-tag">副将 1</view>
+            <view class="slot-icon" style="background: {{currentTroop.heroes[1] ? currentTroop.heroes[1].avatarBg : '#2a221a'}}">
+              {{currentTroop.heroes[1] ? currentTroop.heroes[1].avatar : '➕'}}
+            </view>
+            <view class="slot-hero-name">{{currentTroop.heroes[1] ? currentTroop.heroes[1].name : '点选配置副将'}}</view>
+            <view class="slot-hero-soldier" wx:if="{{currentTroop.heroes[1]}}">
+              兵力: {{currentTroop.heroes[1].currentSoldiers}}/{{currentTroop.heroes[1].maxSoldiers}}
+            </view>
+          </view>
+
+          <view class="slot-box" bindtap="openSelectHeroModal" data-pos="2">
+            <view class="slot-role-tag">副将 2</view>
+            <view class="slot-icon" style="background: {{currentTroop.heroes[2] ? currentTroop.heroes[2].avatarBg : '#2a221a'}}">
+              {{currentTroop.heroes[2] ? currentTroop.heroes[2].avatar : '➕'}}
+            </view>
+            <view class="slot-hero-name">{{currentTroop.heroes[2] ? currentTroop.heroes[2].name : '点选配置副将'}}</view>
+            <view class="slot-hero-soldier" wx:if="{{currentTroop.heroes[2]}}">
+              兵力: {{currentTroop.heroes[2].currentSoldiers}}/{{currentTroop.heroes[2].maxSoldiers}}
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 6. 武将图鉴（底部导航「武将」Tab；完整多维筛选见 generals 子页） -->
+    <view class="page-sec" wx:if="{{activeTab === 'generals'}}">
+      <view class="sec-banner">
+        <view class="sec-title-row">
+          <text class="sec-title">🎴 麾下名将图鉴</text>
+          <button class="action-sm-btn" bindtap="navTo" data-page="generals">📖 打开完整图鉴</button>
+        </view>
+        <view class="sec-desc">已收归 {{gameState.ownedGenerals.length}} 位名将，点击卡片可查看详情与养成。</view>
+      </view>
+      <view class="gen-grid">
+        <block wx:for="{{gameState.ownedGenerals}}" wx:key="id">
+          <view class="gen-tile" bindtap="navTo" data-page="generals">
+            <view class="gen-tile-avatar" style="background: {{item.avatarBg || '#1e3a8a'}}">{{item.avatar}}</view>
+            <view class="gen-tile-name">{{item.name}}</view>
+            <view class="gen-tile-meta">{{item.camp}} · {{item.star}}★</view>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 7. 战报（底部导航「战报」Tab；完整报告见 reports 子页） -->
+    <view class="page-sec" wx:if="{{activeTab === 'reports'}}">
+      <view class="sec-banner">
+        <view class="sec-title-row">
+          <text class="sec-title">📜 征战战报</text>
+          <button class="action-sm-btn" bindtap="navTo" data-page="reports">📜 查看全部战报</button>
+        </view>
+        <view class="sec-desc">近期出征、开拓、试炼的战斗推演记录。</view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="modal-overlay" wx:if="{{showRechargeModal}}">
+    <view class="modal-box">
+      <view class="modal-head">👑 金铢钱庄 · 模拟充值 (始终双倍)</view>
+      <view class="recharge-grid">
+        <button class="rec-btn" bindtap="doRecharge" data-amount="6">充值 ¥6 (+120金)</button>
+        <button class="rec-btn" bindtap="doRecharge" data-amount="30">充值 ¥30 (+600金)</button>
+        <button class="rec-btn" bindtap="doRecharge" data-amount="98">充值 ¥98 (+1960金)</button>
+        <button class="rec-btn" bindtap="doRecharge" data-amount="198">充值 ¥198 (+3960金)</button>
+        <button class="rec-btn" bindtap="doRecharge" data-amount="648">充值 ¥648 (+12960金)</button>
+      </view>
+      <button class="modal-close" bindtap="closeRechargeModal">关闭</button>
+    </view>
+  </view>
+
+  <!-- 战报结算推演弹窗 -->
+  <view class="modal-overlay" wx:if="{{showBattleModal}}">
+    <view wx:if="{{battleResult.victory}}" class="gold-flash"></view>
+    <view class="modal-box battle-log-box">
+      <view class="modal-head">{{battleResult.victory ? '🎉 战役大捷' : '💔 战线受挫'}}</view>
+      <scroll-view class="battle-scroll" scroll-y>
+        <block wx:for="{{battleResult.logs}}" wx:key="*this">
+          <view class="b-log-row">{{item}}</view>
+        </block>
+      </scroll-view>
+      <button class="modal-close" bindtap="closeBattleModal">回师大营</button>
+    </view>
+  </view>
+
+  <!-- 委任武将弹窗 -->
+  <view class="modal-overlay" wx:if="{{showHeroSelectModal}}">
+    <view class="modal-box hero-select-box">
+      <view class="modal-head">委任将领出征</view>
+      <scroll-view class="hero-select-scroll" scroll-y>
+        <block wx:for="{{gameState.ownedGenerals}}" wx:key="id">
+          <view class="hero-select-item" bindtap="confirmAssignHero" data-idx="{{index}}">
+            <view class="h-sel-avatar" style="background: {{item.avatarBg || '#1e3a8a'}}">{{item.avatar || '🎖️'}}</view>
+            <view class="h-sel-info">
+              <view class="h-sel-name">{{item.name}} ({{item.star}}⭐)</view>
+              <view class="h-sel-meta">武{{item.force}} 智{{item.intel}} 统{{item.command}} 速{{item.speed}}</view>
+            </view>
+            <button class="h-sel-btn">委派</button>
+          </view>
+        </block>
+      </scroll-view>
+      <button class="modal-close" bindtap="closeHeroSelectModal">取消</button>
+    </view>
+  </view>
+</view>

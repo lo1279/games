@@ -1,0 +1,36 @@
+/* pages/games/three-kingdoms-slg/sandbox/index.wxss */
+.sandbox-container { display:flex; flex-direction:column; height:100vh; background:#0e0b08; color:#e8d9b5; }
+.page-head { display:flex; align-items:center; padding:24rpx 28rpx 12rpx; }
+.page-back { color:#caa85a; font-size:28rpx; margin-right:16rpx; }
+.page-title { font-size:38rpx; font-weight:700; color:#f0dca0; }
+.sand-intro { font-size:22rpx; color:#9c8a63; padding:0 28rpx 12rpx; line-height:1.4; }
+
+.enemy-name-row { display:flex; justify-content:space-between; align-items:center; padding:10rpx 28rpx; }
+.enemy-name { font-size:30rpx; font-weight:700; color:#f0dca0; }
+.enemy-arm { font-size:22rpx; color:#caa85a; }
+
+.enemy-heroes { padding:0 22rpx; display:flex; flex-direction:column; gap:12rpx; }
+.e-hero-card { display:flex; align-items:center; background:#16110b; border:1rpx solid #332818; border-radius:14rpx; padding:14rpx; }
+.e-hero-img { width:84rpx; height:84rpx; border-radius:12rpx; background:#241c10; flex-shrink:0; }
+.e-hero-img.emoji { display:flex; align-items:center; justify-content:center; font-size:46rpx; }
+.e-hero-info { flex:1; padding:0 14rpx; }
+.e-hero-name { font-size:27rpx; color:#f2e2b0; font-weight:700; }
+.e-hero-star { color:#e0b85a; font-size:20rpx; }
+.e-hero-meta { font-size:21rpx; color:#b6a47a; }
+.e-hero-edit { font-size:22rpx; color:#caa85a; }
+
+.sand-launch { margin:24rpx 28rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:14rpx; font-size:28rpx; font-weight:700; height:84rpx; line-height:84rpx; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:50; }
+.modal-box { width:86%; max-height:78vh; background:#16110b; border:1rpx solid #4a3a1e; border-radius:18rpx; padding:24rpx; display:flex; flex-direction:column; }
+.modal-head { font-size:30rpx; font-weight:700; color:#f0dca0; text-align:center; margin-bottom:14rpx; }
+.picker-scroll { flex:1; max-height:56vh; }
+.pick-item { display:flex; align-items:center; padding:12rpx 8rpx; border-bottom:1rpx solid #241c10; }
+.pick-img { width:64rpx; height:64rpx; border-radius:10rpx; background:#241c10; margin-right:14rpx; flex-shrink:0; }
+.pick-img.emoji { display:flex; align-items:center; justify-content:center; font-size:38rpx; }
+.pick-info { flex:1; }
+.pick-name { font-size:26rpx; color:#f2e2b0; display:block; }
+.pick-meta { font-size:20rpx; color:#b6a47a; }
+.modal-close { margin-top:14rpx; background:linear-gradient(135deg,#caa85a,#9a7a32); color:#1a140a; border-radius:12rpx; font-size:26rpx; }
+.battle-log-box .battle-scroll { flex:1; max-height:52vh; }
+.b-log-row { font-size:21rpx; color:#cdbd92; line-height:1.5; padding:4rpx 0; border-bottom:1rpx solid #241c10; }
